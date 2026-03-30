@@ -1,0 +1,45 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go build outputs
+/bin/
+/dist/
+*.test
+*.out
+
+# Go module cache / vendor
+vendor/
+
+# Go workspace
+go.work
+go.work.sum
+
+# Test coverage
+coverage.out
+coverage.html
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Claude Code / AI agents
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key

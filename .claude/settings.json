@@ -1,0 +1,12 @@
+{
+  "rules": [
+    {
+      "glob": "**/*.go",
+      "path": "rules/go_rule.md"
+    },
+    {
+      "glob": "**/*_test.go",
+      "path": "rules/go_test_rule.md"
+    }
+  ]
+}
