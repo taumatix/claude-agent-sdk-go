@@ -207,8 +207,7 @@ func BuildCLIArgs(opts Options) []string {
 		args = append(args, "--fork-session")
 	}
 
-	// Setting sources: nil = omit, non-nil = pass (empty slice = disable)
-	if opts.SettingSources != nil {
+	if len(opts.SettingSources) > 0 {
 		args = append(args, "--setting-sources", strings.Join(opts.SettingSources, ","))
 	}
 
