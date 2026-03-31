@@ -1,4 +1,17 @@
 {
+    "enabledPlugins": {
+    "developer@taumatix-dev": true,
+    "git@taumatix-dev": true
+  },
+  "extraKnownMarketplaces": {
+    "taumatix-dev": {
+      "source": {
+        "source": "github",
+        "repo": "taumatix/dev"
+      },
+      "autoUpdate": true
+    }
+  },
   "rules": [
     {
       "glob": "**/*.go",
