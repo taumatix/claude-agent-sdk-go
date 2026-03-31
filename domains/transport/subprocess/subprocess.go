@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -237,7 +238,7 @@ func buildEnv(extra map[string]string) []string {
 	for _, e := range inherited {
 		// Strip CLAUDECODE so SDK-spawned subprocesses don't think they're
 		// running inside a Claude Code parent.
-		if len(e) >= 10 && e[:10] == "CLAUDECODE" && (len(e) == 10 || e[10] == '=') {
+		if strings.HasPrefix(e, "CLAUDECODE=") || e == "CLAUDECODE" {
 			continue
 		}
 		filtered = append(filtered, e)
@@ -257,8 +258,7 @@ func buildEnv(extra map[string]string) []string {
 	for _, e := range filtered {
 		skip := false
 		for k := range overrides {
-			prefix := k + "="
-			if len(e) >= len(prefix) && e[:len(prefix)] == prefix {
+			if strings.HasPrefix(e, k+"=") {
 				skip = true
 				break
 			}

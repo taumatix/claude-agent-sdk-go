@@ -8,7 +8,7 @@ import (
 
 	"github.com/taumatix/claude-agent-sdk-go/domains/messages"
 	"github.com/taumatix/claude-agent-sdk-go/domains/transport"
-	subprocess "github.com/taumatix/claude-agent-sdk-go/domains/transport/subprocess"
+	"github.com/taumatix/claude-agent-sdk-go/domains/transport/subprocess"
 )
 
 // Client is a stateful agent client. Connect once, then call Query multiple times.
