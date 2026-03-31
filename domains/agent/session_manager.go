@@ -259,16 +259,25 @@ func (sm *sessionManager) handleControlRequest(env *protocol.ControlRequestEnvel
 		respBody := protocol.CanUseToolResponseBody{Behavior: behavior, Message: reason}
 		data, marshalErr := protocol.BuildControlResponse(env.RequestID, respBody)
 		if marshalErr != nil {
+			errResp, _ := protocol.BuildControlErrorResponse(env.RequestID, "internal marshal error")
+			_ = sm.transport.Send(sm.ctx, errResp)
 			return
 		}
-		_ = sm.transport.Send(sm.ctx, data)
+		if sendErr := sm.transport.Send(sm.ctx, data); sendErr != nil {
+			sm.sendErr(sendErr)
+		}
 
 	case *protocol.HookCallbackRequest:
 		handler, ok := sm.hookIDs[req.CallbackID]
 		if !ok {
 			return
 		}
-		output, _ := handler(sm.ctx, req.CallbackID, req.Input)
+		output, hookErr := handler(sm.ctx, req.CallbackID, req.Input)
+		if hookErr != nil {
+			errResp, _ := protocol.BuildControlErrorResponse(env.RequestID, hookErr.Error())
+			_ = sm.transport.Send(sm.ctx, errResp)
+			return
+		}
 		if output == nil {
 			output = map[string]interface{}{}
 		}
@@ -283,9 +292,13 @@ func (sm *sessionManager) handleControlRequest(env *protocol.ControlRequestEnvel
 		}
 		data, marshalErr := protocol.BuildControlResponse(env.RequestID, output)
 		if marshalErr != nil {
+			errResp, _ := protocol.BuildControlErrorResponse(env.RequestID, "internal marshal error")
+			_ = sm.transport.Send(sm.ctx, errResp)
 			return
 		}
-		_ = sm.transport.Send(sm.ctx, data)
+		if sendErr := sm.transport.Send(sm.ctx, data); sendErr != nil {
+			sm.sendErr(sendErr)
+		}
 	}
 }
 
