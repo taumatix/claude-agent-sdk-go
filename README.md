@@ -337,6 +337,19 @@ cmd/
   example/         # Runnable example
 ```
 
+## Versioning and stability
+
+This module follows [Semantic Versioning](https://semver.org/). While the major version is `0`,
+the public API is still settling, but breaking changes will not be made casually:
+
+- Additive changes (new functions, new option fields) land in minor releases.
+- Any incompatible change to an exported symbol requires a minor bump while `0.x`, and is
+  called out in [CHANGELOG.md](CHANGELOG.md) with the migration path.
+- Every pull request runs `apidiff` against its base and fails on incompatible public API
+  changes, so a break is always a deliberate decision rather than an accident.
+
+Pin a version in your `go.mod` and read the changelog before upgrading.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
