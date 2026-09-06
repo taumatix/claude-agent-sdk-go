@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-09-06
+
 ### Fixed
 
 - `BuildCLIArgs`: omit `--setting-sources` flag when `SettingSources` is nil or empty (backport of `fix/empty-setting-sources-cli-flag` from the Python SDK).
@@ -23,3 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Typed error hierarchy (`domains/errors`): `CLINotFoundError`, `ProcessError`, `InitializeError`.
 - Pluggable `Transport` interface for testing without a real subprocess.
 - Subprocess transport wrapping the `claude` CLI binary.
+
+### Changed
+
+- CI now gates every pull request on build, `go test -race` (Go 1.23 and stable), `gofmt`, `go vet`, `staticcheck`, and an `apidiff` check that fails on incompatible public API changes.
+
+[Unreleased]: https://github.com/taumatix/claude-agent-sdk-go/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.1.0
