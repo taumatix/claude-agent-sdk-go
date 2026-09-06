@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (Go ${{ matrix.go }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Oldest supported (must match the `go` directive in go.mod) and current stable.
+        go: ["1.23", "stable"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+          check-latest: true
+
+      - name: Verify go.mod is tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test (race detector + coverage)
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Coverage summary
+        run: go tool cover -func=coverage.out | tail -1
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "These files are not gofmt-formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: staticcheck
+        uses: dominikh/staticcheck-action@v1
+        with:
+          version: latest
+          install-go: false
+
+  api-compat:
+    name: API backward compatibility
+    runs-on: ubuntu-latest
+    # Only meaningful on PRs, where there is a base revision to compare against.
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Install apidiff
+        run: go install golang.org/x/exp/cmd/apidiff@latest
+
+      - name: Report incompatible public API changes
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          git worktree add /tmp/base "$base"
+
+          pkgs=$(go list ./... | sed "s|^github.com/taumatix/claude-agent-sdk-go|.|")
+          incompatible=0
+
+          for p in $pkgs; do
+            # A package that does not exist on the base branch is new — nothing to compare.
+            (cd /tmp/base && go list "$p" >/dev/null 2>&1) || continue
+
+            (cd /tmp/base && apidiff -w "/tmp/base.api" "$p" 2>/dev/null) || continue
+            out=$(apidiff "/tmp/base.api" "$p" 2>/dev/null || true)
+
+            if echo "$out" | grep -q "^Incompatible changes:"; then
+              echo "::error::Incompatible public API change in $p"
+              echo "$out"
+              incompatible=1
+            fi
+          done
+
+          if [ "$incompatible" -eq 1 ]; then
+            echo
+            echo "This PR breaks the public API. Either make the change additive, or"
+            echo "plan a major version bump with a documented migration path."
+            exit 1
+          fi
+          echo "No incompatible public API changes."

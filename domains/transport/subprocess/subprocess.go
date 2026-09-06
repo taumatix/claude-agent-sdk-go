@@ -245,7 +245,7 @@ func buildEnv(extra map[string]string) []string {
 
 	// Build override map to deduplicate
 	overrides := map[string]string{
-		"CLAUDE_CODE_ENTRYPOINT":  "sdk-go",
+		"CLAUDE_CODE_ENTRYPOINT":   "sdk-go",
 		"CLAUDE_AGENT_SDK_VERSION": sdkVersion,
 	}
 	for k, v := range extra {
