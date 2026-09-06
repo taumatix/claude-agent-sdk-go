@@ -54,26 +54,6 @@ func (f *FakeTransport) Close() error {
 	return nil
 }
 
-// sequentialReceiver returns a receiveFunc that serves msgs one by one then blocks until ctx done.
-func sequentialReceiver(msgs [][]byte) func(context.Context) ([]byte, error) {
-	i := 0
-	var mu sync.Mutex
-	return func(ctx context.Context) ([]byte, error) {
-		mu.Lock()
-		idx := i
-		if idx < len(msgs) {
-			i++
-			b := msgs[idx]
-			mu.Unlock()
-			return b, nil
-		}
-		mu.Unlock()
-		// Block until context cancelled (simulates process staying alive)
-		<-ctx.Done()
-		return nil, io.EOF
-	}
-}
-
 // buildInitSuccessResponse builds a control_response for initialize.
 func buildInitSuccessResponse(requestID string) []byte {
 	resp := map[string]interface{}{
@@ -406,7 +386,9 @@ func TestQuery_ContextCancellation(t *testing.T) {
 				Type      string          `json:"type"`
 			}
 			if json.Unmarshal(data, &env) == nil && env.Type == "control_request" {
-				var req struct{ Subtype string `json:"subtype"` }
+				var req struct {
+					Subtype string `json:"subtype"`
+				}
 				if json.Unmarshal(env.Request, &req) == nil && req.Subtype == "initialize" {
 					initReqID = env.RequestID
 					close(initReady)

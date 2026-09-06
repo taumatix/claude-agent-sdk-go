@@ -248,4 +248,3 @@ func newUUID() string {
 		hex.EncodeToString(b[10:16]),
 	)
 }
-
