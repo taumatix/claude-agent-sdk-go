@@ -13,6 +13,7 @@ const (
 	TypeResult               MessageType = "result"
 	TypeStreamEvent          MessageType = "stream_event"
 	TypeRateLimitEvent       MessageType = "rate_limit_event"
+	TypeConversationReset    MessageType = "conversation_reset"
 	TypeControlRequest       MessageType = "control_request"
 	TypeControlResponse      MessageType = "control_response"
 	TypeControlCancelRequest MessageType = "control_cancel_request"
@@ -43,16 +44,20 @@ type InboundRoleMessage struct {
 	StopReason      *string         `json:"stop_reason,omitempty"`
 	MessageID       *string         `json:"message_id,omitempty"`
 	Error           *string         `json:"error,omitempty"`
+	ToolUseResult   json.RawMessage `json:"tool_use_result,omitempty"`
+	Origin          json.RawMessage `json:"origin,omitempty"`
 }
 
 // ContentBlockType identifies the type of a content block.
 type ContentBlockType string
 
 const (
-	ContentTypeText       ContentBlockType = "text"
-	ContentTypeThinking   ContentBlockType = "thinking"
-	ContentTypeToolUse    ContentBlockType = "tool_use"
-	ContentTypeToolResult ContentBlockType = "tool_result"
+	ContentTypeText             ContentBlockType = "text"
+	ContentTypeThinking         ContentBlockType = "thinking"
+	ContentTypeToolUse          ContentBlockType = "tool_use"
+	ContentTypeToolResult       ContentBlockType = "tool_result"
+	ContentTypeServerToolUse    ContentBlockType = "server_tool_use"
+	ContentTypeServerToolResult ContentBlockType = "server_tool_result"
 )
 
 // ContentBlock is a single block within a message's content array.
@@ -94,6 +99,33 @@ type ResultMessage struct {
 	Usage         json.RawMessage `json:"usage,omitempty"`
 	StopReason    *string         `json:"stop_reason,omitempty"`
 	UUID          *string         `json:"uuid,omitempty"`
+
+	// TerminalReason says why the query loop ended ("completed", "max_turns",
+	// "aborted_streaming", "aborted_tools", ...). Absent on CLI versions that
+	// predate it, and on results that bypass the query loop.
+	TerminalReason *string `json:"terminal_reason,omitempty"`
+	// APIErrorStatus is the HTTP status of the failing API call when IsError is
+	// true and Subtype is "success". Safe to log — carries no message content.
+	APIErrorStatus    *int            `json:"api_error_status,omitempty"`
+	StructuredOutput  json.RawMessage `json:"structured_output,omitempty"`
+	ModelUsage        json.RawMessage `json:"model_usage,omitempty"`
+	PermissionDenials json.RawMessage `json:"permission_denials,omitempty"`
+	Errors            []string        `json:"errors,omitempty"`
+	Origin            json.RawMessage `json:"origin,omitempty"`
+}
+
+// ConversationResetMessage is emitted when the session's conversation is
+// replaced without ending the connection — after /clear, for instance. It
+// zeroes the running totals reported on subsequent ResultMessages, so a caller
+// accumulating TotalCostUSD across a long-lived session must snapshot on it.
+type ConversationResetMessage struct {
+	Type MessageType `json:"type"`
+	// NewConversationID keys the fresh conversation. It is not the session_id
+	// of subsequent messages — read that from the next message.
+	NewConversationID string `json:"new_conversation_id"`
+	UUID              string `json:"uuid"`
+	// SessionID is the outgoing session that was reset.
+	SessionID string `json:"session_id"`
 }
 
 // StreamEvent carries a partial/streaming API event.

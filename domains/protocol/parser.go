@@ -17,6 +17,7 @@ type WireMessage struct {
 	Result          *ResultMessage
 	StreamEvent     *StreamEvent
 	RateLimitEvent  *RateLimitEvent
+	ConvReset       *ConversationResetMessage
 	ControlRequest  *ControlRequestEnvelope
 	ControlResponse *ControlResponseEnvelope
 	ControlCancel   *ControlCancelRequest
@@ -93,6 +94,15 @@ func ParseLine(data []byte) (*WireMessage, error) {
 			}
 		}
 		msg.RateLimitEvent = &m
+
+	case TypeConversationReset:
+		var m ConversationResetMessage
+		if err := json.Unmarshal(data, &m); err != nil {
+			return nil, &sdkerrors.CLIJSONDecodeError{
+				Msg: "failed to decode conversation_reset message", Line: data, OriginalError: err,
+			}
+		}
+		msg.ConvReset = &m
 
 	case TypeControlRequest:
 		var m ControlRequestEnvelope

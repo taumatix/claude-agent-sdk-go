@@ -71,6 +71,59 @@ func TestParseLine_RateLimitEvent(t *testing.T) {
 	assert.Equal(t, "allowed_warning", msg.RateLimitEvent.RateLimitInfo.Status)
 }
 
+// conversation_reset is a top-level message type, not a system subtype — see
+// claude-agent-sdk-python v0.2.152, _internal/message_parser.py case
+// "conversation_reset". Before this case existed the SDK fell through to the
+// forward-compat default and dropped the message.
+func TestParseLine_ConversationReset(t *testing.T) {
+	data := []byte(`{"type":"conversation_reset","new_conversation_id":"conv_2","uuid":"u1","session_id":"sess_1"}`)
+	msg, err := protocol.ParseLine(data)
+	require.NoError(t, err)
+	require.NotNil(t, msg.ConvReset)
+	assert.Equal(t, "conv_2", msg.ConvReset.NewConversationID)
+	assert.Equal(t, "u1", msg.ConvReset.UUID)
+	assert.Equal(t, "sess_1", msg.ConvReset.SessionID)
+}
+
+// Field names and semantics follow claude-agent-sdk-python v0.2.152
+// types.py ResultMessage.
+func TestParseLine_ResultMessageExtendedFields(t *testing.T) {
+	data := []byte(`{"type":"result","subtype":"success","session_id":"sess_1",` +
+		`"duration_ms":1234,"duration_api_ms":800,"is_error":true,"num_turns":2,` +
+		`"terminal_reason":"aborted_streaming","api_error_status":429,` +
+		`"structured_output":{"ok":true},"model_usage":{"claude-3":{"provider":"anthropic"}},` +
+		`"permission_denials":[{"tool_name":"Bash"}],"errors":["overloaded"],` +
+		`"origin":{"kind":"task-notification"}}`)
+	msg, err := protocol.ParseLine(data)
+	require.NoError(t, err)
+	require.NotNil(t, msg.Result)
+
+	assert.Equal(t, int64(800), msg.Result.DurationAPIMS)
+	require.NotNil(t, msg.Result.TerminalReason)
+	assert.Equal(t, "aborted_streaming", *msg.Result.TerminalReason)
+	require.NotNil(t, msg.Result.APIErrorStatus)
+	assert.Equal(t, 429, *msg.Result.APIErrorStatus)
+	assert.JSONEq(t, `{"ok":true}`, string(msg.Result.StructuredOutput))
+	assert.JSONEq(t, `{"claude-3":{"provider":"anthropic"}}`, string(msg.Result.ModelUsage))
+	assert.JSONEq(t, `[{"tool_name":"Bash"}]`, string(msg.Result.PermissionDenials))
+	assert.Equal(t, []string{"overloaded"}, msg.Result.Errors)
+	assert.JSONEq(t, `{"kind":"task-notification"}`, string(msg.Result.Origin))
+}
+
+// A result from an older CLI carries none of the extended fields; they must
+// stay zero rather than fail the parse.
+func TestParseLine_ResultMessageWithoutExtendedFields(t *testing.T) {
+	data := []byte(`{"type":"result","subtype":"success","session_id":"sess_1","duration_ms":10,"duration_api_ms":5,"is_error":false,"num_turns":1}`)
+	msg, err := protocol.ParseLine(data)
+	require.NoError(t, err)
+	require.NotNil(t, msg.Result)
+	assert.Nil(t, msg.Result.TerminalReason)
+	assert.Nil(t, msg.Result.APIErrorStatus)
+	assert.Nil(t, msg.Result.StructuredOutput)
+	assert.Nil(t, msg.Result.Errors)
+	assert.Nil(t, msg.Result.Origin)
+}
+
 func TestParseLine_ControlRequest(t *testing.T) {
 	data := []byte(`{"type":"control_request","request_id":"req_1","request":{"subtype":"can_use_tool","tool_name":"Bash","input":{},"tool_use_id":"tu_1"}}`)
 	msg, err := protocol.ParseLine(data)

@@ -15,6 +15,7 @@ type Message struct {
 	Result      *ResultMessage
 	StreamEvent *StreamEventMessage
 	RateLimit   *RateLimitMessage
+	ConvReset   *ConversationResetMessage
 }
 
 // UserMessage is a user-role message received from the CLI.
@@ -23,6 +24,29 @@ type UserMessage struct {
 	UUID            *string
 	Content         []ContentBlock
 	ParentToolUseID *string
+	// ToolUseResult is the CLI's raw structured result for a tool-result turn.
+	// Nil on ordinary user turns.
+	ToolUseResult json.RawMessage
+	// Origin is the CLI's raw provenance object for this message, telling an
+	// injected turn (task notification, channel or peer message) from a human
+	// one. Nil when the CLI did not attribute it. Left raw because the set of
+	// origin kinds grows with the CLI.
+	Origin json.RawMessage
+}
+
+// ConversationResetMessage reports that the session's conversation was replaced
+// without ending the connection — after /clear, for instance.
+//
+// The reset also zeroes the running totals on subsequent ResultMessages, so a
+// caller accumulating ResultMessage.TotalCostUSD over a long-lived session must
+// snapshot its tally when this arrives.
+type ConversationResetMessage struct {
+	// NewConversationID keys the fresh conversation. It is not the SessionID of
+	// subsequent messages — read that from the next message.
+	NewConversationID string
+	UUID              string
+	// SessionID is the outgoing session that was reset.
+	SessionID string
 }
 
 // AssistantMessage is an assistant-role message received from the CLI.
@@ -59,6 +83,30 @@ type ResultMessage struct {
 	TotalCostUSD *float64
 	StopReason   *string
 	Usage        json.RawMessage
+
+	// DurationAPIMS is the time spent in API calls, a subset of DurationMS.
+	DurationAPIMS int64
+	// TerminalReason says why the query loop ended ("completed", "max_turns",
+	// "aborted_streaming", "aborted_tools", ...). "aborted_streaming" and
+	// "aborted_tools" mean the turn was cancelled. Nil on CLI versions that
+	// predate the field, and on results that bypass the query loop such as a
+	// local slash command.
+	TerminalReason *string
+	// APIErrorStatus is the HTTP status (429, 500, 529, ...) of the failing API
+	// call when IsError is true and Subtype is "success". Nil otherwise. Safe to
+	// log — carries no message content.
+	APIErrorStatus *int
+	// StructuredOutput is the raw structured result, when the agent produced one.
+	StructuredOutput json.RawMessage
+	// ModelUsage is the raw per-model usage breakdown, keyed by model name.
+	ModelUsage json.RawMessage
+	// PermissionDenials is the raw list of tool calls denied during the turn.
+	PermissionDenials json.RawMessage
+	// Errors holds error strings the CLI attached to a failed result.
+	Errors []string
+	// Origin is the CLI's raw provenance object for the user message that
+	// triggered this turn. See UserMessage.Origin.
+	Origin json.RawMessage
 }
 
 // StreamEventMessage carries a partial streaming API event.
@@ -78,10 +126,31 @@ type RateLimitMessage struct {
 
 // ContentBlock holds exactly one content block type.
 type ContentBlock struct {
-	Text       *TextBlock
-	Thinking   *ThinkingBlock
-	ToolUse    *ToolUseBlock
-	ToolResult *ToolResultBlock
+	Text             *TextBlock
+	Thinking         *ThinkingBlock
+	ToolUse          *ToolUseBlock
+	ToolResult       *ToolResultBlock
+	ServerToolUse    *ServerToolUseBlock
+	ServerToolResult *ServerToolResultBlock
+}
+
+// ServerToolUseBlock is a tool the API executed server-side on the model's
+// behalf (web_search, web_fetch, ...). It appears alongside ToolUseBlock in the
+// content stream, but the caller never returns a result for it. Branch on Name
+// to know which server tool ran.
+type ServerToolUseBlock struct {
+	ID    string
+	Name  string
+	Input json.RawMessage
+}
+
+// ServerToolResultBlock is the result of a server-side tool call. Content is
+// the raw payload from the API, opaque at this layer — inspect its "type" field
+// to decode a specific server tool's result schema.
+type ServerToolResultBlock struct {
+	ToolUseID string
+	Content   json.RawMessage
+	IsError   bool
 }
 
 // TextBlock holds plain text content.

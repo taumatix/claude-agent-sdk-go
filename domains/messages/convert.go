@@ -23,6 +23,8 @@ func FromWire(w *protocol.WireMessage) (*Message, error) {
 		return fromWireStreamEvent(w.StreamEvent)
 	case w.RateLimitEvent != nil:
 		return fromWireRateLimitEvent(w.RateLimitEvent)
+	case w.ConvReset != nil:
+		return fromWireConvReset(w.ConvReset)
 	default:
 		return nil, nil
 	}
@@ -39,6 +41,8 @@ func fromWireUser(m *protocol.InboundRoleMessage) (*Message, error) {
 			UUID:            m.UUID,
 			Content:         blocks,
 			ParentToolUseID: m.ParentToolUseID,
+			ToolUseResult:   m.ToolUseResult,
+			Origin:          m.Origin,
 		},
 	}, nil
 }
@@ -88,6 +92,25 @@ func fromWireResult(m *protocol.ResultMessage) (*Message, error) {
 			TotalCostUSD: m.TotalCostUSD,
 			StopReason:   m.StopReason,
 			Usage:        m.Usage,
+
+			DurationAPIMS:     m.DurationAPIMS,
+			TerminalReason:    m.TerminalReason,
+			APIErrorStatus:    m.APIErrorStatus,
+			StructuredOutput:  m.StructuredOutput,
+			ModelUsage:        m.ModelUsage,
+			PermissionDenials: m.PermissionDenials,
+			Errors:            m.Errors,
+			Origin:            m.Origin,
+		},
+	}, nil
+}
+
+func fromWireConvReset(m *protocol.ConversationResetMessage) (*Message, error) {
+	return &Message{
+		ConvReset: &ConversationResetMessage{
+			NewConversationID: m.NewConversationID,
+			UUID:              m.UUID,
+			SessionID:         m.SessionID,
 		},
 	}, nil
 }
@@ -159,6 +182,24 @@ func contentBlockFromWire(b *protocol.ContentBlock) (ContentBlock, error) {
 			ID:    b.ID,
 			Name:  b.Name,
 			Input: b.Input,
+		}}, nil
+
+	case protocol.ContentTypeServerToolUse:
+		return ContentBlock{ServerToolUse: &ServerToolUseBlock{
+			ID:    b.ID,
+			Name:  b.Name,
+			Input: b.Input,
+		}}, nil
+
+	case protocol.ContentTypeServerToolResult:
+		isError := false
+		if b.IsError != nil {
+			isError = *b.IsError
+		}
+		return ContentBlock{ServerToolResult: &ServerToolResultBlock{
+			ToolUseID: b.ToolUseID,
+			Content:   b.Content,
+			IsError:   isError,
 		}}, nil
 
 	case protocol.ContentTypeToolResult:
