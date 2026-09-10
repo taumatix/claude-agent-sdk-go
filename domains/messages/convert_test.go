@@ -117,6 +117,83 @@ func TestFromWire_RateLimitEvent(t *testing.T) {
 	assert.Equal(t, "allowed_warning", msg.RateLimit.RateLimitInfo.Status)
 }
 
+func TestFromWire_ConversationReset(t *testing.T) {
+	w := wireMsg(t, `{"type":"conversation_reset","new_conversation_id":"conv_2","uuid":"u1","session_id":"s1"}`)
+	msg, err := messages.FromWire(w)
+	require.NoError(t, err)
+	require.NotNil(t, msg.ConvReset)
+	assert.Equal(t, "conv_2", msg.ConvReset.NewConversationID)
+	assert.Equal(t, "u1", msg.ConvReset.UUID)
+	assert.Equal(t, "s1", msg.ConvReset.SessionID)
+}
+
+func TestFromWire_ResultExtendedFields(t *testing.T) {
+	w := wireMsg(t, `{"type":"result","subtype":"success","session_id":"s1","duration_ms":1000,`+
+		`"duration_api_ms":700,"is_error":true,"num_turns":1,"terminal_reason":"max_turns",`+
+		`"api_error_status":529,"errors":["overloaded"],"model_usage":{"claude-3":{"provider":"anthropic"}}}`)
+	msg, err := messages.FromWire(w)
+	require.NoError(t, err)
+	require.NotNil(t, msg.Result)
+	assert.Equal(t, int64(700), msg.Result.DurationAPIMS)
+	require.NotNil(t, msg.Result.TerminalReason)
+	assert.Equal(t, "max_turns", *msg.Result.TerminalReason)
+	require.NotNil(t, msg.Result.APIErrorStatus)
+	assert.Equal(t, 529, *msg.Result.APIErrorStatus)
+	assert.Equal(t, []string{"overloaded"}, msg.Result.Errors)
+	assert.JSONEq(t, `{"claude-3":{"provider":"anthropic"}}`, string(msg.Result.ModelUsage))
+}
+
+// server_tool_use blocks previously fell through to the unknown-block branch
+// and surfaced as an empty TextBlock, silently losing the call.
+func TestFromWire_AssistantWithServerToolUse(t *testing.T) {
+	w := wireMsg(t, `{"type":"assistant","session_id":"s1","message":{"role":"assistant","content":[`+
+		`{"type":"server_tool_use","id":"stu1","name":"web_search","input":{"query":"go generics"}}]},"model":"claude-3"}`)
+	msg, err := messages.FromWire(w)
+	require.NoError(t, err)
+	require.NotNil(t, msg.Assistant)
+	require.Len(t, msg.Assistant.Content, 1)
+	block := msg.Assistant.Content[0]
+	assert.Nil(t, block.Text)
+	require.NotNil(t, block.ServerToolUse)
+	assert.Equal(t, "stu1", block.ServerToolUse.ID)
+	assert.Equal(t, "web_search", block.ServerToolUse.Name)
+	assert.JSONEq(t, `{"query":"go generics"}`, string(block.ServerToolUse.Input))
+}
+
+func TestFromWire_AssistantWithServerToolResult(t *testing.T) {
+	w := wireMsg(t, `{"type":"assistant","session_id":"s1","message":{"role":"assistant","content":[`+
+		`{"type":"server_tool_result","tool_use_id":"stu1","content":{"type":"web_search_result","results":[]}}]},"model":"claude-3"}`)
+	msg, err := messages.FromWire(w)
+	require.NoError(t, err)
+	require.NotNil(t, msg.Assistant)
+	require.Len(t, msg.Assistant.Content, 1)
+	block := msg.Assistant.Content[0]
+	require.NotNil(t, block.ServerToolResult)
+	assert.Equal(t, "stu1", block.ServerToolResult.ToolUseID)
+	assert.False(t, block.ServerToolResult.IsError)
+	assert.JSONEq(t, `{"type":"web_search_result","results":[]}`, string(block.ServerToolResult.Content))
+}
+
+func TestFromWire_UserWithToolUseResultAndOrigin(t *testing.T) {
+	w := wireMsg(t, `{"type":"user","session_id":"s1","message":{"role":"user","content":"hi"},`+
+		`"tool_use_result":{"stdout":"ok"},"origin":{"kind":"task-notification","subkind":"scheduled-trigger"}}`)
+	msg, err := messages.FromWire(w)
+	require.NoError(t, err)
+	require.NotNil(t, msg.User)
+	assert.JSONEq(t, `{"stdout":"ok"}`, string(msg.User.ToolUseResult))
+	assert.JSONEq(t, `{"kind":"task-notification","subkind":"scheduled-trigger"}`, string(msg.User.Origin))
+}
+
+// An ordinary user turn carries neither field.
+func TestFromWire_UserWithoutToolUseResultOrOrigin(t *testing.T) {
+	w := wireMsg(t, `{"type":"user","session_id":"s1","message":{"role":"user","content":"hi"}}`)
+	msg, err := messages.FromWire(w)
+	require.NoError(t, err)
+	require.NotNil(t, msg.User)
+	assert.Nil(t, msg.User.ToolUseResult)
+	assert.Nil(t, msg.User.Origin)
+}
+
 func TestFromWire_MultipleContentBlocks(t *testing.T) {
 	w := wireMsg(t, `{"type":"assistant","session_id":"s1","message":{"role":"assistant","content":[{"type":"text","text":"Hello"},{"type":"tool_use","id":"tu1","name":"Read","input":{"path":"/tmp"}}]},"model":"claude-3"}`)
 	msg, err := messages.FromWire(w)

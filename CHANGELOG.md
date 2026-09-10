@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+Parsing for CLI output the SDK received but discarded. Checked against
+[claude-agent-sdk-python v0.2.152](https://github.com/anthropics/claude-agent-sdk-python/releases/tag/v0.2.152)
+(bundled CLI 2.1.259). All additions are new fields and new types; nothing existing changed.
+
+- `messages.ConversationResetMessage`, reachable as `Message.ConvReset`. `conversation_reset` is a
+  top-level wire type, so it previously hit the parser's forward-compatibility default and was
+  dropped. It also zeroes the running totals on later results — code accumulating
+  `ResultMessage.TotalCostUSD` over a long-lived session must snapshot when it arrives.
+- `messages.ServerToolUseBlock` and `messages.ServerToolResultBlock` for the `server_tool_use` /
+  `server_tool_result` content blocks the API emits for server-executed tools (`web_search`,
+  `web_fetch`, ...). These previously fell through to the unknown-block branch and surfaced as an
+  empty `TextBlock`, silently losing the call.
+- `ResultMessage`: `DurationAPIMS`, `TerminalReason`, `APIErrorStatus`, `StructuredOutput`,
+  `ModelUsage`, `PermissionDenials`, `Errors`, `Origin`. `TerminalReason` is the only way to tell an
+  interrupted turn (`aborted_streaming`, `aborted_tools`) from a completed one.
+- `UserMessage`: `ToolUseResult` and `Origin`. `Origin` distinguishes an injected turn (task
+  notification, channel or peer message) from a human one.
+
+`Origin`, `ModelUsage`, `PermissionDenials` and `StructuredOutput` are `json.RawMessage`: their
+shapes grow with the CLI, and a raw field stays forward-compatible where a struct would not.
+
 ## [0.1.0] - 2026-09-06
 
 ### Fixed

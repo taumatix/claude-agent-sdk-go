@@ -307,6 +307,7 @@ type Message struct {
     Result      *ResultMessage
     StreamEvent *StreamEventMessage
     RateLimit   *RateLimitMessage
+    ConvReset   *ConversationResetMessage
 }
 ```
 
@@ -320,6 +321,7 @@ case msg.System != nil:    // ...
 case msg.Result != nil:    // terminal message
 case msg.StreamEvent != nil: // partial stream (only with IncludePartialMessages)
 case msg.RateLimit != nil: // rate limit notification
+case msg.ConvReset != nil: // conversation replaced mid-session
 }
 ```
 
@@ -333,8 +335,33 @@ type UserMessage struct {
     UUID            *string
     Content         []ContentBlock
     ParentToolUseID *string
+    ToolUseResult   json.RawMessage // structured tool result; nil on ordinary turns
+    Origin          json.RawMessage // provenance; nil when the CLI did not attribute it
 }
 ```
+
+`Origin` tells an injected turn (task notification, channel or peer message) from a human one.
+Its `kind` field is the discriminator, and the CLI adds new kinds over time — treat anything
+unrecognised as "not human".
+
+---
+
+### `ConversationResetMessage`
+
+```go
+type ConversationResetMessage struct {
+    NewConversationID string
+    UUID              string
+    SessionID         string // the outgoing session that was reset
+}
+```
+
+Emitted when the conversation is replaced without ending the connection — after `/clear`, for
+instance. The reset also zeroes the running totals on subsequent `ResultMessage`s, so code
+accumulating `TotalCostUSD` across a long-lived session must snapshot its tally here.
+
+`NewConversationID` is not the `SessionID` of subsequent messages; read that from the next
+message.
 
 ---
 
@@ -386,8 +413,25 @@ type ResultMessage struct {
     TotalCostUSD *float64  // nil if cost data not available
     StopReason   *string
     Usage        json.RawMessage
+
+    DurationAPIMS     int64           // time in API calls, a subset of DurationMS
+    TerminalReason    *string         // why the loop ended; nil on older CLIs
+    APIErrorStatus    *int            // HTTP status of the failing call, when IsError
+    StructuredOutput  json.RawMessage
+    ModelUsage        json.RawMessage // per-model usage, keyed by model name
+    PermissionDenials json.RawMessage // tool calls denied during the turn
+    Errors            []string
+    Origin            json.RawMessage // provenance of the triggering user message
 }
 ```
+
+`TerminalReason` is the only way to tell an interrupted turn from a completed one:
+`"aborted_streaming"` and `"aborted_tools"` mean the turn was cancelled (via `Client.Interrupt`
+or an `interrupt` control request); `"completed"` and `"max_turns"` mean it ran to an end. It is
+nil on CLI versions predating the field and on results that bypass the query loop, such as a
+local slash command.
+
+`APIErrorStatus` carries no message content and is safe to log.
 
 ---
 
@@ -422,14 +466,36 @@ type RateLimitMessage struct {
 
 ```go
 type ContentBlock struct {
-    Text       *TextBlock
-    Thinking   *ThinkingBlock
-    ToolUse    *ToolUseBlock
-    ToolResult *ToolResultBlock
+    Text             *TextBlock
+    Thinking         *ThinkingBlock
+    ToolUse          *ToolUseBlock
+    ToolResult       *ToolResultBlock
+    ServerToolUse    *ServerToolUseBlock
+    ServerToolResult *ServerToolResultBlock
 }
 ```
 
 Exactly one field is non-nil.
+
+### `ServerToolUseBlock` / `ServerToolResultBlock`
+
+Tools the API runs server-side on the model's behalf (`web_search`, `web_fetch`, ...). They
+appear alongside `ToolUse` blocks in the content stream, but you never return a result for them —
+the result arrives as a `ServerToolResult` block. Branch on `Name` to know which tool ran.
+
+```go
+type ServerToolUseBlock struct {
+    ID    string
+    Name  string          // "web_search", "web_fetch", ...
+    Input json.RawMessage
+}
+
+type ServerToolResultBlock struct {
+    ToolUseID string
+    Content   json.RawMessage // raw API payload; inspect its "type" to decode
+    IsError   bool
+}
+```
 
 ### `TextBlock`
 
