@@ -782,4 +782,4 @@ The following variables are always injected into the subprocess environment:
 | Variable | Value |
 |---|---|
 | `CLAUDE_CODE_ENTRYPOINT` | `sdk-go` |
-| `CLAUDE_AGENT_SDK_VERSION` | `0.1.0` |
+| `CLAUDE_AGENT_SDK_VERSION` | `0.2.0` |
