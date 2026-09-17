@@ -26,7 +26,7 @@ const (
 	shutdownGracePeriod = 5 * time.Second
 	versionCheckTimeout = 2 * time.Second
 
-	sdkVersion = "0.1.0"
+	sdkVersion = "0.2.0"
 )
 
 // Config holds the configuration for creating a subprocess Transport.
