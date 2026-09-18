@@ -15,14 +15,19 @@ and backports them to this Go SDK.
 
 ## Context
 
-- The file `.claude-agent-sdk-python-sha` at the repo root stores the last Python SDK
-  commit SHA that was backported.
+- **[UPSTREAM.md](../../../UPSTREAM.md) at the repo root is the single source of truth** for the
+  last Python SDK commit that was backported — the `claude-agent-sdk-python` pin in its fenced
+  ` ```yaml ` block. It replaced a `.claude-agent-sdk-python-sha` dotfile, which nothing but this
+  skill ever read: the pin went six months and 446 commits stale without anyone noticing, because
+  a version a reader cannot see is a version nobody checks.
 - The upstream Python SDK lives at https://github.com/anthropics/claude-agent-sdk-python.git
 - This Go SDK mirrors the Python SDK's architecture and protocol semantics.
+- To see the current gap without cloning anything:
+  `/Users/taumatix/bootstrap/bin/check-upstream-drift.py <checkout>`
 
 ## Behavioral Flow
 
-1. **Read current SHA**: Read `.claude-agent-sdk-python-sha` to get the last synced commit.
+1. **Read current SHA**: Read the `sha:` of the `claude-agent-sdk-python` pin in `UPSTREAM.md`.
 
 2. **Fetch upstream changes**: Clone or fetch the Python SDK into a temp directory
    (`/tmp/claude-agent-sdk-python`), then run:
@@ -49,10 +54,12 @@ and backports them to this Go SDK.
    run `go test ./...` from the repo root. If tests fail, investigate and fix before
    proceeding. Only proceed to the next step once all tests pass.
 
-6. **Update SHA**: Write the new HEAD SHA of the Python SDK to
-   `.claude-agent-sdk-python-sha`. This must happen regardless of whether any
-   backport changes were made — if the SDKs are already in sync, update the SHA to
-   confirm the sync point was verified.
+6. **Update the pin**: Write the new HEAD SHA into the `claude-agent-sdk-python` pin in
+   `UPSTREAM.md` and bump its `checked:` date. This must happen regardless of whether any
+   backport changes were made — if the SDKs are already in sync, the pin still moves, because an
+   unrefreshed date cannot be told apart from an unchecked one. Update the README's upstream note
+   and the "where this stands today" section of `UPSTREAM.md` in the same commit, or the repo
+   goes back to advertising a staleness it no longer has.
 
 7. **Report**: Summarise what was changed, what was skipped (Python-only concerns
    such as type stubs, packaging, docs), and any manual follow-up required.
@@ -73,13 +80,14 @@ and backports them to this Go SDK.
 - **Bash**: git operations (fetch, diff, log) on the temp clone
 - **Read / Grep**: navigate Go source to find the right place for each change
 - **Edit**: apply targeted changes to existing Go files
-- **Write**: update `.claude-agent-sdk-python-sha` with the new HEAD SHA
+- **Edit**: move the `claude-agent-sdk-python` pin in `UPSTREAM.md` to the new HEAD SHA
 
 ## Boundaries
 
 **Will:**
 - Backport protocol, options, and client behaviour changes from Python → Go
-- Update `.claude-agent-sdk-python-sha` to the new HEAD after a successful backport
+- Move the `UPSTREAM.md` pin to the new HEAD after a successful backport, and bring the README's
+  upstream note with it
 - Report clearly what was backported and what was intentionally skipped
 
 **Will Not:**

@@ -4,6 +4,12 @@ A Go SDK for [Claude Code](https://claude.ai/code) that lets you run Claude as a
 
 The SDK wraps the `claude` CLI binary as a subprocess and communicates over newline-delimited JSON streams, exposing a clean Go API with Go 1.23 range iterators.
 
+> **Upstream: ported from `claude-agent-sdk-python` at [`566e41f`](https://github.com/anthropics/claude-agent-sdk-python/commit/566e41f7a59377885693082d0e8436d8964a0491) (2026-03-30), which is 446 commits behind upstream as of 2026-09-19.**
+> Nothing here is known to be broken, but the feature surface is the Python SDK as it stood in
+> March 2026 — a test cannot fail for a feature that was never ported. See
+> [UPSTREAM.md](UPSTREAM.md) for what that means for you, and [ROADMAP.md](ROADMAP.md) for how
+> the gap is being closed.
+
 ## Requirements
 
 - Go 1.23+
