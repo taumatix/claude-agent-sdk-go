@@ -8,8 +8,8 @@ The SDK wraps the `claude` CLI binary as a subprocess and communicates over newl
 > The feature surface is the Python SDK as it stood in March 2026 — a test cannot fail for a
 > feature that was never ported. Version 0.2.0 also shipped a real bug the green suite could not
 > see: every server-side tool result was discarded, because the SDK matched a wire type the CLI
-> does not send. That is fixed on `main` and unreleased. See [UPSTREAM.md](UPSTREAM.md) for what
-> the gap means for you, and [ROADMAP.md](ROADMAP.md) for how it is being closed.
+> does not send. **Fixed in v0.3.0 — upgrade if you are on 0.2.0.** See [UPSTREAM.md](UPSTREAM.md)
+> for what the gap means for you, and [ROADMAP.md](ROADMAP.md) for how it is being closed.
 
 ## Requirements
 

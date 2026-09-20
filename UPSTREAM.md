@@ -36,7 +36,7 @@ would advertise a currency this port does not have.
 **Something here *was* broken, and the green suite said otherwise.** The SDK matched a content
 block type, `server_tool_result`, that no CLI has ever emitted; every server-side tool result was
 being dropped and replaced with an empty text block. It shipped in 0.2.0 as a *fix* for that very
-problem. The test covering it asserted the invented name on both sides, so it passed for as long
+problem, and is actually fixed in 0.3.0. The test covering it asserted the invented name on both sides, so it passed for as long
 as the parser was consistently wrong. Green tests prove what was ported still agrees with itself —
 not that it agrees with the CLI, and not that it is all of what upstream now offers.
 
