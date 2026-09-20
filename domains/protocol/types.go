@@ -52,13 +52,51 @@ type InboundRoleMessage struct {
 type ContentBlockType string
 
 const (
-	ContentTypeText             ContentBlockType = "text"
-	ContentTypeThinking         ContentBlockType = "thinking"
-	ContentTypeToolUse          ContentBlockType = "tool_use"
-	ContentTypeToolResult       ContentBlockType = "tool_result"
-	ContentTypeServerToolUse    ContentBlockType = "server_tool_use"
+	ContentTypeText          ContentBlockType = "text"
+	ContentTypeThinking      ContentBlockType = "thinking"
+	ContentTypeToolUse       ContentBlockType = "tool_use"
+	ContentTypeToolResult    ContentBlockType = "tool_result"
+	ContentTypeServerToolUse ContentBlockType = "server_tool_use"
+
+	// ContentTypeServerToolResult is not a type the CLI puts on the wire. A
+	// server-side tool result is named after the tool that produced it — see
+	// the constants below — so this never matched an incoming block.
+	//
+	// Deprecated: kept so existing code compiles. Use IsServerToolResult.
 	ContentTypeServerToolResult ContentBlockType = "server_tool_result"
 )
+
+// Server-side tool result block types. The API returns one block per server
+// tool, each named after the tool that ran, so there is no umbrella type to
+// match on. This list is the content-block switch in the `claude` binary
+// (2.1.220), which enumerates every model-internal block it recognises.
+const (
+	ContentTypeWebSearchToolResult               ContentBlockType = "web_search_tool_result"
+	ContentTypeWebFetchToolResult                ContentBlockType = "web_fetch_tool_result"
+	ContentTypeAdvisorToolResult                 ContentBlockType = "advisor_tool_result"
+	ContentTypeCodeExecutionToolResult           ContentBlockType = "code_execution_tool_result"
+	ContentTypeBashCodeExecutionToolResult       ContentBlockType = "bash_code_execution_tool_result"
+	ContentTypeTextEditorCodeExecutionToolResult ContentBlockType = "text_editor_code_execution_tool_result"
+	ContentTypeToolSearchToolResult              ContentBlockType = "tool_search_tool_result"
+)
+
+var serverToolResultTypes = map[ContentBlockType]struct{}{
+	ContentTypeWebSearchToolResult:               {},
+	ContentTypeWebFetchToolResult:                {},
+	ContentTypeAdvisorToolResult:                 {},
+	ContentTypeCodeExecutionToolResult:           {},
+	ContentTypeBashCodeExecutionToolResult:       {},
+	ContentTypeTextEditorCodeExecutionToolResult: {},
+	ContentTypeToolSearchToolResult:              {},
+}
+
+// IsServerToolResult reports whether t names a server-side tool result block.
+// A server tool the CLI adds later will not be recognised here and arrives as
+// an unknown block with its payload intact, rather than being discarded.
+func IsServerToolResult(t ContentBlockType) bool {
+	_, ok := serverToolResultTypes[t]
+	return ok
+}
 
 // ContentBlock is a single block within a message's content array.
 type ContentBlock struct {

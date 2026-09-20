@@ -132,6 +132,22 @@ type ContentBlock struct {
 	ToolResult       *ToolResultBlock
 	ServerToolUse    *ServerToolUseBlock
 	ServerToolResult *ServerToolResultBlock
+	Unknown          *UnknownBlock
+}
+
+// UnknownBlock is a content block this SDK version does not model — a block
+// type the CLI added after this release, or one it emits that no SDK decodes
+// (mcp_tool_use, container_upload, redacted_thinking, compaction, ...).
+//
+// It exists so a block the SDK cannot name is still visible: Raw is the block
+// exactly as it arrived, so a caller can decode it without waiting for an SDK
+// release. Earlier versions turned every such block into an empty TextBlock,
+// which both lost the payload and invented text the model never wrote.
+type UnknownBlock struct {
+	// Type is the block's wire "type" field. Empty if the block carried none.
+	Type protocol.ContentBlockType
+	// Raw is the complete block as received, including fields above.
+	Raw json.RawMessage
 }
 
 // ServerToolUseBlock is a tool the API executed server-side on the model's
@@ -150,7 +166,17 @@ type ServerToolUseBlock struct {
 type ServerToolResultBlock struct {
 	ToolUseID string
 	Content   json.RawMessage
-	IsError   bool
+	// IsError reflects the block's own "is_error" field, which server tool
+	// results generally omit. A failed server tool reports the failure inside
+	// Content instead, as a type ending in "_tool_result_error" carrying an
+	// "error_code" — so do not read IsError == false as "the tool succeeded".
+	IsError bool
+	// Type is the wire block type: "web_search_tool_result",
+	// "advisor_tool_result", and so on. There is no single "server_tool_result"
+	// on the wire, so this is what says which server tool produced the block
+	// and therefore how Content is shaped. Pair it with the matching
+	// ServerToolUseBlock via ToolUseID.
+	Type protocol.ContentBlockType
 }
 
 // TextBlock holds plain text content.
