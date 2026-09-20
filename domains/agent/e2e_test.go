@@ -27,12 +27,13 @@ import (
 var fakeCLIPath string
 
 func TestMain(m *testing.M) {
+	// No defer anywhere in here: every exit from TestMain goes through os.Exit,
+	// which does not run deferred calls.
 	dir, err := os.MkdirTemp("", "claude-agent-sdk-go-e2e")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "e2e: temp dir:", err)
 		os.Exit(1)
 	}
-	defer os.RemoveAll(dir)
 
 	fakeCLIPath = filepath.Join(dir, "fakecli")
 	if runtime.GOOS == "windows" {
