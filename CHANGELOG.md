@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Server-side tool results were being discarded.** The SDK matched
+  `server_tool_result` as the wire type. Nothing emits that name — the API names each result after
+  the tool that ran, and the content-block switch in the `claude` binary (2.1.220) lists
+  `web_search_tool_result`, `web_fetch_tool_result`, `advisor_tool_result`,
+  `code_execution_tool_result`, `bash_code_execution_tool_result`,
+  `text_editor_code_execution_tool_result` and `tool_search_tool_result`. The 0.2.0 entry below
+  claims these blocks were fixed; they were not. Every one of them hit the unknown-block branch,
+  which returned an **empty `TextBlock`** — so the payload was lost *and* the caller was handed
+  text the model never wrote. An assistant turn whose only content was a web search result arrived
+  looking like the model had answered with nothing.
+- **`Client.Disconnect()` blocked until the caller's context expired** — forever on a
+  `context.Background()`. It waited for the read loop before closing the transport, but the read is
+  a blocking pipe read no context can interrupt, and the CLI holds stdout open while its stdin is
+  open. Measured at 119.9s against a 120s context; now returns in milliseconds.
+
+### Added
+
+- `messages.ContentBlock.Unknown` (`messages.UnknownBlock`), carrying `Type` and the raw JSON of
+  any block this SDK does not model — including one the CLI adds after this release. Previously
+  such blocks became empty `TextBlock`s.
+- `messages.ServerToolResultBlock.Type`, saying which server tool produced the block. `Content`'s
+  shape differs per tool, so without it the block could not be decoded.
+- `protocol.IsServerToolResult` and one `protocol.ContentType*` constant per server tool result
+  type. `protocol.ContentTypeServerToolResult` is **deprecated** — it never matched a real message
+  — but still decodes, so code built on it keeps working.
+
+**Behaviour change, not an API break.** The public API is additive and `apidiff` reports no
+incompatible change. But a caller that today receives an empty `TextBlock` for an unmodelled block
+will receive `Unknown` instead. Nothing could usefully depend on the old value: it was
+indistinguishable from real empty text.
+
 ## [0.2.0] - 2026-09-17
 
 ### Added

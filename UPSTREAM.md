@@ -9,31 +9,40 @@ how current it is before depending on it.
   kind: github-commit
   repo: anthropics/claude-agent-sdk-python
   sha: 566e41f7a59377885693082d0e8436d8964a0491
-  checked: 2026-09-19
+  checked: 2026-09-20
   note: the Python SDK this library is ported from; the port mirrors its public surface
 
 - name: claude-code-cli
   kind: npm
   package: "@anthropic-ai/claude-code"
   version: unpinned
-  checked: 2026-09-19
-  note: spawned as a subprocess by domains/transport/subprocess; no version floor is enforced yet
+  checked: 2026-09-20
+  note: >-
+    spawned as a subprocess by domains/transport/subprocess; no version floor is
+    enforced yet. The content-block vocabulary in domains/protocol was read out
+    of the 2.1.220 binary on 2026-09-20.
 ```
 
 ## Where this stands today — read this before depending on the port
 
 **The Python SDK pin is six months stale.** It was set on 2026-03-30 when the port was written
-and never moved. Upstream is **446 commits ahead** of it and released `v0.2.156` on 2026-09-18.
+and never moved. Upstream is **447 commits ahead** of it and released `v0.2.156` on 2026-09-18.
 
-Nothing here is known to be broken — the test suite is green and the CLI protocol this library
-speaks has been stable — but **green tests prove only that what was ported still works, not that
-it is all of what upstream now offers.** Anything added to `claude-agent-sdk-python` since March
-2026 is missing here, and no test can fail for a feature that was never written. Treat the
-feature surface as "the Python SDK as of 2026-03-30" until this pin moves.
+The pin has not moved, and it should not: on 2026-09-20 the first slice of the catch-up shipped —
+the content-block vocabulary in `domains/protocol`, verified against the `claude` 2.1.220 binary
+and covered end to end. That is one slice of one area, not the 447 commits, so moving the pin
+would advertise a currency this port does not have.
 
-Closing that gap is tracked in [ROADMAP.md](ROADMAP.md), split into reviewable pieces. A single
-446-commit catch-up is exactly the change nobody dares to review, so it is being taken in order
-of what actually limits users.
+**Something here *was* broken, and the green suite said otherwise.** The SDK matched a content
+block type, `server_tool_result`, that no CLI has ever emitted; every server-side tool result was
+being dropped and replaced with an empty text block. It shipped in 0.2.0 as a *fix* for that very
+problem. The test covering it asserted the invented name on both sides, so it passed for as long
+as the parser was consistently wrong. Green tests prove what was ported still agrees with itself —
+not that it agrees with the CLI, and not that it is all of what upstream now offers.
+
+Treat the feature surface as "the Python SDK as of 2026-03-30, plus the content-block fix of
+2026-09-20". Closing the rest is tracked in [ROADMAP.md](ROADMAP.md), split into slices ordered
+live-breaks-first.
 
 **The CLI version floor is undeclared.** This library spawns `@anthropic-ai/claude-code` and
 speaks its stdio protocol. It does not check the CLI's version, so an old CLI fails at runtime
