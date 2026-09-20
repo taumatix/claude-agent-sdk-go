@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-20
+
 ### Fixed
 
 - **Server-side tool results were being discarded.** The SDK matched
@@ -88,6 +90,7 @@ shapes grow with the CLI, and a raw field stays forward-compatible where a struc
 
 - CI now gates every pull request on build, `go test -race` (Go 1.23 and stable), `gofmt`, `go vet`, `staticcheck`, and an `apidiff` check that fails on incompatible public API changes.
 
-[Unreleased]: https://github.com/taumatix/claude-agent-sdk-go/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/taumatix/claude-agent-sdk-go/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.3.0
 [0.2.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.2.0
 [0.1.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.1.0
