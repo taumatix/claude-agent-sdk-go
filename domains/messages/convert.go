@@ -201,6 +201,7 @@ func contentBlockFromWire(b *protocol.ContentBlock, raw json.RawMessage) (Conten
 
 	// Retained for callers built against the name this SDK used to expect. The
 	// CLI never emits it; the real names are handled in the default branch.
+	//lint:ignore SA1019 deprecating the constant is the point; it must still decode.
 	case protocol.ContentTypeServerToolResult:
 		return ContentBlock{ServerToolResult: serverToolResultFromWire(b)}, nil
 
