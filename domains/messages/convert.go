@@ -148,15 +148,21 @@ func contentBlocksFromRaw(raw json.RawMessage) ([]ContentBlock, error) {
 		return []ContentBlock{{Text: &TextBlock{Text: s}}}, nil
 	}
 
-	// Try as array of protocol ContentBlocks
-	var wireBlocks []protocol.ContentBlock
-	if err := json.Unmarshal(raw, &wireBlocks); err != nil {
+	// Try as an array of blocks. Each element is kept in its raw form as well as
+	// decoded, so a block type this SDK does not model can still be handed to
+	// the caller intact.
+	var rawBlocks []json.RawMessage
+	if err := json.Unmarshal(raw, &rawBlocks); err != nil {
 		return nil, fmt.Errorf("parse content blocks: %w", err)
 	}
 
-	blocks := make([]ContentBlock, 0, len(wireBlocks))
-	for i := range wireBlocks {
-		b, err := contentBlockFromWire(&wireBlocks[i])
+	blocks := make([]ContentBlock, 0, len(rawBlocks))
+	for i, rawBlock := range rawBlocks {
+		var wireBlock protocol.ContentBlock
+		if err := json.Unmarshal(rawBlock, &wireBlock); err != nil {
+			return nil, fmt.Errorf("content block %d: %w", i, err)
+		}
+		b, err := contentBlockFromWire(&wireBlock, rawBlock)
 		if err != nil {
 			return nil, fmt.Errorf("content block %d: %w", i, err)
 		}
@@ -165,8 +171,10 @@ func contentBlocksFromRaw(raw json.RawMessage) ([]ContentBlock, error) {
 	return blocks, nil
 }
 
-// contentBlockFromWire converts a single protocol ContentBlock to a messages ContentBlock.
-func contentBlockFromWire(b *protocol.ContentBlock) (ContentBlock, error) {
+// contentBlockFromWire converts a single protocol ContentBlock to a messages
+// ContentBlock. raw is the same block as it arrived, retained for block types
+// this SDK does not model.
+func contentBlockFromWire(b *protocol.ContentBlock, raw json.RawMessage) (ContentBlock, error) {
 	switch b.Type {
 	case protocol.ContentTypeText:
 		return ContentBlock{Text: &TextBlock{Text: b.Text}}, nil
@@ -191,16 +199,11 @@ func contentBlockFromWire(b *protocol.ContentBlock) (ContentBlock, error) {
 			Input: b.Input,
 		}}, nil
 
+	// Retained for callers built against the name this SDK used to expect. The
+	// CLI never emits it; the real names are handled in the default branch.
+	//lint:ignore SA1019 deprecating the constant is the point; it must still decode.
 	case protocol.ContentTypeServerToolResult:
-		isError := false
-		if b.IsError != nil {
-			isError = *b.IsError
-		}
-		return ContentBlock{ServerToolResult: &ServerToolResultBlock{
-			ToolUseID: b.ToolUseID,
-			Content:   b.Content,
-			IsError:   isError,
-		}}, nil
+		return ContentBlock{ServerToolResult: serverToolResultFromWire(b)}, nil
 
 	case protocol.ContentTypeToolResult:
 		isError := false
@@ -224,7 +227,27 @@ func contentBlockFromWire(b *protocol.ContentBlock) (ContentBlock, error) {
 		}}, nil
 
 	default:
-		// Unknown block type — return empty text block for forward compat
-		return ContentBlock{Text: &TextBlock{Text: ""}}, nil
+		if protocol.IsServerToolResult(b.Type) {
+			return ContentBlock{ServerToolResult: serverToolResultFromWire(b)}, nil
+		}
+		// A block type this SDK does not model. Hand it over whole rather than
+		// dropping it: the caller can decode what we cannot name.
+		return ContentBlock{Unknown: &UnknownBlock{
+			Type: b.Type,
+			Raw:  append(json.RawMessage(nil), raw...),
+		}}, nil
+	}
+}
+
+func serverToolResultFromWire(b *protocol.ContentBlock) *ServerToolResultBlock {
+	isError := false
+	if b.IsError != nil {
+		isError = *b.IsError
+	}
+	return &ServerToolResultBlock{
+		ToolUseID: b.ToolUseID,
+		Content:   b.Content,
+		IsError:   isError,
+		Type:      b.Type,
 	}
 }

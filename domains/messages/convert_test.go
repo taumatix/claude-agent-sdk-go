@@ -160,18 +160,123 @@ func TestFromWire_AssistantWithServerToolUse(t *testing.T) {
 	assert.JSONEq(t, `{"query":"go generics"}`, string(block.ServerToolUse.Input))
 }
 
-func TestFromWire_AssistantWithServerToolResult(t *testing.T) {
+// testServerToolResultBlock drives one server-side tool result block through
+// the parser. The block type names come from the content-block switch in the
+// `claude` binary (2.1.220) — `web_search_tool_result`, `advisor_tool_result`
+// and the rest. There is no `server_tool_result` on the wire: this SDK matched
+// that invented name until 2026-09-20, so every one of these blocks fell to the
+// unknown branch and surfaced as an empty TextBlock.
+func testServerToolResultBlock(t *testing.T, blockType, content string) {
+	t.Helper()
 	w := wireMsg(t, `{"type":"assistant","session_id":"s1","message":{"role":"assistant","content":[`+
-		`{"type":"server_tool_result","tool_use_id":"stu1","content":{"type":"web_search_result","results":[]}}]},"model":"claude-3"}`)
+		`{"type":"`+blockType+`","tool_use_id":"stu1","content":`+content+`}]},"model":"claude-3"}`)
+	msg, err := messages.FromWire(w)
+	require.NoError(t, err)
+	require.NotNil(t, msg.Assistant)
+	require.Len(t, msg.Assistant.Content, 1)
+	block := msg.Assistant.Content[0]
+	assert.Nil(t, block.Text, "a server tool result must not surface as text")
+	assert.Nil(t, block.Unknown, "a known server tool result must not surface as unknown")
+	require.NotNil(t, block.ServerToolResult)
+	assert.Equal(t, "stu1", block.ServerToolResult.ToolUseID)
+	assert.Equal(t, protocol.ContentBlockType(blockType), block.ServerToolResult.Type)
+	assert.JSONEq(t, content, string(block.ServerToolResult.Content))
+}
+
+func TestFromWire_AssistantWithServerToolResult(t *testing.T) {
+	testServerToolResultBlock(t, "web_search_tool_result", `[{"type":"web_search_result","title":"Go"}]`)
+	testServerToolResultBlock(t, "web_fetch_tool_result", `{"type":"web_fetch_result","url":"https://go.dev"}`)
+	testServerToolResultBlock(t, "advisor_tool_result", `{"type":"advisor_result","advice":"ship it"}`)
+	testServerToolResultBlock(t, "code_execution_tool_result", `{"type":"code_execution_result","stdout":"1"}`)
+	testServerToolResultBlock(t, "bash_code_execution_tool_result", `{"type":"bash_code_execution_result"}`)
+	testServerToolResultBlock(t, "text_editor_code_execution_tool_result", `{"type":"text_editor_code_execution_result"}`)
+	testServerToolResultBlock(t, "tool_search_tool_result", `{"type":"tool_search_result","tools":[]}`)
+}
+
+// A server tool that failed says so inside its content, not via is_error.
+func TestFromWire_ServerToolResultErrorLivesInContent(t *testing.T) {
+	w := wireMsg(t, `{"type":"assistant","session_id":"s1","message":{"role":"assistant","content":[`+
+		`{"type":"advisor_tool_result","tool_use_id":"stu1",`+
+		`"content":{"type":"advisor_tool_result_error","error_code":"unavailable"}}]},"model":"claude-3"}`)
 	msg, err := messages.FromWire(w)
 	require.NoError(t, err)
 	require.NotNil(t, msg.Assistant)
 	require.Len(t, msg.Assistant.Content, 1)
 	block := msg.Assistant.Content[0]
 	require.NotNil(t, block.ServerToolResult)
-	assert.Equal(t, "stu1", block.ServerToolResult.ToolUseID)
-	assert.False(t, block.ServerToolResult.IsError)
-	assert.JSONEq(t, `{"type":"web_search_result","results":[]}`, string(block.ServerToolResult.Content))
+	assert.False(t, block.ServerToolResult.IsError, "the wire block carries no is_error field")
+	assert.JSONEq(t, `{"type":"advisor_tool_result_error","error_code":"unavailable"}`,
+		string(block.ServerToolResult.Content))
+}
+
+// The name this SDK used to expect still decodes, so a caller that built a
+// fixture on it keeps working.
+func TestFromWire_LegacyServerToolResultNameStillDecodes(t *testing.T) {
+	w := wireMsg(t, `{"type":"assistant","session_id":"s1","message":{"role":"assistant","content":[`+
+		`{"type":"server_tool_result","tool_use_id":"stu1","content":{"type":"web_search_result"}}]},"model":"claude-3"}`)
+	msg, err := messages.FromWire(w)
+	require.NoError(t, err)
+	require.NotNil(t, msg.Assistant)
+	require.Len(t, msg.Assistant.Content, 1)
+	require.NotNil(t, msg.Assistant.Content[0].ServerToolResult)
+	assert.Equal(t, "stu1", msg.Assistant.Content[0].ServerToolResult.ToolUseID)
+}
+
+// Blocks the CLI emits that no SDK models must arrive whole, not as empty text.
+func testUnknownContentBlock(t *testing.T, block string) {
+	t.Helper()
+	w := wireMsg(t, `{"type":"assistant","session_id":"s1","message":{"role":"assistant","content":[`+
+		block+`]},"model":"claude-3"}`)
+	msg, err := messages.FromWire(w)
+	require.NoError(t, err)
+	require.NotNil(t, msg.Assistant)
+	require.Len(t, msg.Assistant.Content, 1)
+	got := msg.Assistant.Content[0]
+	assert.Nil(t, got.Text, "an unmodelled block must not masquerade as text")
+	require.NotNil(t, got.Unknown)
+	assert.JSONEq(t, block, string(got.Unknown.Raw))
+}
+
+func TestFromWire_UnknownContentBlockKeepsItsPayload(t *testing.T) {
+	testUnknownContentBlock(t, `{"type":"mcp_tool_use","id":"m1","name":"search","server_name":"docs"}`)
+	testUnknownContentBlock(t, `{"type":"container_upload","file_id":"f1"}`)
+	testUnknownContentBlock(t, `{"type":"redacted_thinking","data":"encrypted"}`)
+	testUnknownContentBlock(t, `{"type":"compaction"}`)
+	testUnknownContentBlock(t, `{"type":"a_block_type_invented_after_this_release","payload":{"n":1}}`)
+}
+
+func TestFromWire_UnknownContentBlockCarriesItsType(t *testing.T) {
+	w := wireMsg(t, `{"type":"assistant","session_id":"s1","message":{"role":"assistant","content":[`+
+		`{"type":"mcp_tool_use","id":"m1"}]},"model":"claude-3"}`)
+	msg, err := messages.FromWire(w)
+	require.NoError(t, err)
+	require.Len(t, msg.Assistant.Content, 1)
+	require.NotNil(t, msg.Assistant.Content[0].Unknown)
+	assert.Equal(t, protocol.ContentBlockType("mcp_tool_use"), msg.Assistant.Content[0].Unknown.Type)
+}
+
+// An assistant turn whose only block is a server tool result used to arrive
+// looking like the model had said nothing.
+func TestFromWire_AssistantWithOnlyServerToolResultIsNotEmpty(t *testing.T) {
+	w := wireMsg(t, `{"type":"assistant","session_id":"s1","message":{"role":"assistant","content":[`+
+		`{"type":"server_tool_use","id":"stu1","name":"web_search","input":{"query":"go"}},`+
+		`{"type":"web_search_tool_result","tool_use_id":"stu1","content":[{"type":"web_search_result","title":"Go"}]}`+
+		`]},"model":"claude-3"}`)
+	msg, err := messages.FromWire(w)
+	require.NoError(t, err)
+	require.Len(t, msg.Assistant.Content, 2)
+
+	var text string
+	for _, b := range msg.Assistant.Content {
+		if b.Text != nil {
+			text += b.Text.Text
+		}
+	}
+	assert.Empty(t, text, "no text block should have been fabricated")
+	require.NotNil(t, msg.Assistant.Content[0].ServerToolUse)
+	require.NotNil(t, msg.Assistant.Content[1].ServerToolResult)
+	assert.Equal(t, msg.Assistant.Content[0].ServerToolUse.ID,
+		msg.Assistant.Content[1].ServerToolResult.ToolUseID)
 }
 
 func TestFromWire_UserWithToolUseResultAndOrigin(t *testing.T) {

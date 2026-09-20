@@ -472,6 +472,7 @@ type ContentBlock struct {
     ToolResult       *ToolResultBlock
     ServerToolUse    *ServerToolUseBlock
     ServerToolResult *ServerToolResultBlock
+    Unknown          *UnknownBlock
 }
 ```
 
@@ -494,6 +495,32 @@ type ServerToolResultBlock struct {
     ToolUseID string
     Content   json.RawMessage // raw API payload; inspect its "type" to decode
     IsError   bool
+    Type      protocol.ContentBlockType // which server tool produced it
+}
+```
+
+There is no single `server_tool_result` type on the wire: the API names each result after the
+tool that ran, so `Type` is what tells you how to decode `Content`. The names are
+`web_search_tool_result`, `web_fetch_tool_result`, `advisor_tool_result`,
+`code_execution_tool_result`, `bash_code_execution_tool_result`,
+`text_editor_code_execution_tool_result` and `tool_search_tool_result`, each available as a
+`protocol.ContentType*` constant, with `protocol.IsServerToolResult` as the predicate.
+
+A server tool that failed generally does **not** set `IsError`. It reports the failure inside
+`Content`, as a type ending in `_tool_result_error` carrying an `error_code` — so do not read
+`IsError == false` as "the tool succeeded".
+
+### `UnknownBlock`
+
+A content block this SDK version does not model: a type the CLI added after this release, or one
+no SDK decodes (`mcp_tool_use`, `mcp_tool_result`, `container_upload`, `redacted_thinking`,
+`compaction`). `Raw` is the block exactly as it arrived, so you can decode it yourself without
+waiting for an SDK release.
+
+```go
+type UnknownBlock struct {
+    Type protocol.ContentBlockType // the block's wire "type"; empty if it carried none
+    Raw  json.RawMessage           // the complete block as received
 }
 ```
 

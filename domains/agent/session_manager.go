@@ -155,11 +155,23 @@ func (sm *sessionManager) SetModel(ctx context.Context, model string) error {
 	return err
 }
 
-// Close cancels the context, waits for the read loop to finish, and closes the transport.
+// Close cancels the context, closes the transport, and waits for the read loop
+// to finish.
+//
+// The transport must be closed before the wait, not after. readLoop is parked
+// in a pipe read that no context cancellation can interrupt, and the CLI holds
+// its stdout open for as long as its stdin is open — so waiting first blocks
+// until the caller's context expires, or forever on context.Background().
+// Closing first shuts the CLI's stdin, which ends the read.
+//
+// Cancelling before closing is what keeps the resulting read error quiet:
+// readLoop reports a cancelled context as a clean shutdown rather than as a
+// ProcessError.
 func (sm *sessionManager) Close() error {
 	sm.cancel()
+	err := sm.transport.Close()
 	sm.wg.Wait()
-	return sm.transport.Close()
+	return err
 }
 
 func (sm *sessionManager) readLoop() {
