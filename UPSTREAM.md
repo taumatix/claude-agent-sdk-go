@@ -9,44 +9,52 @@ how current it is before depending on it.
   kind: github-commit
   repo: anthropics/claude-agent-sdk-python
   sha: 566e41f7a59377885693082d0e8436d8964a0491
-  checked: 2026-09-20
+  checked: 2026-09-21
   note: the Python SDK this library is ported from; the port mirrors its public surface
 
 - name: claude-code-cli
   kind: npm
   package: "@anthropic-ai/claude-code"
-  version: unpinned
-  checked: 2026-09-20
+  version: 2.1.267
+  checked: 2026-09-21
+  hold: >-
+    the CLI is spawned, not bundled, so the user's installed version is the one that
+    runs; the gap is measured, not an alarm. Floor is MinimumCLIVersion = 2.0.0
+    (warning only) and unmodelled blocks now degrade to messages.UnknownBlock.
   note: >-
-    spawned as a subprocess by domains/transport/subprocess; no version floor is
-    enforced yet. The content-block vocabulary in domains/protocol was read out
-    of the 2.1.220 binary on 2026-09-20.
+    spawned as a subprocess by domains/transport/subprocess. `version` is the
+    newest binary whose content-block vocabulary was diffed against
+    domains/protocol — 2.1.267 on 2026-09-21, agreeing on all seven server tool
+    result types and carrying no `server_tool_result`.
 ```
 
 ## Where this stands today — read this before depending on the port
 
 **The Python SDK pin is six months stale.** It was set on 2026-03-30 when the port was written
-and never moved. Upstream is **447 commits ahead** of it and released `v0.2.156` on 2026-09-18.
+and never moved. Upstream is **448 commits ahead** of it and released `v0.2.156` on 2026-09-18.
 
 The pin has not moved, and it should not: on 2026-09-20 the first slice of the catch-up shipped —
 the content-block vocabulary in `domains/protocol`, verified against the `claude` 2.1.220 binary
-and covered end to end. That is one slice of one area, not the 447 commits, so moving the pin
-would advertise a currency this port does not have.
+and covered end to end, released as `v0.3.0`. That is one slice of one area, not the 448 commits,
+so moving the pin would advertise a currency this port does not have.
 
 **Something here *was* broken, and the green suite said otherwise.** The SDK matched a content
 block type, `server_tool_result`, that no CLI has ever emitted; every server-side tool result was
-being dropped and replaced with an empty text block. It shipped in 0.2.0 as a *fix* for that very
-problem, and is actually fixed in 0.3.0. The test covering it asserted the invented name on both sides, so it passed for as long
-as the parser was consistently wrong. Green tests prove what was ported still agrees with itself —
-not that it agrees with the CLI, and not that it is all of what upstream now offers.
+being dropped and replaced with an empty text block. 0.2.0's changelog claims to have fixed that
+very problem; it did not, and 0.3.0 does. The test covering it asserted the invented name on both
+sides, so it passed for as long as the parser was consistently wrong. Green tests prove what was
+ported still agrees with itself — not that it agrees with the CLI, and not that it is all of what
+upstream now offers.
 
 Treat the feature surface as "the Python SDK as of 2026-03-30, plus the content-block fix of
-2026-09-20". Closing the rest is tracked in [ROADMAP.md](ROADMAP.md), split into slices ordered
-live-breaks-first.
+2026-09-20, released as `v0.3.0` on 2026-09-21". Closing the rest is tracked in
+[ROADMAP.md](ROADMAP.md), split into slices ordered live-breaks-first.
 
-**The CLI version floor is undeclared.** This library spawns `@anthropic-ai/claude-code` and
-speaks its stdio protocol. It does not check the CLI's version, so an old CLI fails at runtime
-with a protocol error rather than a clear message. Also on the roadmap.
+**The CLI version floor is soft.** This library spawns `@anthropic-ai/claude-code` and speaks its
+stdio protocol. It reads `claude -v` at construction and logs a warning below
+`subprocess.MinimumCLIVersion` (2.0.0), then carries on — so an old CLI still fails later with a
+protocol or JSON decode error that points at this library rather than at the real cause. Turning
+that warning into a refusal with a clear message is on the roadmap.
 
 ## How this file is kept honest
 

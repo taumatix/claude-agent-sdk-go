@@ -5,11 +5,11 @@ Each entry says what breaks today, so it can be judged on its own.
 
 ## Closing the gap to `claude-agent-sdk-python`
 
-The port is pinned to `566e41f` (2026-03-30); upstream is **447 commits ahead** and released
+The port is pinned to `566e41f` (2026-03-30); upstream is **448 commits ahead** and released
 `v0.2.156` on 2026-09-18. The test suite is green and stays green, because no test can fail for a
 feature that was never ported.
 
-A single 447-commit catch-up is the change nobody dares review, so this is taken in slices,
+A single 448-commit catch-up is the change nobody dares review, so this is taken in slices,
 each of which ships something usable on its own. The `UPSTREAM.md` pin moves only as far as a
 slice actually verifies — a pin that jumps to HEAD because the tests passed is the same lie in a
 newer commit.
@@ -86,6 +86,13 @@ shape changes between CLI releases, and a check that silently stops matching is 
 check, because it reports healthy while doing nothing. So it has to fail loudly when it can no
 longer find the vocabulary, not just when the vocabulary disagrees.
 
+A coarse version of this was run by hand on 2026-09-21 against the 2.1.267 binary:
+`strings | grep -oE '[a-z_]+_tool_result'` returned 14 names, agreeing with all seven the SDK
+models and carrying no `server_tool_result`. It also returned `tengu_advisor_tool_result`,
+`tengu_unexpected_tool_result` and `delivered_as_tool_result`, which are telemetry event names
+rather than wire types — **so a name-shaped grep over the whole bundle cannot tell a content block
+from an analytics event**, and the real check has to scope itself to the switch, not to the file.
+
 **Shape:** a script that extracts the block-type switch from the installed CLI, diffs it against
 the constants in `domains/protocol`, and reports three lists: emitted-but-unmatched,
 matched-but-never-emitted, and agreed. Run it in the maintenance pass. It must exit non-zero if
@@ -110,15 +117,18 @@ told to go silent.
 
 ## Declare and enforce the `claude` CLI version floor
 
-**Today:** the SDK spawns `@anthropic-ai/claude-code` (latest 2.1.277) and speaks its stdio
-protocol, with no version check. An old CLI fails at runtime with a protocol or JSON decode error
-that points at this library rather than at the real cause, and `UPSTREAM.md` has to record the
-floor as `unpinned` because there is nothing to record.
+**Today:** the SDK spawns `@anthropic-ai/claude-code` (latest 2.1.278) and speaks its stdio
+protocol. It *does* check the version — `checkVersion` has run `claude -v` since the original port
+and logs a warning below `MinimumCLIVersion` (2.0.0) — but the check is non-fatal and writes to
+`log.Printf`, so a library consumer with a structured logger never sees it. The run then continues
+and fails later with a protocol or JSON decode error that points at this library rather than at the
+real cause. Until 2026-09-21 both this entry and `UPSTREAM.md` claimed there was no check at all.
 
-**Shape:** run `claude --version` during the subprocess handshake, compare against a declared
-minimum, and fail with a message naming the CLI and the required version. The floor becomes a
-real pin in `UPSTREAM.md`. The end-to-end test needs a real CLI on PATH plus a stub that reports
-an old version.
+**Shape:** make the floor a refusal, not a warning — a typed error from `domains/errors` naming the
+CLI, the version found and the version required, returned from transport construction. That is a
+behaviour change for anyone running an ancient CLI *successfully*, so it needs an opt-out
+(`Config.SkipVersionCheck`) rather than a silent break. The end-to-end test needs a real CLI on
+PATH plus a stub that reports an old version.
 
 ## Surface parity checked by a test, not by a pass
 
