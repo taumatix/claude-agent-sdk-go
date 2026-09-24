@@ -5,11 +5,11 @@ Each entry says what breaks today, so it can be judged on its own.
 
 ## Closing the gap to `claude-agent-sdk-python`
 
-The port is pinned to `566e41f` (2026-03-30); upstream is **448 commits ahead** and released
-`v0.2.156` on 2026-09-18. The test suite is green and stays green, because no test can fail for a
+The port is pinned to `566e41f` (2026-03-30); upstream is **456 commits ahead** and released
+`v0.2.159` on 2026-09-23. The test suite is green and stays green, because no test can fail for a
 feature that was never ported.
 
-A single 448-commit catch-up is the change nobody dares review, so this is taken in slices,
+A single 456-commit catch-up is the change nobody dares review, so this is taken in slices,
 each of which ships something usable on its own. The `UPSTREAM.md` pin moves only as far as a
 slice actually verifies — a pin that jumps to HEAD because the tests passed is the same lie in a
 newer commit.

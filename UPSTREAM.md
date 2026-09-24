@@ -9,14 +9,14 @@ how current it is before depending on it.
   kind: github-commit
   repo: anthropics/claude-agent-sdk-python
   sha: 566e41f7a59377885693082d0e8436d8964a0491
-  checked: 2026-09-21
+  checked: 2026-09-24
   note: the Python SDK this library is ported from; the port mirrors its public surface
 
 - name: claude-code-cli
   kind: npm
   package: "@anthropic-ai/claude-code"
   version: 2.1.267
-  checked: 2026-09-21
+  checked: 2026-09-24
   hold: >-
     the CLI is spawned, not bundled, so the user's installed version is the one that
     runs; the gap is measured, not an alarm. Floor is MinimumCLIVersion = 2.0.0
@@ -31,11 +31,13 @@ how current it is before depending on it.
 ## Where this stands today — read this before depending on the port
 
 **The Python SDK pin is six months stale.** It was set on 2026-03-30 when the port was written
-and never moved. Upstream is **448 commits ahead** of it and released `v0.2.156` on 2026-09-18.
+and never moved. Upstream is **456 commits ahead** of it and released `v0.2.159` on 2026-09-23.
+The gap has grown by 8 commits since 2026-09-21; it grows every week this port does not close a
+slice, which is the honest way to read this number.
 
 The pin has not moved, and it should not: on 2026-09-20 the first slice of the catch-up shipped —
 the content-block vocabulary in `domains/protocol`, verified against the `claude` 2.1.220 binary
-and covered end to end, released as `v0.3.0`. That is one slice of one area, not the 448 commits,
+and covered end to end, released as `v0.3.0`. That is one slice of one area, not the 456 commits,
 so moving the pin would advertise a currency this port does not have.
 
 **Something here *was* broken, and the green suite said otherwise.** The SDK matched a content
