@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`messages.SystemMessage.Data` has been empty since the port was written.** It is bound to a
+  `data` key that no `claude` release up to 2.1.267 emits — every `system` subtype puts its fields
+  at the top level. Upstream's Python `SystemMessage.data` is the *whole message dict*; the Go port
+  bound that name to a nested object that has never existed, so the payload of every system message
+  was unreachable. `Data` is now **deprecated** and keeps its binding (nothing silently changes
+  meaning); the new `Raw` field carries the complete message.
+
+### Added
+
+- `messages.SystemMessage.Raw`, the complete message as it arrived. This is how to read a subtype
+  or a field this SDK does not model without waiting for a release.
+- Typed task lifecycle messages: `messages.Message.TaskStarted`, `.TaskProgress`, `.TaskUpdated`
+  and `.TaskNotification`, decoded from the matching `system` subtype. A caller tracking a subagent
+  no longer hand-decodes anything.
+- `messages.Message.HookEvent` for the `hook_started`, `hook_progress` and `hook_response`
+  subtypes, with `Phase` telling them apart. **`hook_progress` is a third phase upstream's Python
+  SDK does not model at all** — its parser routes only the other two, while the CLI emits progress
+  from an interval timer for the duration of a hook.
+- `messages.TaskStatus` with `IsTerminal()`, which spans both lifecycle vocabularies: a
+  `task_updated` patch reports the raw `killed` where a `task_notification` reports the mapped
+  `stopped`. A task's terminal state can arrive *only* as a `task_updated`, so a caller clearing
+  active-task state must accept it from either message.
+- `messages.HookPhase`, `messages.HookOutcome`, `messages.TaskPatch`, `messages.TaskUsage`, and the
+  `protocol.SystemSubtype` constants and payload structs behind them.
+
+Shapes were read from the zod schemas the `claude` 2.1.267 bundle carries per subtype, then
+confirmed against a live run on 2026-09-25 that spawned a subagent. The CLI models five fields on
+`task_started` that upstream Python does not (`subagent_type`, `is_backgrounded`, `spawn_depth`,
+`workflow_name`, `prompt`); all are included.
+
+**Additive, not a break.** A `system` subtype this SDK does not model still arrives as `System`
+alone, and a subtype it does model populates `System` *as well as* the typed field — so existing
+code that switches on `msg.System` is unaffected. A malformed lifecycle payload degrades to
+`System` rather than failing the stream; upstream raises `MessageParseError` there, which lets a
+progress notification kill a run.
+
 ## [0.3.0] - 2026-09-21
 
 ### Fixed

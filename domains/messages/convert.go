@@ -68,15 +68,25 @@ func fromWireAssistant(m *protocol.InboundRoleMessage) (*Message, error) {
 }
 
 func fromWireSystem(m *protocol.SystemMessage) (*Message, error) {
-	return &Message{
+	msg := &Message{
 		System: &SystemMessage{
 			SessionID: m.SessionID,
 			Subtype:   m.Subtype,
-			Data:      m.Data,
-			TaskID:    m.TaskID,
-			UUID:      m.UUID,
+			// Deprecating the field is the point; it must still be propagated,
+			// or a CLI that does start nesting a payload would silently drop it
+			// and existing code reading Data would change behaviour.
+			//lint:ignore SA1019 deliberate: the deprecated field is carried through, not dropped.
+			Data:   m.Data,
+			TaskID: m.TaskID,
+			UUID:   m.UUID,
+			Raw:    m.Raw,
 		},
-	}, nil
+	}
+	// Decodes the typed lifecycle payload alongside System, leaving it nil for
+	// a subtype this SDK does not model or a payload that will not decode. It
+	// returns no error on purpose: a lifecycle event must not fail the stream.
+	systemPayloadFromWire(msg, m)
+	return msg, nil
 }
 
 func fromWireResult(m *protocol.ResultMessage) (*Message, error) {

@@ -5,40 +5,97 @@ Each entry says what breaks today, so it can be judged on its own.
 
 ## Closing the gap to `claude-agent-sdk-python`
 
-The port is pinned to `566e41f` (2026-03-30); upstream is **456 commits ahead** and released
-`v0.2.159` on 2026-09-23. The test suite is green and stays green, because no test can fail for a
-feature that was never ported.
+The port is pinned to `566e41f` (2026-03-30); upstream is **459 commits ahead** as of 2026-09-25
+and released `v0.2.159` on 2026-09-23. The test suite is green and stays green, because no test
+can fail for a feature that was never ported.
 
-A single 456-commit catch-up is the change nobody dares review, so this is taken in slices,
+A single 459-commit catch-up is the change nobody dares review, so this is taken in slices,
 each of which ships something usable on its own. The `UPSTREAM.md` pin moves only as far as a
 slice actually verifies — a pin that jumps to HEAD because the tests passed is the same lie in a
 newer commit.
 
 The ordering principle is **live breaks before missing features**: a wire type the SDK gets wrong
 corrupts what a working user already receives, while a feature that was never ported merely stays
-absent. The first slice (content blocks) shipped on 2026-09-20 and found exactly that — a block
-type the SDK had invented, dropping every server-side tool result. Expect the same shape in the
-slices below: check what the CLI binary actually emits, not what the SDK expects.
+absent. Two slices have shipped and both found a live break rather than a missing feature:
 
-### 1. Typed lifecycle and hook-event messages
+- **Content blocks** (2026-09-20) — the SDK matched `server_tool_result`, a name no CLI emits, and
+  was dropping every server-side tool result.
+- **System lifecycle messages** (2026-09-25) — `SystemMessage.Data` was bound to a `data` key that
+  no CLI emits, so the payload of *every* system message was unreachable. The entry had this filed
+  as "the caller has to hand-decode `Data`"; there was nothing in `Data` to decode.
 
-**Today:** `task_started`, `task_progress`, `task_notification`, `task_updated`, `hook_started`
-and `hook_response` all arrive as a generic `SystemMessage` with a `Subtype` string and a
-`json.RawMessage`. Upstream types each of them. `task_updated` matters most: it is sometimes the
-*only* notice that a task reached a terminal state, so a caller tracking subagent tasks in Go has
-to hand-decode `Data` and know that `patch.status` is where terminal-ness lives.
+Both were found the same way and it is the instruction for every slice below: **check what the CLI
+binary actually emits, not what the SDK expects, and not what upstream's dataclasses say.** The
+binary is a usable reference — it ships zod schemas naming every field of every message it sends
+(see entry 2). Reading them also found `hook_progress`, a message upstream's Python SDK does not
+model at all.
 
-**Why it is not simply done:** the subtype set grows with the CLI, so typing them must not turn an
-unrecognised subtype into a dropped message — the same failure the content-block slice just fixed,
-one level up. The generic `SystemMessage` has to stay as the fallback, and `Message` gains fields
-rather than changing the existing one.
+### 1. The rest of the `system` subtype vocabulary
 
-**Shape:** `Message.TaskUpdated`, `Message.HookEvent` and friends, populated from the `system`
-subtypes; every unrecognised subtype keeps arriving as `System`. End to end against the stub CLI
-with a recorded `task_updated` patch, and against a real `claude` run that spawns a subagent —
-that one is provokable, unlike a server-side tool call.
+**Today:** the task and hook subtypes are typed (shipped 2026-09-25). The CLI's schema bundle
+declares many more that still arrive as a generic `System`, and two of them have a caller waiting:
+`background_tasks_changed` is a *level* signal listing every live background task, and its own
+schema says consumers who only need "is background work running" should replace their set from it
+rather than pairing `task_started`/`task_notification` edges — which is exactly what the shipped
+slice makes a caller do, so a missed bookend can still wedge a stale indicator.
+`session_state_changed` (`idle`/`running`/`requires_action`) is described in the bundle as the
+"authoritative turn-over signal".
 
-### 2. `deferred_tool_use` on the result message
+Others seen or declared: `init`, `status`, `thinking_tokens`, `task_summary`, `post_turn_summary`,
+`compact_boundary`, `files_persisted`, `file_snapshot`, `mirror_error`, `code_change_published`,
+`vcs_state_changed`, `commands_changed`, `elicitation_complete`, `plugin_install`,
+`local_command_output`, `informational`, `feedback_draft_queued`, `worker_shutting_down`,
+`auth_status`, `turn_duration`, `dev_intent`.
+
+**Why it is not simply done:** that is 20+ subtypes and typing all of them in one change is the
+review nobody wants. Rank by whether a Go caller can act on it: `background_tasks_changed` and
+`session_state_changed` first, the `@internal`-marked ones probably never.
+
+**Shape:** one sub-entry per subtype worth typing, same pattern as the lifecycle slice — payload
+struct in `protocol`, public type in `messages`, `System` still populated, unmodelled subtypes
+still fall through. `mirror_error` is the odd one: upstream synthesises it in the SDK rather than
+receiving it from the CLI, so it only makes sense once session mirroring exists here (entry 5).
+
+### 2. Extract the system-subtype vocabulary from the CLI, mechanically
+
+**Today:** the `claude` bundle turns out to ship **zod schemas for every `system` subtype it
+emits**, naming each field and its optionality — `c({type:k("system"),subtype:k("task_updated"),
+task_id:s(),patch:c({status:X([...])...})})`. The lifecycle slice was built by reading them out
+of the binary by hand.
+
+This is a much better source than the entry below assumed, and it is worth saying why: a grep for
+block *names* cannot tell a wire type from a telemetry event, but a schema says what the fields
+are. It is also how the slice found that `hook_progress` exists and that **no system subtype has a
+`data` key** — the field the Go port had bound `SystemMessage.Data` to since March.
+
+**Why it is not simply done:** same brittleness as the content-block check below. The minifier's
+variable names change between releases, so the extractor has to key off the stable
+`type:k("system"),subtype:k("...")` shape and **fail loudly when it matches nothing**.
+
+**Shape:** merge with the content-block check below into one `bin/check-cli-vocabulary.py` that
+reports, for both content blocks and system subtypes: emitted-but-unmatched,
+matched-but-never-emitted, and field-level drift against the structs in `domains/protocol`. Run it
+in the maintenance pass. Falsify it against a deliberately wrong constant before trusting a clean
+run.
+
+### 3. Make the live end-to-end path runnable by something other than me
+
+**Today:** `domains/agent/live_e2e_test.go` drives the real `claude` binary and is the only test
+that can catch the SDK believing a wire shape the CLI does not send — the failure that hid a
+broken parser for six months. It is gated behind `CLAUDE_SDK_LIVE_E2E=1` because it needs
+credentials and spends money, so **CI never runs it** and it fires only when a maintenance or
+roadmap pass happens to run it by hand. A regression between passes is invisible.
+
+**Why it is not simply done:** it needs a credential CI does not have, and the repo has no secret
+set. The same gap is open on `anthropic-swift` (#5) and is a decision for my human, not for me.
+
+**Shape:** either a repository secret and a scheduled (not per-PR) workflow that runs the live
+tests and reports cost, or — cheaper and with no credential at all — record one real session's
+frames to a golden file, replay it through the transport in CI, and have the maintenance pass
+re-record and diff. The recording catches wire drift; it does not catch a CLI that stops speaking
+to us at all.
+
+### 4. `deferred_tool_use` on the result message
 
 **Today:** `ResultMessage` drops the `deferred_tool_use` field upstream added. A turn that ended
 with a tool call deferred to the caller looks, in Go, like a turn that ended with nothing pending.
@@ -47,7 +104,7 @@ with a tool call deferred to the caller looks, in Go, like a turn that ended wit
 is confirming against the CLI binary what actually populates it and when, rather than copying the
 Python dataclass and assuming.
 
-### 3. Options and CLI flags
+### 5. Options and CLI flags
 
 **Today:** `domains/agent/options.go` maps the flags as of March 2026. An option upstream added
 that this does not map is a feature a user cannot reach at all — `BuildCLIArgs` has no escape
@@ -57,7 +114,7 @@ hatch for an unmapped flag.
 from the pinned CLI. Two sources, because upstream's own list has been behind the CLI before. Add
 the missing flags, and consider a raw pass-through so the next gap is not a hard block.
 
-### 4. Client lifecycle and session semantics
+### 6. Client lifecycle and session semantics
 
 **Today:** upstream grew `session_resume`, `session_import`, `session_summary`,
 `transcript_mirror_batcher` and a `testing/session_store_conformance` harness — roughly 2,700 new

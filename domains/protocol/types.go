@@ -114,13 +114,26 @@ type ContentBlock struct {
 
 // SystemMessage carries metadata events from the CLI (task start, progress, etc.).
 type SystemMessage struct {
-	Type        MessageType     `json:"type"`
-	Subtype     string          `json:"subtype"`
+	Type    MessageType `json:"type"`
+	Subtype string      `json:"subtype"`
+	// Data is bound to a `data` key that no `claude` release up to 2.1.267
+	// emits: every system subtype puts its fields at the top level. It is kept
+	// so existing code compiles and in case a future CLI does nest a payload.
+	//
+	// Deprecated: read Raw, which always carries the whole message.
 	Data        json.RawMessage `json:"data,omitempty"`
 	TaskID      string          `json:"task_id,omitempty"`
 	Description string          `json:"description,omitempty"`
 	SessionID   string          `json:"session_id,omitempty"`
 	UUID        string          `json:"uuid,omitempty"`
+	// Raw is the complete message exactly as it arrived, so a subtype or field
+	// this SDK does not model is still reachable without an SDK release.
+	//
+	// It is set by ParseLine, and messages.FromWire needs it to decode the
+	// typed lifecycle messages: a SystemMessage assembled by hand with Raw
+	// empty converts to a Message whose TaskStarted, TaskUpdated and HookEvent
+	// fields are all nil.
+	Raw json.RawMessage `json:"-"`
 }
 
 // ResultMessage is the final message in a query session.
