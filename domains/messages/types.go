@@ -7,7 +7,17 @@ import (
 	"github.com/taumatix/claude-agent-sdk-go/domains/protocol"
 )
 
-// Message holds exactly one non-nil message field.
+// Message holds one message received from the CLI.
+//
+// Exactly one of the first-class fields (User, Assistant, System, Result,
+// StreamEvent, RateLimit, ConvReset) is non-nil.
+//
+// The lifecycle fields below are the exception, and deliberately so: a system
+// message this SDK decodes into a typed lifecycle message populates *both*
+// System and the matching typed field. Upstream's Python SDK gets the same
+// effect by making these dataclasses subclasses of SystemMessage, so existing
+// isinstance checks keep matching; Go has no subclassing, so both fields are
+// set instead. Code written against System therefore keeps working unchanged.
 type Message struct {
 	User        *UserMessage
 	Assistant   *AssistantMessage
@@ -16,6 +26,17 @@ type Message struct {
 	StreamEvent *StreamEventMessage
 	RateLimit   *RateLimitMessage
 	ConvReset   *ConversationResetMessage
+
+	// TaskStarted, TaskProgress, TaskUpdated and TaskNotification are set for
+	// the matching `system` subtype, in addition to System. A subtype this SDK
+	// does not model leaves all of them nil and arrives as System alone.
+	TaskStarted      *TaskStartedMessage
+	TaskProgress     *TaskProgressMessage
+	TaskUpdated      *TaskUpdatedMessage
+	TaskNotification *TaskNotificationMessage
+	// HookEvent is set for the hook_started, hook_progress and hook_response
+	// subtypes; read its Phase to tell them apart.
+	HookEvent *HookEventMessage
 }
 
 // UserMessage is a user-role message received from the CLI.
@@ -66,9 +87,17 @@ type AssistantMessage struct {
 type SystemMessage struct {
 	SessionID string
 	Subtype   string
-	Data      json.RawMessage
-	TaskID    string
-	UUID      string
+	// Data is bound to a `data` key that no `claude` release up to 2.1.267
+	// emits — every system subtype puts its fields at the top level — so it is
+	// nil in practice. Kept so existing code compiles.
+	//
+	// Deprecated: read Raw, which always carries the whole message.
+	Data   json.RawMessage
+	TaskID string
+	UUID   string
+	// Raw is the complete message exactly as it arrived. It is how to reach a
+	// subtype or a field this SDK does not model without waiting for a release.
+	Raw json.RawMessage
 }
 
 // ResultMessage is the final message in a session, carrying cost/usage metadata.

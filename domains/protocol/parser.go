@@ -66,6 +66,7 @@ func ParseLine(data []byte) (*WireMessage, error) {
 				Msg: "failed to decode system message", Line: data, OriginalError: err,
 			}
 		}
+		m.Raw = append(json.RawMessage(nil), data...)
 		msg.System = &m
 
 	case TypeResult:

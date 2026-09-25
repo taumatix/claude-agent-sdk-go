@@ -68,15 +68,21 @@ func fromWireAssistant(m *protocol.InboundRoleMessage) (*Message, error) {
 }
 
 func fromWireSystem(m *protocol.SystemMessage) (*Message, error) {
-	return &Message{
+	msg := &Message{
 		System: &SystemMessage{
 			SessionID: m.SessionID,
 			Subtype:   m.Subtype,
 			Data:      m.Data,
 			TaskID:    m.TaskID,
 			UUID:      m.UUID,
+			Raw:       m.Raw,
 		},
-	}, nil
+	}
+	// Decodes the typed lifecycle payload alongside System, leaving it nil for
+	// a subtype this SDK does not model or a payload that will not decode. It
+	// returns no error on purpose: a lifecycle event must not fail the stream.
+	systemPayloadFromWire(msg, m)
+	return msg, nil
 }
 
 func fromWireResult(m *protocol.ResultMessage) (*Message, error) {
