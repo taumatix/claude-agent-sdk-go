@@ -82,6 +82,48 @@ Read off the bundled schemas, not inferred:
 
 None. `encoding/json` and the existing `testify` assertions only.
 
+## What the review gate changed
+
+The first version of this passed its own mutation check — 7 mutations, 7 caught. The QA review ran
+16 and **11 survived**, which is the honest measure: the mutations I wrote were the ones I had
+already written tests for.
+
+What that bought, all of it now covered:
+
+- **Four of the five decode guards were unenforced.** `task_updated` had a malformed-payload test;
+  the other four subtypes did not, so their `if err != nil { return }` could be deleted with the
+  suite green. One malformed fixture per subtype now.
+- **`TaskPatch.TotalPausedMS` and `IsBackgrounded` were decoded but never decoded *from a
+  fixture*** — a wrong json tag on either was invisible. Same for `TaskProgress.Summary`,
+  `TaskStarted.WorkflowName`, and `Ambient`/`SkipTranscript` in the true direction (the existing
+  `assert.False` passed on Go's zero value whether or not the field was wired at all).
+- **The hook fixtures set `stdout` and `output` to the same string**, copied verbatim from the live
+  capture where they happen to be equal. Sourcing `Stdout` from `p.Output` survived. They now carry
+  three distinct values.
+- **`TestE2E_TaskCanBeTrackedToTerminalByStatusAlone` was vacuous.** It asserted the active-task map
+  was empty; with `task_started` decoding deleted the map was never filled, stayed empty, and the
+  test passed. The test encoding the entry's whole user story could not fail for its own reason. It
+  now asserts the tasks became active first, and the stub emits a second task so nothing passes by
+  treating one id as "the" task.
+- **`TaskNotification.Usage`'s documented nil-vs-present tri-state had no test**, so a regression to
+  an always-non-nil zero tally would have shipped silently.
+
+Three API changes came out of the same pass:
+
+- **`protocol.TaskUpdatedPayload.RawPatch` was an exported field that was always nil** — `json:"-"`
+  and never assigned. Two reviewers independently called it the `SystemMessage.Data` bug being
+  reintroduced one package over, and they were right. `Patch` is now `json.RawMessage` and the
+  patch is decoded from that slice, which removes the dead field and a redundant second scan of the
+  whole line at once.
+- **`TaskPatch.Status` duplicated `TaskUpdatedMessage.Status`** — two spellings of one datum,
+  encoding absence twice (`nil` vs `""`). Dropped from `TaskPatch`.
+- **The constants were renamed `SystemSubtype*`** to stop `SubtypeHookStarted` sitting next to the
+  unrelated `SubtypeHookCallback` (a control request) in the same package.
+
+The security review found the live test ran the real CLI under `PermissionModeBypass`, which does
+not confine the subprocess to its `WorkingDirectory` — a model-driven agent with unrestricted Bash
+on whoever's machine runs the test. Replaced with an allow-list; the test still passes.
+
 ## Trade-offs and risks
 
 - **Optionality is modelled unevenly, on purpose.** `*bool` where absence means "not applicable"

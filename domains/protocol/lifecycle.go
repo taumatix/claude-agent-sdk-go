@@ -10,15 +10,20 @@ import "encoding/json"
 // a typed message are named here.
 type SystemSubtype string
 
+// Named SystemSubtype* rather than Subtype* to keep them apart from the
+// ControlRequestSubtype constants in this package, which are a different
+// protocol: SubtypeHookCallback is a control request the CLI sends to invoke a
+// registered hook, while SystemSubtypeHookStarted is a notification that one
+// began running.
 const (
-	SubtypeTaskStarted      SystemSubtype = "task_started"
-	SubtypeTaskProgress     SystemSubtype = "task_progress"
-	SubtypeTaskUpdated      SystemSubtype = "task_updated"
-	SubtypeTaskNotification SystemSubtype = "task_notification"
+	SystemSubtypeTaskStarted      SystemSubtype = "task_started"
+	SystemSubtypeTaskProgress     SystemSubtype = "task_progress"
+	SystemSubtypeTaskUpdated      SystemSubtype = "task_updated"
+	SystemSubtypeTaskNotification SystemSubtype = "task_notification"
 
-	SubtypeHookStarted  SystemSubtype = "hook_started"
-	SubtypeHookProgress SystemSubtype = "hook_progress"
-	SubtypeHookResponse SystemSubtype = "hook_response"
+	SystemSubtypeHookStarted  SystemSubtype = "hook_started"
+	SystemSubtypeHookProgress SystemSubtype = "hook_progress"
+	SystemSubtypeHookResponse SystemSubtype = "hook_response"
 )
 
 // TaskUsage is the usage tally reported on task_progress and task_notification.
@@ -80,9 +85,11 @@ type TaskProgressPayload struct {
 // TaskUpdatedPayload is the `system`/`task_updated` frame: a wire-safe subset of
 // the CLI's task state carrying only the fields that changed.
 type TaskUpdatedPayload struct {
-	TaskID    string          `json:"task_id"`
-	Patch     TaskPatch       `json:"patch"`
-	RawPatch  json.RawMessage `json:"-"`
+	TaskID string `json:"task_id"`
+	// Patch is left raw so the whole line is not re-scanned to recover it, and
+	// so a field the CLI adds to the patch survives into the public
+	// TaskUpdatedMessage.RawPatch. Decode it into TaskPatch.
+	Patch     json.RawMessage `json:"patch"`
 	UUID      string          `json:"uuid,omitempty"`
 	SessionID string          `json:"session_id,omitempty"`
 }
@@ -90,12 +97,16 @@ type TaskUpdatedPayload struct {
 // TaskPatch holds the changed fields of a task's state. Every field is optional
 // by construction: a patch reports only what moved.
 type TaskPatch struct {
-	Status         *string `json:"status,omitempty"`
-	Description    *string `json:"description,omitempty"`
-	EndTime        *int64  `json:"end_time,omitempty"`
-	TotalPausedMS  *int64  `json:"total_paused_ms,omitempty"`
-	Error          *string `json:"error,omitempty"`
-	IsBackgrounded *bool   `json:"is_backgrounded,omitempty"`
+	Status      *string `json:"status,omitempty"`
+	Description *string `json:"description,omitempty"`
+	// EndTime is Unix epoch milliseconds, matching the CLI's Date.now().
+	EndTime *int64 `json:"end_time,omitempty"`
+	// TotalPausedMS is the cumulative time the task spent paused.
+	TotalPausedMS *int64  `json:"total_paused_ms,omitempty"`
+	Error         *string `json:"error,omitempty"`
+	// IsBackgrounded reports a task moving between foreground and background
+	// after it started; the initial value is on TaskStartedPayload.
+	IsBackgrounded *bool `json:"is_backgrounded,omitempty"`
 }
 
 // TaskNotificationPayload is the `system`/`task_notification` frame, emitted

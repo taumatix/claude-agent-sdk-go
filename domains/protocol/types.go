@@ -128,6 +128,11 @@ type SystemMessage struct {
 	UUID        string          `json:"uuid,omitempty"`
 	// Raw is the complete message exactly as it arrived, so a subtype or field
 	// this SDK does not model is still reachable without an SDK release.
+	//
+	// It is set by ParseLine, and messages.FromWire needs it to decode the
+	// typed lifecycle messages: a SystemMessage assembled by hand with Raw
+	// empty converts to a Message whose TaskStarted, TaskUpdated and HookEvent
+	// fields are all nil.
 	Raw json.RawMessage `json:"-"`
 }
 

@@ -95,8 +95,6 @@ func TestTaskUpdatedCarriesThePatchAndItsTerminalStatus(t *testing.T) {
 	assert.Equal(t, messages.TaskStatusCompleted, tu.Status)
 	assert.True(t, tu.Status.IsTerminal())
 
-	require.NotNil(t, tu.Patch.Status)
-	assert.Equal(t, messages.TaskStatusCompleted, *tu.Patch.Status)
 	require.NotNil(t, tu.Patch.EndTime)
 	assert.Equal(t, int64(1790295641558), *tu.Patch.EndTime)
 	assert.Nil(t, tu.Patch.Error)
@@ -165,7 +163,51 @@ func TestTaskUpdatedWithNoStatusInPatchIsNotTerminal(t *testing.T) {
 	require.NotNil(t, msg.TaskUpdated)
 	assert.Equal(t, messages.TaskStatus(""), msg.TaskUpdated.Status)
 	assert.False(t, msg.TaskUpdated.Status.IsTerminal())
-	assert.Nil(t, msg.TaskUpdated.Patch.Status)
+
+	// The patch still reports what it did carry.
+	require.NotNil(t, msg.TaskUpdated.Patch.Description)
+	assert.Equal(t, "still going", *msg.TaskUpdated.Patch.Description)
+	assert.Nil(t, msg.TaskUpdated.Patch.EndTime)
+}
+
+// Every field TaskPatch models needs a fixture that carries it, or a wrong json
+// tag is invisible: total_paused_ms and is_backgrounded were both decoded and
+// unobservable until this test existed. A background transition is the case
+// task_updated exists to report.
+func TestTaskUpdatedPatchDecodesEveryModelledField(t *testing.T) {
+	msg := convert(t, `{"type":"system","subtype":"task_updated","task_id":"t7","patch":{`+
+		`"status":"paused","description":"waiting on review","end_time":1790295641558,`+
+		`"total_paused_ms":500,"error":"none","is_backgrounded":true},`+
+		`"uuid":"u","session_id":"s"}`)
+
+	require.NotNil(t, msg.TaskUpdated)
+	p := msg.TaskUpdated.Patch
+
+	assert.Equal(t, messages.TaskStatusPaused, msg.TaskUpdated.Status)
+	assert.False(t, msg.TaskUpdated.Status.IsTerminal(), "paused is not terminal")
+
+	require.NotNil(t, p.Description)
+	assert.Equal(t, "waiting on review", *p.Description)
+	require.NotNil(t, p.EndTime)
+	assert.Equal(t, int64(1790295641558), *p.EndTime)
+	require.NotNil(t, p.TotalPausedMS)
+	assert.Equal(t, int64(500), *p.TotalPausedMS)
+	require.NotNil(t, p.Error)
+	assert.Equal(t, "none", *p.Error)
+	require.NotNil(t, p.IsBackgrounded)
+	assert.True(t, *p.IsBackgrounded)
+}
+
+// A patch whose only content is a field this SDK does not model still reaches
+// the caller through RawPatch.
+func TestTaskUpdatedRawPatchCarriesUnmodelledFields(t *testing.T) {
+	msg := convert(t, `{"type":"system","subtype":"task_updated","task_id":"t8",`+
+		`"patch":{"status":"running","some_future_field":{"n":1}},"uuid":"u","session_id":"s"}`)
+
+	require.NotNil(t, msg.TaskUpdated)
+	assert.Equal(t, messages.TaskStatusRunning, msg.TaskUpdated.Status)
+	assert.JSONEq(t, `{"status":"running","some_future_field":{"n":1}}`,
+		string(msg.TaskUpdated.RawPatch))
 }
 
 // Backward compatibility: code written against Message.System keeps working.
@@ -174,7 +216,7 @@ func TestTaskUpdatedWithNoStatusInPatchIsNotTerminal(t *testing.T) {
 func TestTypedLifecycleMessagesStillArriveAsSystem(t *testing.T) {
 	for _, line := range []string{liveTaskStarted, liveTaskProgress, liveTaskUpdated, liveTaskNotification} {
 		msg := convert(t, line)
-		require.NotNil(t, msg.System, "System must stay populated for %s", line[:60])
+		require.NotNil(t, msg.System, "System must stay populated for %.60s", line)
 		assert.Equal(t, "sess-1", msg.System.SessionID)
 		assert.NotEmpty(t, msg.System.Subtype)
 	}
@@ -216,10 +258,12 @@ func TestUnmodelledSubtypeStillArrivesAsSystem(t *testing.T) {
 // MessageParseError when task_started is missing a key, which lets a progress
 // notification kill a run; upstream's own task_updated branch says parsing
 // "must never raise on a lifecycle event". That rule is applied to all of them.
-func TestMalformedLifecyclePayloadDegradesToSystem(t *testing.T) {
-	// `patch` is an array where the schema says object — a shape no amount of
-	// defensive field-reading can rescue.
-	line := `{"type":"system","subtype":"task_updated","task_id":"t1","patch":[1,2,3],"uuid":"u","session_id":"s"}`
+//
+// One case per decoded subtype: the guard is written five times, so five tests
+// are what proves it is there five times. Four of these were absent and all
+// four guards could be deleted with the suite staying green.
+func testMalformedPayloadDegradesToSystem(t *testing.T, subtype, line string) {
+	t.Helper()
 
 	w, err := protocol.ParseLine([]byte(line))
 	require.NoError(t, err)
@@ -227,8 +271,110 @@ func TestMalformedLifecyclePayloadDegradesToSystem(t *testing.T) {
 	require.NoError(t, err, "a malformed lifecycle event must not fail the stream")
 	require.NotNil(t, msg)
 
-	assert.Nil(t, msg.TaskUpdated, "an undecodable payload must not be handed over half-filled")
-	require.NotNil(t, msg.System)
-	assert.Equal(t, "task_updated", msg.System.Subtype)
+	assert.Nil(t, msg.TaskStarted, "an undecodable payload must not be handed over half-filled")
+	assert.Nil(t, msg.TaskProgress)
+	assert.Nil(t, msg.TaskUpdated)
+	assert.Nil(t, msg.TaskNotification)
+	assert.Nil(t, msg.HookEvent)
+
+	require.NotNil(t, msg.System, "the caller must still receive the message")
+	assert.Equal(t, subtype, msg.System.Subtype)
 	assert.JSONEq(t, line, string(msg.System.Raw))
+}
+
+func TestMalformedLifecyclePayloadsDegradeToSystem(t *testing.T) {
+	// Each fixture gives one field a type the CLI's schema forbids.
+	testMalformedPayloadDegradesToSystem(t, "task_updated",
+		`{"type":"system","subtype":"task_updated","task_id":"t1","patch":[1,2,3],"uuid":"u","session_id":"s"}`)
+
+	testMalformedPayloadDegradesToSystem(t, "task_started",
+		`{"type":"system","subtype":"task_started","task_id":"t1","description":"d",`+
+			`"spawn_depth":"deep","uuid":"u","session_id":"s"}`)
+
+	testMalformedPayloadDegradesToSystem(t, "task_progress",
+		`{"type":"system","subtype":"task_progress","task_id":"t1","description":"d",`+
+			`"usage":[1,2],"uuid":"u","session_id":"s"}`)
+
+	testMalformedPayloadDegradesToSystem(t, "task_notification",
+		`{"type":"system","subtype":"task_notification","task_id":"t1","status":"completed",`+
+			`"output_file":"/tmp/o","summary":"s","usage":"none","uuid":"u","session_id":"s"}`)
+
+	testMalformedPayloadDegradesToSystem(t, "hook_response",
+		`{"type":"system","subtype":"hook_response","hook_id":"h","hook_name":"n","hook_event":"e",`+
+			`"exit_code":"zero","outcome":"success","uuid":"u","session_id":"s"}`)
+}
+
+// A patch whose object is well-formed but whose inner field has the wrong type
+// must degrade too — the patch is decoded separately from the envelope, so it
+// is a second guard, not the same one.
+func TestMalformedTaskUpdatedPatchDegradesToSystem(t *testing.T) {
+	testMalformedPayloadDegradesToSystem(t, "task_updated",
+		`{"type":"system","subtype":"task_updated","task_id":"t1",`+
+			`"patch":{"end_time":"yesterday"},"uuid":"u","session_id":"s"}`)
+}
+
+// The tri-state the doc comment promises: absent usage is nil, not a zero
+// tally. A caller told "0 tokens" when the CLI said nothing is being misled.
+func TestTaskNotificationWithoutUsageReportsNil(t *testing.T) {
+	msg := convert(t, `{"type":"system","subtype":"task_notification","task_id":"t1",`+
+		`"status":"failed","output_file":"/tmp/o","summary":"it broke","uuid":"u","session_id":"s"}`)
+
+	require.NotNil(t, msg.TaskNotification)
+	assert.Nil(t, msg.TaskNotification.Usage, "absent usage must not become a zero tally")
+	assert.Equal(t, messages.TaskStatusFailed, msg.TaskNotification.Status)
+	assert.True(t, msg.TaskNotification.Status.IsTerminal())
+}
+
+// The killed/stopped mapping asserted against a frame rather than against this
+// SDK's own constant: the CLI reports "stopped" here for the transition a
+// task_updated patch calls "killed".
+func TestTaskNotificationReportsStoppedForAKilledTask(t *testing.T) {
+	msg := convert(t, `{"type":"system","subtype":"task_notification","task_id":"t1",`+
+		`"status":"stopped","output_file":"/tmp/o","summary":"cancelled","uuid":"u","session_id":"s"}`)
+
+	require.NotNil(t, msg.TaskNotification)
+	assert.Equal(t, messages.TaskStatusStopped, msg.TaskNotification.Status)
+	assert.True(t, msg.TaskNotification.Status.IsTerminal())
+}
+
+// Fields that were decoded but which no fixture carried, so a wrong json tag or
+// a dropped assignment was invisible.
+func TestTaskStartedDecodesTheOptionalFields(t *testing.T) {
+	msg := convert(t, `{"type":"system","subtype":"task_started","task_id":"t1",`+
+		`"description":"housekeeping","task_type":"local_workflow","workflow_name":"spec",`+
+		`"skip_transcript":true,"ambient":true,"uuid":"u","session_id":"s"}`)
+
+	require.NotNil(t, msg.TaskStarted)
+	ts := msg.TaskStarted
+	assert.Equal(t, "spec", ts.WorkflowName)
+	assert.Equal(t, "local_workflow", ts.TaskType)
+	assert.True(t, ts.SkipTranscript)
+	assert.True(t, ts.Ambient)
+
+	// Not a subagent spawn, so these stay absent rather than reading as false/0.
+	assert.Nil(t, ts.IsBackgrounded)
+	assert.Nil(t, ts.SpawnDepth)
+}
+
+func TestTaskProgressDecodesSummary(t *testing.T) {
+	msg := convert(t, `{"type":"system","subtype":"task_progress","task_id":"t1",`+
+		`"description":"d","usage":{"total_tokens":1,"tool_uses":2,"duration_ms":3},`+
+		`"summary":"reading the schema","uuid":"u","session_id":"s"}`)
+
+	require.NotNil(t, msg.TaskProgress)
+	assert.Equal(t, "reading the schema", msg.TaskProgress.Summary)
+	assert.Equal(t, int64(3), msg.TaskProgress.Usage.DurationMS)
+}
+
+func TestTaskNotificationDecodesResourceLinksAndFlags(t *testing.T) {
+	msg := convert(t, `{"type":"system","subtype":"task_notification","task_id":"t1",`+
+		`"status":"completed","output_file":"/tmp/o","summary":"done",`+
+		`"resource_links":[{"type":"resource_link","uri":"file:///tmp/a.txt"}],`+
+		`"skip_transcript":true,"ambient":true,"uuid":"u","session_id":"s"}`)
+
+	require.NotNil(t, msg.TaskNotification)
+	tn := msg.TaskNotification
+	assert.True(t, tn.SkipTranscript)
+	assert.True(t, tn.Ambient)
+	assert.JSONEq(t, `[{"type":"resource_link","uri":"file:///tmp/a.txt"}]`, string(tn.ResourceLinks))
 }

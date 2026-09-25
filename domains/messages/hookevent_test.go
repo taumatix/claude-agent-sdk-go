@@ -21,14 +21,17 @@ const (
 		`"hook_name":"SessionStart:startup","hook_event":"SessionStart",` +
 		`"uuid":"u-hs","session_id":"sess-1"}`
 
+	// stdout, stderr and output are given three different values on purpose.
+	// The real capture had stdout == output, which made sourcing Stdout from
+	// the wrong field an undetectable mistake: the assertion passed either way.
 	liveHookProgress = `{"type":"system","subtype":"hook_progress","hook_id":"hk-1",` +
 		`"hook_name":"SessionStart:startup","hook_event":"SessionStart",` +
-		`"stdout":"working","stderr":"","output":"working",` +
+		`"stdout":"on stdout","stderr":"on stderr","output":"the output",` +
 		`"uuid":"u-hp","session_id":"sess-1"}`
 
 	liveHookResponse = `{"type":"system","subtype":"hook_response","hook_id":"hk-1",` +
 		`"hook_name":"SessionStart:startup","hook_event":"SessionStart",` +
-		`"output":"## Go conventions","stdout":"## Go conventions","stderr":"",` +
+		`"output":"the output","stdout":"on stdout","stderr":"on stderr",` +
 		`"exit_code":0,"outcome":"success","uuid":"u-hr","session_id":"sess-1"}`
 )
 
@@ -63,9 +66,9 @@ func TestHookProgressIsTyped(t *testing.T) {
 	require.NotNil(t, msg.HookEvent)
 	h := msg.HookEvent
 	assert.Equal(t, messages.HookPhaseProgress, h.Phase)
-	assert.Equal(t, "working", h.Output)
-	assert.Equal(t, "working", h.Stdout)
-	assert.Equal(t, "", h.Stderr)
+	assert.Equal(t, "the output", h.Output)
+	assert.Equal(t, "on stdout", h.Stdout)
+	assert.Equal(t, "on stderr", h.Stderr)
 	assert.Nil(t, h.ExitCode, "exit_code arrives only once the hook has finished")
 }
 
@@ -76,7 +79,11 @@ func TestHookResponseCarriesOutcomeAndExitCode(t *testing.T) {
 	h := msg.HookEvent
 	assert.Equal(t, messages.HookPhaseResponse, h.Phase)
 	assert.Equal(t, messages.HookOutcomeSuccess, h.Outcome)
-	assert.Equal(t, "## Go conventions", h.Output)
+
+	// Three separate wire fields, three separate values.
+	assert.Equal(t, "the output", h.Output)
+	assert.Equal(t, "on stdout", h.Stdout)
+	assert.Equal(t, "on stderr", h.Stderr)
 
 	// A successful hook exits 0, so a plain int would make "exited 0" and
 	// "did not report an exit code" the same value. It is a pointer for that

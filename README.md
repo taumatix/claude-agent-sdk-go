@@ -119,7 +119,8 @@ for _, prompt := range []string{
 
 ### Handling message types
 
-Every `messages.Message` has exactly one non-nil field:
+Every `messages.Message` has exactly one non-nil *transport* field — `User`, `Assistant`,
+`System`, `Result`, `StreamEvent`, `RateLimit` or `ConvReset`:
 
 ```go
 for msg, err := range agent.Query(ctx, prompt, opts) {
@@ -153,6 +154,50 @@ for msg, err := range agent.Query(ctx, prompt, opts) {
     }
 }
 ```
+
+### Following a subagent
+
+Some `system` messages also arrive decoded. `task_started`, `task_progress`, `task_updated`,
+`task_notification` and the three hook phases populate a typed field **in addition to** `System`,
+so the switch above keeps working unchanged — put the typed cases first if you want them:
+
+```go
+for msg, err := range agent.Query(ctx, prompt, opts) {
+    if err != nil { log.Fatal(err) }
+
+    switch {
+    case msg.TaskStarted != nil:
+        fmt.Printf("[task %s started: %s]\n",
+            msg.TaskStarted.TaskID, msg.TaskStarted.SubagentType)
+
+    case msg.TaskProgress != nil:
+        fmt.Printf("[task %s: %s, %d tokens]\n", msg.TaskProgress.TaskID,
+            msg.TaskProgress.LastToolName, msg.TaskProgress.Usage.TotalTokens)
+
+    case msg.TaskUpdated != nil && msg.TaskUpdated.Status.IsTerminal():
+        fmt.Printf("[task %s finished: %s]\n",
+            msg.TaskUpdated.TaskID, msg.TaskUpdated.Status)
+
+    case msg.HookEvent != nil:
+        fmt.Printf("[hook %s %s]\n",
+            msg.HookEvent.HookEventName, msg.HookEvent.Phase)
+
+    case msg.System != nil:
+        // Every other subtype, with its payload in Raw.
+        fmt.Printf("[system: %s]\n", msg.System.Subtype)
+    }
+}
+```
+
+Two things worth knowing before you track tasks:
+
+- **A terminal state can arrive only as `task_updated`.** A task stopped by the host reports
+  `TaskStatusKilled` in its patch and the matching `task_notification` is sometimes suppressed.
+  Clear active-task state on `Status.IsTerminal()` from *either* message — the two spell the same
+  transition differently (`killed` versus `stopped`), which is what `IsTerminal` is for.
+- **`SystemMessage.Data` is deprecated and always nil.** It is bound to a `data` key that no
+  `claude` release up to 2.1.267 emits; every subtype puts its fields at the top level. Read
+  `SystemMessage.Raw`, which carries the whole message, for any subtype this SDK does not model.
 
 ### Tool permission callbacks
 

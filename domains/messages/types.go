@@ -97,6 +97,10 @@ type SystemMessage struct {
 	UUID   string
 	// Raw is the complete message exactly as it arrived. It is how to reach a
 	// subtype or a field this SDK does not model without waiting for a release.
+	//
+	// It carries whatever the CLI sent, including the `init` message's cwd,
+	// tool list and MCP server configuration. Treat it as untrusted and do not
+	// log it verbatim.
 	Raw json.RawMessage
 }
 

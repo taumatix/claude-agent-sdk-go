@@ -67,7 +67,13 @@ type TaskStartedMessage struct {
 	TaskType   string
 	// WorkflowName is set only when TaskType is "local_workflow".
 	WorkflowName string
-	Prompt       string
+	// Prompt is the full instruction the subagent was given.
+	//
+	// It is model-generated text and may quote anything already in the
+	// conversation, including tool output and fetched web pages. Treat it as
+	// untrusted, and do not log it verbatim — it can carry secrets that reached
+	// the transcript.
+	Prompt string
 	// SkipTranscript marks a housekeeping task a host should keep out of the
 	// inline transcript.
 	SkipTranscript bool
@@ -84,6 +90,9 @@ type TaskProgressMessage struct {
 	ToolUseID    string
 	Description  string
 	SubagentType string
+	// Usage is a value, not a pointer: the CLI's schema requires it on
+	// task_progress. It is optional on task_notification, which is why
+	// TaskNotificationMessage.Usage is a pointer and this is not.
 	Usage        TaskUsage
 	LastToolName string
 	// Summary is a one-line status for the task's row, when the CLI supplies
@@ -105,6 +114,9 @@ type TaskUsage struct {
 // a task stopped via TaskStop reports TaskStatusKilled in its patch and the
 // matching notification is sometimes suppressed. Clear active-task state on a
 // terminal status from either message.
+// It carries no ToolUseID — the wire payload has none — so correlating a task
+// back to the tool call that spawned it means keeping the TaskID → ToolUseID
+// mapping from the TaskStartedMessage.
 type TaskUpdatedMessage struct {
 	SessionID string
 	UUID      string
@@ -112,6 +124,9 @@ type TaskUpdatedMessage struct {
 	// Status is the patch's status, or "" when the patch carried none — a patch
 	// reporting only end_time or a description leaves it empty rather than
 	// guessing. "" is not terminal.
+	//
+	// This is the only place the patch's status is reported; TaskPatch does not
+	// repeat it, so there is one spelling of it rather than two.
 	Status TaskStatus
 	Patch  TaskPatch
 	// RawPatch is the patch object as it arrived. The CLI may add fields to it;
@@ -120,13 +135,17 @@ type TaskUpdatedMessage struct {
 }
 
 // TaskPatch holds the fields of a task's state that changed. Every field is nil
-// unless this patch reported it.
+// unless this patch reported it. The patch's status is on
+// TaskUpdatedMessage.Status, not here.
 type TaskPatch struct {
-	Status         *TaskStatus
-	Description    *string
-	EndTime        *int64
-	TotalPausedMS  *int64
-	Error          *string
+	Description *string
+	// EndTime is Unix epoch milliseconds.
+	EndTime *int64
+	// TotalPausedMS is the cumulative time the task spent paused.
+	TotalPausedMS *int64
+	Error         *string
+	// IsBackgrounded reports a task moving between foreground and background
+	// after it started; its initial value is on TaskStartedMessage.
 	IsBackgrounded *bool
 }
 
@@ -138,10 +157,16 @@ type TaskNotificationMessage struct {
 	UUID      string
 	TaskID    string
 	ToolUseID string
-	// Status is "completed", "failed" or "stopped".
-	Status     TaskStatus
+	// Status is TaskStatusCompleted, TaskStatusFailed or TaskStatusStopped.
+	// Note "stopped": this is the vocabulary in which a task_updated patch's
+	// "killed" is reported. TaskStatus.IsTerminal covers both.
+	Status TaskStatus
+	// OutputFile is a path on the machine running the CLI.
 	OutputFile string
-	Summary    string
+	// Summary is the task's own report of what it did — model-generated text
+	// that may quote tool output or fetched pages. Untrusted; do not log it
+	// verbatim.
+	Summary string
 	// Usage is nil when the CLI did not report a tally.
 	Usage *TaskUsage
 	// ResourceLinks holds the resource_link content blocks of a backgrounded
@@ -193,9 +218,15 @@ type HookEventMessage struct {
 	// "PreToolUse". It is a different field from HookName — a hook's name
 	// commonly embeds the event but is not equal to it.
 	HookEventName string
-	Stdout        string
-	Stderr        string
-	Output        string
+	// Stdout, Stderr and Output are the hook process's own output. A hook is an
+	// arbitrary command, so these can contain anything it printed — including
+	// environment variables and credentials. Untrusted; do not log verbatim.
+	//
+	// Stdout and Output are commonly equal, but they are distinct fields: the
+	// CLI populates Output with the value it acts on.
+	Stdout string
+	Stderr string
+	Output string
 	// ExitCode is the hook process's exit status. Nil except on
 	// HookPhaseResponse, and optional even there.
 	ExitCode *int
@@ -216,9 +247,9 @@ func systemPayloadFromWire(msg *Message, m *protocol.SystemMessage) {
 	}
 
 	switch protocol.SystemSubtype(m.Subtype) {
-	case protocol.SubtypeTaskStarted:
+	case protocol.SystemSubtypeTaskStarted:
 		var p protocol.TaskStartedPayload
-		if json.Unmarshal(raw, &p) != nil {
+		if err := json.Unmarshal(raw, &p); err != nil {
 			return
 		}
 		msg.TaskStarted = &TaskStartedMessage{
@@ -237,9 +268,9 @@ func systemPayloadFromWire(msg *Message, m *protocol.SystemMessage) {
 			Ambient:        p.Ambient,
 		}
 
-	case protocol.SubtypeTaskProgress:
+	case protocol.SystemSubtypeTaskProgress:
 		var p protocol.TaskProgressPayload
-		if json.Unmarshal(raw, &p) != nil {
+		if err := json.Unmarshal(raw, &p); err != nil {
 			return
 		}
 		msg.TaskProgress = &TaskProgressMessage{
@@ -254,42 +285,43 @@ func systemPayloadFromWire(msg *Message, m *protocol.SystemMessage) {
 			Summary:      p.Summary,
 		}
 
-	case protocol.SubtypeTaskUpdated:
+	case protocol.SystemSubtypeTaskUpdated:
 		var p protocol.TaskUpdatedPayload
-		if json.Unmarshal(raw, &p) != nil {
+		if err := json.Unmarshal(raw, &p); err != nil {
 			return
 		}
-		// The patch is re-extracted rather than re-marshalled, so a field the
-		// CLI added and TaskPatch does not model survives on RawPatch.
-		var envelope struct {
-			Patch json.RawMessage `json:"patch"`
+		// p.Patch is raw, so the patch is decoded from that small slice rather
+		// than by re-scanning the whole line, and the raw form survives for a
+		// field the CLI added that TaskPatch does not model.
+		var wirePatch protocol.TaskPatch
+		if len(p.Patch) > 0 {
+			if err := json.Unmarshal(p.Patch, &wirePatch); err != nil {
+				return
+			}
 		}
-		_ = json.Unmarshal(raw, &envelope)
 
-		patch := TaskPatch{
-			Description:    p.Patch.Description,
-			EndTime:        p.Patch.EndTime,
-			TotalPausedMS:  p.Patch.TotalPausedMS,
-			Error:          p.Patch.Error,
-			IsBackgrounded: p.Patch.IsBackgrounded,
-		}
 		var status TaskStatus
-		if p.Patch.Status != nil {
-			status = TaskStatus(*p.Patch.Status)
-			patch.Status = &status
+		if wirePatch.Status != nil {
+			status = TaskStatus(*wirePatch.Status)
 		}
 		msg.TaskUpdated = &TaskUpdatedMessage{
 			SessionID: p.SessionID,
 			UUID:      p.UUID,
 			TaskID:    p.TaskID,
 			Status:    status,
-			Patch:     patch,
-			RawPatch:  envelope.Patch,
+			Patch: TaskPatch{
+				Description:    wirePatch.Description,
+				EndTime:        wirePatch.EndTime,
+				TotalPausedMS:  wirePatch.TotalPausedMS,
+				Error:          wirePatch.Error,
+				IsBackgrounded: wirePatch.IsBackgrounded,
+			},
+			RawPatch: p.Patch,
 		}
 
-	case protocol.SubtypeTaskNotification:
+	case protocol.SystemSubtypeTaskNotification:
 		var p protocol.TaskNotificationPayload
-		if json.Unmarshal(raw, &p) != nil {
+		if err := json.Unmarshal(raw, &p); err != nil {
 			return
 		}
 		var usage *TaskUsage
@@ -311,9 +343,9 @@ func systemPayloadFromWire(msg *Message, m *protocol.SystemMessage) {
 			Ambient:        p.Ambient,
 		}
 
-	case protocol.SubtypeHookStarted, protocol.SubtypeHookProgress, protocol.SubtypeHookResponse:
+	case protocol.SystemSubtypeHookStarted, protocol.SystemSubtypeHookProgress, protocol.SystemSubtypeHookResponse:
 		var p protocol.HookEventPayload
-		if json.Unmarshal(raw, &p) != nil {
+		if err := json.Unmarshal(raw, &p); err != nil {
 			return
 		}
 		msg.HookEvent = &HookEventMessage{

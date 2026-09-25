@@ -308,10 +308,17 @@ type Message struct {
     StreamEvent *StreamEventMessage
     RateLimit   *RateLimitMessage
     ConvReset   *ConversationResetMessage
+
+    // Set in addition to System, for the `system` subtypes this SDK decodes.
+    TaskStarted      *TaskStartedMessage
+    TaskProgress     *TaskProgressMessage
+    TaskUpdated      *TaskUpdatedMessage
+    TaskNotification *TaskNotificationMessage
+    HookEvent        *HookEventMessage
 }
 ```
 
-Exactly one field is non-nil. Type-switch using the field:
+Exactly one of the seven transport fields is non-nil. Type-switch using the field:
 
 ```go
 switch {
@@ -322,6 +329,28 @@ case msg.Result != nil:    // terminal message
 case msg.StreamEvent != nil: // partial stream (only with IncludePartialMessages)
 case msg.RateLimit != nil: // rate limit notification
 case msg.ConvReset != nil: // conversation replaced mid-session
+}
+```
+
+The five lifecycle fields are the exception: a `system` message this SDK decodes sets **both**
+`System` and the matching typed field. Upstream's Python SDK achieves the same by subclassing
+`SystemMessage`, so existing `isinstance` checks keep matching; Go has no subclassing, so both
+are set. The switch above therefore keeps working unchanged.
+
+Two consequences when you adopt the typed fields:
+
+- **Put the typed cases before `case msg.System != nil`.** A typed case placed after it is dead
+  code, because the `System` case matches first.
+- **Do not handle both** for the same subtype, or you will process each lifecycle event twice.
+
+```go
+switch {
+case msg.TaskUpdated != nil && msg.TaskUpdated.Status.IsTerminal():
+    clearTask(msg.TaskUpdated.TaskID)
+case msg.HookEvent != nil:
+    // ...
+case msg.System != nil:
+    // every subtype not decoded above, payload in System.Raw
 }
 ```
 
@@ -388,12 +417,90 @@ type AssistantMessage struct {
 ```go
 type SystemMessage struct {
     SessionID string
-    Subtype   string          // e.g. "task_started", "task_progress", "task_notification"
-    Data      json.RawMessage // subtype-specific payload
+    Subtype   string          // e.g. "task_started", "background_tasks_changed", "init"
+    Data      json.RawMessage // Deprecated: always nil — see below
     TaskID    string
     UUID      string
+    Raw       json.RawMessage // the complete message as it arrived
 }
 ```
+
+**`Data` is deprecated and always nil.** It is bound to a `data` key that no `claude` release up
+to 2.1.267 emits — every `system` subtype puts its fields at the top level, so this has been empty
+since the port was written. Upstream's Python `SystemMessage.data` is the *whole message dict*;
+the Go port bound that name to a nested object that has never existed. `Data` keeps its binding
+rather than silently changing meaning.
+
+Read **`Raw`** instead. It carries the complete message, which is how to reach a subtype or a
+field this SDK does not model without waiting for a release:
+
+```go
+if msg.System != nil && msg.System.Subtype == "background_tasks_changed" {
+    var payload struct {
+        Tasks []struct{ TaskID string `json:"task_id"` } `json:"tasks"`
+    }
+    if err := json.Unmarshal(msg.System.Raw, &payload); err == nil {
+        // ...
+    }
+}
+```
+
+`Raw` is populated by `protocol.ParseLine`. If you assemble a `protocol.WireMessage` by hand and
+pass it to `messages.FromWire` — a replay harness, say — set `Raw` yourself, or the typed
+lifecycle fields will all be nil.
+
+**Security note.** `Raw` hands you the whole frame, including the `init` message's cwd, tool list
+and MCP server configuration. Along with `HookEventMessage.Stdout`/`Stderr`/`Output` and
+`TaskStartedMessage.Prompt`, this is untrusted CLI, model and hook output that may contain
+credentials. Do not log it verbatim.
+
+---
+
+### Lifecycle messages
+
+`task_started`, `task_progress`, `task_updated`, `task_notification` and the three hook phases are
+decoded into typed messages set alongside `System`. See [`Message`](#message) for how to switch on
+them.
+
+```go
+type TaskUpdatedMessage struct {
+    SessionID string
+    UUID      string
+    TaskID    string
+    Status    TaskStatus      // "" when the patch carried none; "" is not terminal
+    Patch     TaskPatch       // only the fields that changed
+    RawPatch  json.RawMessage // the patch object as it arrived
+}
+
+type TaskStatus string // pending|running|paused|completed|failed|killed|stopped
+
+func (s TaskStatus) IsTerminal() bool
+```
+
+`IsTerminal` spans two vocabularies: a `task_updated` patch reports the raw `killed` where a
+`task_notification` reports the mapped `stopped`. **A task's terminal state can arrive only as a
+`task_updated`** — a task stopped by the host sometimes has its notification suppressed — so clear
+active-task state on `IsTerminal()` from either message. A status this SDK does not recognise is
+reported non-terminal, so an unknown value never makes you drop a running task.
+
+```go
+type HookEventMessage struct {
+    SessionID     string
+    UUID          string
+    Phase         HookPhase   // hook_started | hook_progress | hook_response
+    HookID        string
+    HookName      string      // e.g. "SessionStart:startup"
+    HookEventName string      // e.g. "SessionStart" — a different field from HookName
+    Stdout        string
+    Stderr        string
+    Output        string
+    ExitCode      *int        // hook_response only, and optional even there
+    Outcome       HookOutcome // success|error|cancelled; "" on the other phases
+}
+```
+
+`hook_progress` is a phase upstream's Python SDK does not model at all: the CLI emits it from an
+interval timer, so a hook running for several seconds produces several.
 
 ---
 
