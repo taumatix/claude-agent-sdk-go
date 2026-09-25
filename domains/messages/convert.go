@@ -72,10 +72,14 @@ func fromWireSystem(m *protocol.SystemMessage) (*Message, error) {
 		System: &SystemMessage{
 			SessionID: m.SessionID,
 			Subtype:   m.Subtype,
-			Data:      m.Data,
-			TaskID:    m.TaskID,
-			UUID:      m.UUID,
-			Raw:       m.Raw,
+			// Deprecating the field is the point; it must still be propagated,
+			// or a CLI that does start nesting a payload would silently drop it
+			// and existing code reading Data would change behaviour.
+			//lint:ignore SA1019 deliberate: the deprecated field is carried through, not dropped.
+			Data:   m.Data,
+			TaskID: m.TaskID,
+			UUID:   m.UUID,
+			Raw:    m.Raw,
 		},
 	}
 	// Decodes the typed lifecycle payload alongside System, leaving it nil for

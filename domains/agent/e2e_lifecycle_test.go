@@ -187,6 +187,9 @@ func TestE2E_LifecycleEventsStillArriveAsSystemMessages(t *testing.T) {
 			subtypes = append(subtypes, got[i].System.Subtype)
 			assert.NotEmpty(t, got[i].System.Raw,
 				"System.Raw is empty for %s", got[i].System.Subtype)
+			// Reading the deprecated field on purpose: that it stays empty is
+			// the claim the deprecation rests on.
+			//lint:ignore SA1019 asserting the deprecated field is empty is the test.
 			assert.Nil(t, got[i].System.Data,
 				"no CLI up to 2.1.267 emits a `data` key on a system message")
 		}

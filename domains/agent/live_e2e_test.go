@@ -118,6 +118,7 @@ func TestLive_NoSystemMessageCarriesADataKey(t *testing.T) {
 		seen++
 		// Asserted on the length, not the value: a failure here must name the
 		// subtype without printing a live session's payload into the log.
+		//lint:ignore SA1019 asserting the deprecated field is empty is the test.
 		assert.Zero(t, len(msg.System.Data),
 			"subtype %q carried a `data` key; SystemMessage.Data is no longer dead and the "+
 				"deprecation note needs revisiting", msg.System.Subtype)
