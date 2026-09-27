@@ -4,7 +4,7 @@ A Go SDK for [Claude Code](https://claude.ai/code) that lets you run Claude as a
 
 The SDK wraps the `claude` CLI binary as a subprocess and communicates over newline-delimited JSON streams, exposing a clean Go API with Go 1.23 range iterators.
 
-> **Upstream: ported from `claude-agent-sdk-python` at [`566e41f`](https://github.com/anthropics/claude-agent-sdk-python/commit/566e41f7a59377885693082d0e8436d8964a0491) (2026-03-30), which is 456 commits behind upstream as of 2026-09-24 — a six-month gap that is still widening.**
+> **Upstream: ported from `claude-agent-sdk-python` at [`566e41f`](https://github.com/anthropics/claude-agent-sdk-python/commit/566e41f7a59377885693082d0e8436d8964a0491) (2026-03-30), which is 463 commits behind upstream as of 2026-09-27 — a six-month gap that is still widening.**
 > The feature surface is the Python SDK as it stood in March 2026 — a test cannot fail for a
 > feature that was never ported. Version 0.2.0 also shipped a real bug the green suite could not
 > see: every server-side tool result was discarded, because the SDK matched a wire type the CLI
@@ -198,6 +198,37 @@ Two things worth knowing before you track tasks:
 - **`SystemMessage.Data` is deprecated and always nil.** It is bound to a `data` key that no
   `claude` release up to 2.1.267 emits; every subtype puts its fields at the top level. Read
   `SystemMessage.Raw`, which carries the whole message, for any subtype this SDK does not model.
+
+### "Is anything still running?"
+
+Pairing `TaskStarted` with terminal statuses works until one bookend goes missing, and then an
+indicator is stuck on "running". Two level signals answer the question directly:
+
+```go
+opts := agent.DefaultOptions()
+// session_state_changed is opt-in; the CLI sends none without this.
+opts.Env = map[string]string{"CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS": "1"}
+
+var background []messages.BackgroundTask // reset whenever the CLI process starts
+for msg, err := range agent.Query(ctx, prompt, opts) {
+    if err != nil { log.Fatal(err) }
+
+    switch {
+    case msg.BackgroundTasksChanged != nil:
+        // The full set, every time: replace, never merge.
+        background = msg.BackgroundTasksChanged.Tasks
+
+    case msg.SessionStateChanged != nil:
+        fmt.Println("[session]", msg.SessionStateChanged.State) // idle, running, requires_action
+    }
+}
+```
+
+`background_tasks_changed` lists **background** tasks only: a subagent running in the foreground
+is absent until it is backgrounded. `idle` is the CLI's authoritative "no further turn is owed",
+but on `claude` 2.1.283 it can arrive after a background task wakes a follow-up turn, which is
+after the first `Result`, where `Query` returns. So a single `Query` may end without showing you
+`idle`; see [ROADMAP.md](ROADMAP.md).
 
 ### Tool permission callbacks
 

@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-27
+
+### Added
+
+- `messages.Message.BackgroundTasksChanged`, decoded from `background_tasks_changed`: the full
+  set of live background tasks after every change. It is a level signal — replace your set with
+  each payload — so "is background work running" no longer depends on pairing `task_started` with
+  a terminal status and never missing one. The CLI sends it with no opt-in. It lists background
+  tasks only; a foreground subagent is absent until it is backgrounded.
+- `messages.Message.SessionStateChanged`, decoded from `session_state_changed`, with
+  `messages.SessionState` (`idle`, `running`, `requires_action`). **Opt-in:** the CLI sends it
+  only when `Options.Env` sets `CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS=1`.
+- Both also still arrive as `System`, as the lifecycle messages do. A frame with no `tasks` key,
+  or no `state`, degrades to `System` alone rather than being typed as empty — an empty set would
+  tell a caller that all background work had stopped.
+
+Shapes come from the zod schemas in the `claude` 2.1.283 bundle and a live run on 2026-09-27; the
+live end-to-end suite passes against 2.1.283. Upstream's Python SDK does not type either subtype.
+
+### Known limitation
+
+`Query` and `Client.Query` return at the first `Result`. On 2.1.283 a finished background task
+wakes a follow-up turn after that result, and `idle` arrives after it, so a single `Query` may
+not show you `idle`. On a `Client`, those later frames stay queued and the next `Client.Query`
+yields them first — read from the code, not yet observed in a test.
+This predates 0.5.0 and is the top of [ROADMAP.md](ROADMAP.md).
+
 ## [0.4.0] - 2026-09-25
 
 ### Fixed
