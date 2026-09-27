@@ -55,11 +55,16 @@ func TestMain(m *testing.M) {
 // returns every message the caller saw.
 func queryFakeCLI(t *testing.T, prompt string) []messages.Message {
 	t.Helper()
+	return queryFakeCLIWith(t, agent.Options{CLIPath: fakeCLIPath}, prompt)
+}
+
+func queryFakeCLIWith(t *testing.T, opts agent.Options, prompt string) []messages.Message {
+	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	t.Cleanup(cancel)
 
-	client := agent.NewClient(agent.Options{CLIPath: fakeCLIPath})
+	client := agent.NewClient(opts)
 	require.NoError(t, client.Connect(ctx))
 	t.Cleanup(func() { _ = client.Disconnect() })
 

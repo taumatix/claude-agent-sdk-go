@@ -276,6 +276,8 @@ func testMalformedPayloadDegradesToSystem(t *testing.T, subtype, line string) {
 	assert.Nil(t, msg.TaskUpdated)
 	assert.Nil(t, msg.TaskNotification)
 	assert.Nil(t, msg.HookEvent)
+	assert.Nil(t, msg.SessionStateChanged)
+	assert.Nil(t, msg.BackgroundTasksChanged)
 
 	require.NotNil(t, msg.System, "the caller must still receive the message")
 	assert.Equal(t, subtype, msg.System.Subtype)

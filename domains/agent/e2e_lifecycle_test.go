@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/taumatix/claude-agent-sdk-go/domains/agent"
 	"github.com/taumatix/claude-agent-sdk-go/domains/messages"
 )
 
@@ -206,7 +207,56 @@ func TestE2E_LifecycleEventsStillArriveAsSystemMessages(t *testing.T) {
 		"task_updated",
 		"task_notification",
 		"background_tasks_changed",
+		"thinking_tokens",
 	})
+}
+
+// The background set is a level signal a caller replaces wholesale, so both
+// frames must arrive typed and in order: the shell listed, then the empty set.
+func TestE2E_BackgroundTasksReachTheCaller(t *testing.T) {
+	got := queryFakeCLI(t, "count the files")
+
+	var sets [][]messages.BackgroundTask
+	for i := range got {
+		if b := got[i].BackgroundTasksChanged; b != nil {
+			require.NotNil(t, got[i].System, "a typed background set must still arrive as System")
+			sets = append(sets, b.Tasks)
+		}
+	}
+
+	require.Len(t, sets, 2, "both background_tasks_changed frames must reach the caller typed")
+	assert.Equal(t, []messages.BackgroundTask{{
+		TaskID:      "bmrd57x9h",
+		TaskType:    "local_bash",
+		Description: "Wait three seconds then print done",
+	}}, sets[0])
+	assert.NotNil(t, sets[1])
+	assert.Empty(t, sets[1])
+}
+
+// Session state is opt-in on the real CLI. With the opt-in set through
+// Options.Env, the stub sends it and it reaches the caller typed; without it,
+// the stub sends none — which proves the variable crossed into the subprocess.
+func TestE2E_SessionStateIsOptIn(t *testing.T) {
+	statesFrom := func(got []messages.Message) []messages.SessionState {
+		var states []messages.SessionState
+		for i := range got {
+			if s := got[i].SessionStateChanged; s != nil {
+				states = append(states, s.State)
+			}
+		}
+		return states
+	}
+
+	assert.Empty(t, statesFrom(queryFakeCLI(t, "count the files")))
+
+	optedIn := queryFakeCLIWith(t, agent.Options{
+		CLIPath: fakeCLIPath,
+		Env:     map[string]string{"CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS": "1"},
+	}, "count the files")
+	assert.Equal(t,
+		[]messages.SessionState{messages.SessionStateRunning, messages.SessionStateIdle},
+		statesFrom(optedIn))
 }
 
 // An unmodelled subtype keeps reaching the caller with its payload intact. The
@@ -217,16 +267,19 @@ func TestE2E_UnmodelledSubtypeSurvivesTheTransport(t *testing.T) {
 
 	var raw string
 	for i := range got {
-		if got[i].System != nil && got[i].System.Subtype == "background_tasks_changed" {
+		if got[i].System != nil && got[i].System.Subtype == "thinking_tokens" {
 			raw = string(got[i].System.Raw)
 			assert.Nil(t, got[i].TaskStarted)
 			assert.Nil(t, got[i].TaskUpdated)
 			assert.Nil(t, got[i].HookEvent)
+			assert.Nil(t, got[i].BackgroundTasksChanged)
+			assert.Nil(t, got[i].SessionStateChanged)
 		}
 	}
 
 	require.NotEmpty(t, raw, "the unmodelled subtype was dropped")
 	assert.JSONEq(t,
-		`{"type":"system","subtype":"background_tasks_changed","tasks":[],"uuid":"u-bg","session_id":"e2e"}`,
+		`{"type":"system","subtype":"thinking_tokens","estimated_tokens":50,"estimated_tokens_delta":50,`+
+			`"session_id":"e2e","uuid":"u-tt"}`,
 		raw)
 }

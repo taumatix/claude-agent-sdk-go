@@ -24,6 +24,9 @@ const (
 	SystemSubtypeHookStarted  SystemSubtype = "hook_started"
 	SystemSubtypeHookProgress SystemSubtype = "hook_progress"
 	SystemSubtypeHookResponse SystemSubtype = "hook_response"
+
+	SystemSubtypeSessionStateChanged    SystemSubtype = "session_state_changed"
+	SystemSubtypeBackgroundTasksChanged SystemSubtype = "background_tasks_changed"
 )
 
 // TaskUsage is the usage tally reported on task_progress and task_notification.
@@ -155,4 +158,41 @@ type HookEventPayload struct {
 	Outcome   string `json:"outcome,omitempty"`
 	UUID      string `json:"uuid,omitempty"`
 	SessionID string `json:"session_id,omitempty"`
+}
+
+// SessionStateChangedPayload is the `system`/`session_state_changed` frame.
+//
+// Taken from the zod schema in the `claude` 2.1.283 bundle and confirmed
+// against a live run on 2026-09-27. The CLI sends it only when the subprocess
+// has CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS set.
+type SessionStateChangedPayload struct {
+	// State is a pointer so a frame with no state is told apart from one
+	// whose state is the empty string.
+	State *string `json:"state"`
+	// WaitingOnUser is sent only by the CLI's bridge emitter.
+	WaitingOnUser *bool `json:"waiting_on_user,omitempty"`
+	// SDKHostOnly marks a frame the CLI sent because the host set
+	// CLAUDE_CODE_SDK_READS_SESSION_STATE rather than the caller's opt-in.
+	SDKHostOnly bool   `json:"sdk_host_only,omitempty"`
+	UUID        string `json:"uuid,omitempty"`
+	SessionID   string `json:"session_id,omitempty"`
+}
+
+// BackgroundTasksChangedPayload is the `system`/`background_tasks_changed`
+// frame: every live background task after a membership change.
+type BackgroundTasksChangedPayload struct {
+	// Tasks is a pointer so a frame with no `tasks` key is told apart from
+	// the empty set, which the CLI sends when the last background task ends.
+	Tasks     *[]BackgroundTask `json:"tasks"`
+	UUID      string            `json:"uuid,omitempty"`
+	SessionID string            `json:"session_id,omitempty"`
+}
+
+// BackgroundTask is one entry of a background_tasks_changed set.
+type BackgroundTask struct {
+	TaskID      string `json:"task_id"`
+	TaskType    string `json:"task_type"`
+	Description string `json:"description"`
+	// Ambient marks a task hosts should exclude from activity indicators.
+	Ambient bool `json:"ambient,omitempty"`
 }

@@ -37,6 +37,12 @@ type Message struct {
 	// HookEvent is set for the hook_started, hook_progress and hook_response
 	// subtypes; read its Phase to tell them apart.
 	HookEvent *HookEventMessage
+	// SessionStateChanged is set for the session_state_changed subtype, which
+	// the CLI sends only on opt-in; see SessionStateChangedMessage.
+	SessionStateChanged *SessionStateChangedMessage
+	// BackgroundTasksChanged is set for the background_tasks_changed subtype,
+	// which the CLI sends without any opt-in.
+	BackgroundTasksChanged *BackgroundTasksChangedMessage
 }
 
 // UserMessage is a user-role message received from the CLI.
