@@ -33,9 +33,10 @@ const turn = `{"type":"assistant","session_id":"e2e","model":"claude-sonnet-5","
 // short string): a hook pair around session start, then the four task
 // lifecycle events, then one subtype this SDK does not model.
 //
-// The last two matter most. `task_updated` carries the terminal status for a
-// task whose notification can be suppressed, and `background_tasks_changed` is
-// here to prove an unmodelled subtype still reaches the caller.
+// `task_updated` carries the terminal status for a task whose notification can
+// be suppressed. The background set filling and emptying is the 2.1.283 shape
+// (2026-09-27), and `thinking_tokens` is here to prove an unmodelled subtype
+// still reaches the caller.
 var lifecycle = []string{
 	`{"type":"system","subtype":"hook_started","hook_id":"hk-1","hook_name":"SessionStart:startup",` +
 		`"hook_event":"SessionStart","uuid":"u-hs","session_id":"e2e"}`,
@@ -66,8 +67,21 @@ var lifecycle = []string{
 	`{"type":"system","subtype":"task_updated","task_id":"tk-2",` +
 		`"patch":{"status":"killed","end_time":1790295642000,"error":"stopped by TaskStop"},` +
 		`"uuid":"u-tu2","session_id":"e2e"}`,
+	`{"type":"system","subtype":"background_tasks_changed","tasks":[{"task_id":"bmrd57x9h",` +
+		`"task_type":"local_bash","description":"Wait three seconds then print done"}],` +
+		`"uuid":"u-bg-1","session_id":"e2e"}`,
 	`{"type":"system","subtype":"background_tasks_changed","tasks":[],"uuid":"u-bg","session_id":"e2e"}`,
+	`{"type":"system","subtype":"thinking_tokens","estimated_tokens":50,"estimated_tokens_delta":50,` +
+		`"session_id":"e2e","uuid":"u-tt"}`,
 }
+
+// Like the real CLI, session_state_changed is sent only when the caller opted
+// in through the environment, so a test can prove Options.Env reaches the
+// subprocess and the frame reaches the caller typed.
+const (
+	sessionRunning = `{"type":"system","subtype":"session_state_changed","state":"running","uuid":"u-ssr","session_id":"e2e"}`
+	sessionIdle    = `{"type":"system","subtype":"session_state_changed","state":"idle","uuid":"u-ssi","session_id":"e2e"}`
+)
 
 const result = `{"type":"result","subtype":"success","session_id":"e2e","duration_ms":12,` +
 	`"duration_api_ms":9,"is_error":false,"num_turns":1,"result":"Go 1.26 is out.","terminal_reason":"completed"}`
@@ -106,10 +120,20 @@ func main() {
 				`{"type":"control_response","response":{"subtype":"success","request_id":%q,"response":{}}}`,
 				frame.RequestID))
 		case "user":
+			sessionState := os.Getenv("CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS") != ""
+			if sessionState {
+				emit(sessionRunning)
+			}
 			for _, line := range lifecycle {
 				emit(line)
 			}
 			emit(compact(turn))
+			// Before the result, so it is inside the Query that sees it. The
+			// real 2.1.283 can send it after a follow-up turn instead (ROADMAP
+			// entry 0); this stub does not model that.
+			if sessionState {
+				emit(sessionIdle)
+			}
 			emit(result)
 		}
 	}

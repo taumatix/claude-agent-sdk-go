@@ -361,6 +361,20 @@ func systemPayloadFromWire(msg *Message, m *protocol.SystemMessage) {
 			ExitCode:      p.ExitCode,
 			Outcome:       HookOutcome(p.Outcome),
 		}
+
+	case protocol.SystemSubtypeSessionStateChanged:
+		var p protocol.SessionStateChangedPayload
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return
+		}
+		msg.SessionStateChanged = sessionStateFromWire(p)
+
+	case protocol.SystemSubtypeBackgroundTasksChanged:
+		var p protocol.BackgroundTasksChangedPayload
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return
+		}
+		msg.BackgroundTasksChanged = backgroundTasksFromWire(p)
 	}
 }
 

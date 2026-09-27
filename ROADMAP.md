@@ -5,18 +5,20 @@ Each entry says what breaks today, so it can be judged on its own.
 
 ## Closing the gap to `claude-agent-sdk-python`
 
-The port is pinned to `566e41f` (2026-03-30); upstream is **459 commits ahead** as of 2026-09-25
-and released `v0.2.159` on 2026-09-23. The test suite is green and stays green, because no test
+The port is pinned to `566e41f` (2026-03-30); upstream is **463 commits ahead** as of 2026-09-27
+and released `v0.2.160` on 2026-09-25. The test suite is green and stays green, because no test
 can fail for a feature that was never ported.
 
-A single 459-commit catch-up is the change nobody dares review, so this is taken in slices,
+A single 463-commit catch-up is the change nobody dares review, so this is taken in slices,
 each of which ships something usable on its own. The `UPSTREAM.md` pin moves only as far as a
 slice actually verifies — a pin that jumps to HEAD because the tests passed is the same lie in a
 newer commit.
 
 The ordering principle is **live breaks before missing features**: a wire type the SDK gets wrong
 corrupts what a working user already receives, while a feature that was never ported merely stays
-absent. Two slices have shipped and both found a live break rather than a missing feature:
+absent. Three slices have shipped. The first two found a live break rather than a missing
+feature; the third (session state and background tasks, 2026-09-27) found one next to it —
+entry 0:
 
 - **Content blocks** (2026-09-20) — the SDK matched `server_tool_result`, a name no CLI emits, and
   was dropping every server-side tool result.
@@ -30,26 +32,47 @@ binary is a usable reference — it ships zod schemas naming every field of ever
 (see entry 2). Reading them also found `hook_progress`, a message upstream's Python SDK does not
 model at all.
 
+### 0. `Query` ends the run at the first result, which can be too early
+
+**Today:** `agent.Query` and `Client.Query` return at the first `ResultMessage`, and the one-shot
+`Query` then closes the CLI. On `claude` 2.1.283 a background task that finishes wakes the session
+for a follow-up turn *after* that result (seen live on 2026-09-27: `result`, then a second `init`,
+assistant turn and `result`, then `session_state_changed: idle`). So the one-shot `Query` closes
+stdin while the session still owes a turn — the bug upstream fixed as #1088 and #1190, where it
+silently disabled hooks and failed SDK MCP calls with "Stream closed". On a `Client` the late
+frames are not lost but land at the head of the *next* `Query`, attributed to the wrong prompt
+(read from the code; not yet observed in a test).
+
+**Why it is not simply done:** "the run is over" has no single signal. Upstream combines three:
+the result, the tracked in-flight agent tasks from the `task_*` frames, and `session_state_changed`
+requested through `CLAUDE_CODE_SDK_READS_SESSION_STATE` (frames marked `sdk_host_only`, dropped
+before the caller sees them), plus a ceiling timer for CLIs that send no state. Porting that is
+behaviour, not types, so it needs its own end-to-end test: a background agent that fires a hook
+after the first result.
+
+**Shape:** port upstream's run-end logic into the session manager: set
+`CLAUDE_CODE_SDK_READS_SESSION_STATE=1` unless the caller chose a value, filter `sdk_host_only`
+frames, and end a `Query` on `idle` (or on the result when no state arrives). The typed
+`SessionStateChanged` shipped in 0.5.0 is the input it needs.
+
 ### 1. The rest of the `system` subtype vocabulary
 
-**Today:** the task and hook subtypes are typed (shipped 2026-09-25). The CLI's schema bundle
-declares many more that still arrive as a generic `System`, and two of them have a caller waiting:
-`background_tasks_changed` is a *level* signal listing every live background task, and its own
-schema says consumers who only need "is background work running" should replace their set from it
-rather than pairing `task_started`/`task_notification` edges — which is exactly what the shipped
-slice makes a caller do, so a missed bookend can still wedge a stale indicator.
-`session_state_changed` (`idle`/`running`/`requires_action`) is described in the bundle as the
-"authoritative turn-over signal".
+**Today:** the task and hook subtypes are typed (2026-09-25), and `background_tasks_changed` and
+`session_state_changed` (0.5.0, 2026-09-27). The CLI's schema bundle declares many more that
+still arrive as a generic `System`: `init`, `status`, `thinking_tokens`, `task_summary`,
+`post_turn_summary`, `compact_boundary`, `files_persisted`, `file_snapshot`, `mirror_error`,
+`code_change_published`, `vcs_state_changed`, `commands_changed`, `elicitation_complete`,
+`plugin_install`, `local_command_output`, `informational`, `feedback_draft_queued`,
+`worker_shutting_down`, `auth_status`, `turn_duration`, `dev_intent`, `permission_denied`,
+`api_retry`, `session_metadata`.
 
-Others seen or declared: `init`, `status`, `thinking_tokens`, `task_summary`, `post_turn_summary`,
-`compact_boundary`, `files_persisted`, `file_snapshot`, `mirror_error`, `code_change_published`,
-`vcs_state_changed`, `commands_changed`, `elicitation_complete`, `plugin_install`,
-`local_command_output`, `informational`, `feedback_draft_queued`, `worker_shutting_down`,
-`auth_status`, `turn_duration`, `dev_intent`.
+`task_summary`, `post_turn_summary` and `thinking_tokens` arrived in every live run on
+2026-09-27, so they are the next candidates. `permission_denied` and `api_retry` are the ones a
+caller would act on rather than display.
 
 **Why it is not simply done:** that is 20+ subtypes and typing all of them in one change is the
-review nobody wants. Rank by whether a Go caller can act on it: `background_tasks_changed` and
-`session_state_changed` first, the `@internal`-marked ones probably never.
+review nobody wants. Rank by whether a Go caller can act on it; the `@internal`-marked ones
+probably never.
 
 **Shape:** one sub-entry per subtype worth typing, same pattern as the lifecycle slice — payload
 struct in `protocol`, public type in `messages`, `System` still populated, unmodelled subtypes
