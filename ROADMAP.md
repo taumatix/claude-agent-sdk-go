@@ -43,6 +43,11 @@ silently disabled hooks and failed SDK MCP calls with "Stream closed". On a `Cli
 frames are not lost but land at the head of the *next* `Query`, attributed to the wrong prompt
 (read from the code; not yet observed in a test).
 
+It is not only background work: installing v0.5.0 from the proxy on 2026-09-27 and running the
+README example on "reply with exactly: OK" showed `running` and no `idle` — on 2.1.283 `idle`
+follows the result on every turn, so `SessionStateChanged` can never report `idle` inside a
+`Query` today.
+
 **Why it is not simply done:** "the run is over" has no single signal. Upstream combines three:
 the result, the tracked in-flight agent tasks from the `task_*` frames, and `session_state_changed`
 requested through `CLAUDE_CODE_SDK_READS_SESSION_STATE` (frames marked `sdk_host_only`, dropped
