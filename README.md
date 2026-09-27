@@ -226,9 +226,9 @@ for msg, err := range agent.Query(ctx, prompt, opts) {
 
 `background_tasks_changed` lists **background** tasks only: a subagent running in the foreground
 is absent until it is backgrounded. `idle` is the CLI's authoritative "no further turn is owed",
-but on `claude` 2.1.283 it can arrive after a background task wakes a follow-up turn, which is
-after the first `Result`, where `Query` returns. So a single `Query` may end without showing you
-`idle`; see [ROADMAP.md](ROADMAP.md).
+but on `claude` 2.1.283 it arrives *after* the `Result`, where `Query` returns — even for a
+one-line prompt — so today a `Query` shows you `running` and not `idle`. Treat the `Result` as the
+end of the turn until that is fixed; see [ROADMAP.md](ROADMAP.md).
 
 ### Tool permission callbacks
 
