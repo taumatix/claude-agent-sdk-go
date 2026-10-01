@@ -9,14 +9,14 @@ how current it is before depending on it.
   kind: github-commit
   repo: anthropics/claude-agent-sdk-python
   sha: 566e41f7a59377885693082d0e8436d8964a0491
-  checked: 2026-09-27
+  checked: 2026-10-01
   note: >-
     the Python SDK this library is ported from; the port mirrors its public
-    surface. 463 commits behind as of 2026-09-27. The pin stays at the original
+    surface. 475 commits behind as of 2026-10-01. The pin stays at the original
     sha: three areas have since been brought level with upstream HEAD and verified
     against the CLI (content blocks on 2026-09-20, `system` lifecycle and hook
     messages on 2026-09-25, session state and background tasks on 2026-09-27),
-    which is three areas and not 463 commits.
+    which is three areas and not 475 commits.
 
 - name: claude-code-cli
   kind: npm
@@ -43,9 +43,9 @@ how current it is before depending on it.
 ## Where this stands today — read this before depending on the port
 
 **The Python SDK pin is six months stale.** It was set on 2026-03-30 when the port was written
-and never moved. Upstream is **463 commits ahead** of it and released `v0.2.160` on 2026-09-25.
-The gap has grown by 15 commits since 2026-09-21; it grows every week this port does not close a
-slice, which is the honest way to read this number.
+and never moved. Upstream is **475 commits ahead** of it and released `v0.2.163` on 2026-09-30.
+The gap grew by 12 commits between 2026-09-27 and 2026-10-01, and by 27 since 2026-09-21. It grows
+every week this port does not close a slice, which is the honest way to read this number.
 
 The pin has not moved, and it should not. Three slices of the catch-up have shipped:
 
@@ -59,7 +59,7 @@ The pin has not moved, and it should not. Three slices of the catch-up have ship
   session state internally to decide when a run is over, which this port does not yet do (see
   ROADMAP entry 0).
 
-That is three areas, not 463 commits, so moving the pin would advertise a currency this port does
+That is three areas, not 475 commits, so moving the pin would advertise a currency this port does
 not have.
 
 **Something here *was* broken, and the green suite said otherwise.** The SDK matched a content
