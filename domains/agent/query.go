@@ -24,7 +24,7 @@ func Query(ctx context.Context, prompt string, opts Options) iter.Seq2[messages.
 			st, err := subprocess.New(ctx, subprocess.Config{
 				CLIPath:          opts.CLIPath,
 				Args:             BuildCLIArgs(opts),
-				Env:              opts.Env,
+				Env:              subprocessEnv(opts.Env),
 				WorkingDirectory: opts.WorkingDirectory,
 			})
 			if err != nil {
@@ -47,35 +47,8 @@ func Query(ctx context.Context, prompt string, opts Options) iter.Seq2[messages.
 			return
 		}
 
-		for {
-			select {
-			case msg, ok := <-sm.Messages():
-				if !ok {
-					// msgCh closed — drain errCh for any terminal error
-					select {
-					case err := <-sm.Errors():
-						if err != nil {
-							yield(messages.Message{}, err)
-						}
-					default:
-					}
-					return
-				}
-				if !yield(msg, nil) {
-					return
-				}
-				if msg.Result != nil {
-					return
-				}
-			case err := <-sm.Errors():
-				if err != nil {
-					yield(messages.Message{}, err)
-				}
-				return
-			case <-ctx.Done():
-				yield(messages.Message{}, ctx.Err())
-				return
-			}
-		}
+		// Not at the first result: the CLI may still owe a follow-up turn,
+		// and the deferred Close shuts its stdin. See run.
+		sm.run(ctx, yield)
 	}
 }

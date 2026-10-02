@@ -36,6 +36,9 @@ type sessionManager struct {
 	cancel      context.CancelFunc
 	wg          sync.WaitGroup
 	hookIDs     map[string]HookHandler
+	// state is the CLI's reported session state, which decides when a Query
+	// is over (see run).
+	state *sessionState
 }
 
 func newSessionManager(ctx context.Context, t transport.Transport, opts Options) *sessionManager {
@@ -48,6 +51,7 @@ func newSessionManager(ctx context.Context, t transport.Transport, opts Options)
 		ctx:       ctx2,
 		cancel:    cancel,
 		hookIDs:   make(map[string]HookHandler),
+		state:     newSessionState(),
 	}
 	sm.wg.Add(1)
 	go sm.readLoop()
