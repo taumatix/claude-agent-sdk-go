@@ -29,14 +29,12 @@ import (
 //
 //	CLAUDE_SDK_LIVE_E2E=1 go test ./domains/agent/ -run TestLive -v
 //
+// CLAUDE_SDK_LIVE_CLI_PATH points them at a particular `claude` binary instead of
+// the one on PATH, so a newer CLI can be tried without installing it.
+//
 // Last run: 2026-09-25 against claude 2.1.267, passing.
 func TestLive_TaskLifecycleFromRealCLI(t *testing.T) {
-	if os.Getenv("CLAUDE_SDK_LIVE_E2E") != "1" {
-		t.Skip("set CLAUDE_SDK_LIVE_E2E=1 to run against the installed `claude` (needs credentials, costs money)")
-	}
-	if _, err := exec.LookPath("claude"); err != nil {
-		t.Skip("no `claude` on PATH")
-	}
+	cli := liveCLI(t)
 
 	dir := t.TempDir()
 	for _, name := range []string{"a.txt", "b.txt", "c.txt"} {
@@ -52,6 +50,7 @@ func TestLive_TaskLifecycleFromRealCLI(t *testing.T) {
 	// enough to count files, and non-interactive mode denies the rest rather
 	// than prompting.
 	client := agent.NewClient(agent.Options{
+		CLIPath:          cli,
 		AllowedTools:     []string{"Task", "Glob", "Read", "Bash(ls:*)", "Bash(find:*)"},
 		WorkingDirectory: dir,
 	})
@@ -95,18 +94,13 @@ func TestLive_TaskLifecycleFromRealCLI(t *testing.T) {
 // the real client, with the opt-in the SessionStateChangedMessage doc tells
 // callers to use.
 //
-// "idle" is not asserted. On 2.1.283 it arrives after the follow-up turn the
-// finished background task wakes, which is after the first result, where Query
-// returns. Reaching it is a roadmap entry, not something this test can see.
+// Since 0.6.0 a Query waits for "idle" when the CLI reports state, so the opted-
+// in caller now sees it, last, inside the Query. Before, on 2.1.283 it came
+// after the result, where Query had already returned.
 //
-// Last run: 2026-09-27 against claude 2.1.283, passing.
+// Last run: 2026-10-03 against claude 2.1.283 and 2.1.288, passing.
 func TestLive_SessionStateAndBackgroundTasksFromRealCLI(t *testing.T) {
-	if os.Getenv("CLAUDE_SDK_LIVE_E2E") != "1" {
-		t.Skip("set CLAUDE_SDK_LIVE_E2E=1 to run against the installed `claude` (needs credentials, costs money)")
-	}
-	if _, err := exec.LookPath("claude"); err != nil {
-		t.Skip("no `claude` on PATH")
-	}
+	cli := liveCLI(t)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -114,6 +108,7 @@ func TestLive_SessionStateAndBackgroundTasksFromRealCLI(t *testing.T) {
 	// The allow-list admits `sleep` and the tools that read a background
 	// shell's output, nothing else.
 	client := agent.NewClient(agent.Options{
+		CLIPath:          cli,
 		AllowedTools:     []string{"Bash(sleep:*)", "BashOutput", "TaskOutput"},
 		WorkingDirectory: t.TempDir(),
 		Env:              map[string]string{"CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS": "1"},
@@ -152,6 +147,8 @@ func TestLive_SessionStateAndBackgroundTasksFromRealCLI(t *testing.T) {
 
 	require.NotEmpty(t, states, "no typed session_state_changed arrived; subtypes seen: %v", subtypes)
 	assert.Equal(t, messages.SessionStateRunning, states[0], "a turn starts by reporting running")
+	assert.Equal(t, messages.SessionStateIdle, states[len(states)-1],
+		"the Query ended before the CLI said idle; states seen: %v", states)
 	for _, s := range states {
 		assert.Contains(t, []messages.SessionState{
 			messages.SessionStateIdle, messages.SessionStateRunning, messages.SessionStateRequiresAction,
@@ -166,17 +163,12 @@ func TestLive_SessionStateAndBackgroundTasksFromRealCLI(t *testing.T) {
 // against the installed binary so a future CLI that starts nesting payloads is
 // caught here rather than by a user.
 func TestLive_NoSystemMessageCarriesADataKey(t *testing.T) {
-	if os.Getenv("CLAUDE_SDK_LIVE_E2E") != "1" {
-		t.Skip("set CLAUDE_SDK_LIVE_E2E=1 to run against the installed `claude` (needs credentials, costs money)")
-	}
-	if _, err := exec.LookPath("claude"); err != nil {
-		t.Skip("no `claude` on PATH")
-	}
+	cli := liveCLI(t)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
 
-	client := agent.NewClient(agent.Options{})
+	client := agent.NewClient(agent.Options{CLIPath: cli})
 	require.NoError(t, client.Connect(ctx))
 	defer func() { _ = client.Disconnect() }()
 
@@ -201,4 +193,21 @@ func TestLive_NoSystemMessageCarriesADataKey(t *testing.T) {
 	}
 
 	require.Positive(t, seen, "no system messages arrived at all, so nothing was checked")
+}
+
+// liveCLI skips unless live tests were asked for, and returns the `claude` to
+// run: CLAUDE_SDK_LIVE_CLI_PATH if set, otherwise the one on PATH.
+func liveCLI(t *testing.T) string {
+	t.Helper()
+	if os.Getenv("CLAUDE_SDK_LIVE_E2E") != "1" {
+		t.Skip("set CLAUDE_SDK_LIVE_E2E=1 to run against a real `claude` (needs credentials, costs money)")
+	}
+	if p := os.Getenv("CLAUDE_SDK_LIVE_CLI_PATH"); p != "" {
+		return p
+	}
+	p, err := exec.LookPath("claude")
+	if err != nil {
+		t.Skip("no `claude` on PATH")
+	}
+	return p
 }

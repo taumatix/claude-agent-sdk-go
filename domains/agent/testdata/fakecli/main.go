@@ -120,24 +120,89 @@ func main() {
 				`{"type":"control_response","response":{"subtype":"success","request_id":%q,"response":{}}}`,
 				frame.RequestID))
 		case "user":
+			// CLAUDE_CODE_SDK_READS_SESSION_STATE is how the SDK asks for
+			// session state for itself. 2.1.288 answers it with frames marked
+			// sdk_host_only, "running" before the turn and "idle" after the
+			// result (probed 2026-10-03); 2.1.283 ignores it. The stub plays
+			// 2.1.288 unless FAKECLI_SCENARIO=old-cli.
+			scenario := os.Getenv("FAKECLI_SCENARIO")
+			hostState := os.Getenv("CLAUDE_CODE_SDK_READS_SESSION_STATE") != "" && scenario != "old-cli"
 			sessionState := os.Getenv("CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS") != ""
-			if sessionState {
+			// With both set, 2.1.288 sends one set of frames, visible to the
+			// caller, and "idle" after the result (probed 2026-10-03).
+			both := hostState && sessionState
+			switch {
+			case both, sessionState:
 				emit(sessionRunning)
+			case hostState:
+				emit(hostRunning)
 			}
 			for _, line := range lifecycle {
 				emit(line)
 			}
 			emit(compact(turn))
-			// Before the result, so it is inside the Query that sees it. The
-			// real 2.1.283 can send it after a follow-up turn instead (ROADMAP
-			// entry 0); this stub does not model that.
-			if sessionState {
+			if sessionState && !both {
+				// The 2.1.283 shape with only the caller's opt-in.
 				emit(sessionIdle)
 			}
 			emit(result)
+
+			switch scenario {
+			case "followup":
+				// A background agent finished after the result: the CLI asks a
+				// hook to run, and answers the follow-up turn it woke for, all
+				// before "idle". An SDK that closed stdin at the first result
+				// never answers the hook.
+				emit(`{"type":"control_request","request_id":"hook-after-result",` +
+					`"request":{"subtype":"hook_callback","callback_id":"hook_0","input":{"hook_event_name":"SubagentStop"}}}`)
+				if !awaitResponse(scanner, "hook-after-result") {
+					return
+				}
+				emit(followupTurn)
+				emit(followupResult)
+			case "noidle":
+				// State was reported, but "idle" never comes: the SDK must
+				// give up at its ceiling rather than wait for ever.
+				continue
+			}
+			switch {
+			case both:
+				emit(sessionIdle)
+			case hostState:
+				emit(hostIdle)
+			}
 		}
 	}
 }
+
+// awaitResponse reads stdin until the SDK answers requestID, answering any
+// control request of its own in the meantime. It reports false on EOF, which
+// is what an SDK that closed stdin early looks like from here.
+func awaitResponse(scanner *bufio.Scanner, requestID string) bool {
+	for scanner.Scan() {
+		var frame struct {
+			Type     string `json:"type"`
+			Response struct {
+				RequestID string `json:"request_id"`
+			} `json:"response"`
+		}
+		if json.Unmarshal(scanner.Bytes(), &frame) == nil &&
+			frame.Type == "control_response" && frame.Response.RequestID == requestID {
+			return true
+		}
+	}
+	return false
+}
+
+const (
+	hostRunning = `{"type":"system","subtype":"session_state_changed","state":"running","sdk_host_only":true,"uuid":"u-hr","session_id":"e2e"}`
+	hostIdle    = `{"type":"system","subtype":"session_state_changed","state":"idle","sdk_host_only":true,"uuid":"u-hi","session_id":"e2e"}`
+
+	followupTurn = `{"type":"assistant","session_id":"e2e","model":"claude-sonnet-5","message":{"role":"assistant",` +
+		`"content":[{"type":"text","text":"The background agent finished."}]}}`
+	followupResult = `{"type":"result","subtype":"success","session_id":"e2e","duration_ms":5,` +
+		`"duration_api_ms":4,"is_error":false,"num_turns":2,"result":"The background agent finished.","terminal_reason":"completed"}`
+)
 
 // compact strips the newlines that keep the turn literal readable, so it goes
 // out as one JSON line.

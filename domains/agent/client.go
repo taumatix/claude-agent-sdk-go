@@ -36,7 +36,7 @@ func (c *Client) Connect(ctx context.Context) error {
 		st, err := subprocess.New(ctx, subprocess.Config{
 			CLIPath:          c.opts.CLIPath,
 			Args:             BuildCLIArgs(c.opts),
-			Env:              c.opts.Env,
+			Env:              subprocessEnv(c.opts.Env),
 			WorkingDirectory: c.opts.WorkingDirectory,
 		})
 		if err != nil {
@@ -77,36 +77,7 @@ func (c *Client) Query(ctx context.Context, prompt string) iter.Seq2[messages.Me
 			yield(messages.Message{}, err)
 			return
 		}
-		for {
-			select {
-			case msg, ok := <-sm.Messages():
-				if !ok {
-					// msgCh closed — drain errCh for any terminal error
-					select {
-					case err := <-sm.Errors():
-						if err != nil {
-							yield(messages.Message{}, err)
-						}
-					default:
-					}
-					return
-				}
-				if !yield(msg, nil) {
-					return
-				}
-				if msg.Result != nil {
-					return
-				}
-			case err := <-sm.Errors():
-				if err != nil {
-					yield(messages.Message{}, err)
-				}
-				return
-			case <-ctx.Done():
-				yield(messages.Message{}, ctx.Err())
-				return
-			}
-		}
+		sm.run(ctx, yield)
 	}
 }
 

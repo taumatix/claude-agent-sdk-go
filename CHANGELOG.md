@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-03
+
+### Fixed
+
+- **A one-shot `Query` closed the CLI while it still owed a turn.** `Query` returned at the first
+  `ResultMessage` and then closed the CLI's stdin. A background task that finishes after that
+  result wakes the session for a follow-up turn, so a hook the CLI asked to run for it was never
+  answered and an SDK MCP call failed. This is the bug upstream fixed as #1088 and #1190. On a
+  `Client` the follow-up turn was not lost, but it was handed to the *next* `Query`, attributed to
+  the wrong prompt. Both are reproduced by the new stub-CLI end-to-end tests.
+
+### Changed
+
+- **A `Query` now runs until the CLI reports `idle`**, not to the first result, when the CLI
+  reports session state. The SDK asks for that state with `CLAUDE_CODE_SDK_READS_SESSION_STATE`,
+  unless you set the variable yourself. Frames sent only for that request (`sdk_host_only`) are
+  not delivered to you. One `Query` can therefore yield more than one `ResultMessage`. A CLI that
+  reports no state ends at the result, as before. Verified live against `claude` 2.1.283, which
+  ignores the request, and 2.1.288, which honours it.
+- The wait after a result is bounded by `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` (default ten
+  minutes), read from `Options.Env` or the environment, as upstream does.
+- With your own `CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS` opt-in, `idle` now reaches you as the
+  `Query`'s last message. Under 0.5.0 it arrived after the `Query` had returned.
+
+### Known limitation
+
+A CLI that reports `idle` at every turn's end, or reports no state at all, gives no warning of a
+background agent that will wake the session later. Upstream also tracks in-flight agent tasks from
+the `task_*` frames for that case. That is ROADMAP entry 0b.
+
 ## [0.5.0] - 2026-09-27
 
 ### Added
@@ -157,7 +187,8 @@ shapes grow with the CLI, and a raw field stays forward-compatible where a struc
 
 - CI now gates every pull request on build, `go test -race` (Go 1.23 and stable), `gofmt`, `go vet`, `staticcheck`, and an `apidiff` check that fails on incompatible public API changes.
 
-[Unreleased]: https://github.com/taumatix/claude-agent-sdk-go/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/taumatix/claude-agent-sdk-go/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.6.0
 [0.5.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.5.0
 [0.4.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.4.0
 [0.3.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.3.0
