@@ -9,20 +9,21 @@ how current it is before depending on it.
   kind: github-commit
   repo: anthropics/claude-agent-sdk-python
   sha: 566e41f7a59377885693082d0e8436d8964a0491
-  checked: 2026-10-01
+  checked: 2026-10-03
   note: >-
     the Python SDK this library is ported from; the port mirrors its public
-    surface. 475 commits behind as of 2026-10-01. The pin stays at the original
-    sha: three areas have since been brought level with upstream HEAD and verified
+    surface. 476 commits behind as of 2026-10-03. The pin stays at the original
+    sha: four areas have since been brought level with upstream HEAD and verified
     against the CLI (content blocks on 2026-09-20, `system` lifecycle and hook
-    messages on 2026-09-25, session state and background tasks on 2026-09-27),
-    which is three areas and not 475 commits.
+    messages on 2026-09-25, session state and background tasks on 2026-09-27,
+    and ending a Query on the CLI's "idle" on 2026-10-03), which is four areas
+    and not 476 commits.
 
 - name: claude-code-cli
   kind: npm
   package: "@anthropic-ai/claude-code"
-  version: 2.1.283
-  checked: 2026-09-27
+  version: 2.1.288
+  checked: 2026-10-03
   hold: >-
     the CLI is spawned, not bundled, so the user's installed version is the one that
     runs; the gap is measured, not an alarm. Floor is MinimumCLIVersion = 2.0.0
@@ -38,16 +39,20 @@ how current it is before depending on it.
     system subtype carries a `data` key. 2.1.283 checked on 2026-09-27: the
     session_state_changed and background_tasks_changed schemas plus the full
     live end-to-end suite (task lifecycle, session state, no `data` key) pass.
+    2.1.288 checked on 2026-10-03, run from its npm package without installing
+    it: it honours CLAUDE_CODE_SDK_READS_SESSION_STATE (2.1.283 does not; the
+    string is absent from that binary), sends sdk_host_only frames with "idle"
+    after the result, and passes the full live suite. So does 2.1.283.
 ```
 
 ## Where this stands today — read this before depending on the port
 
 **The Python SDK pin is six months stale.** It was set on 2026-03-30 when the port was written
-and never moved. Upstream is **475 commits ahead** of it and released `v0.2.163` on 2026-09-30.
-The gap grew by 12 commits between 2026-09-27 and 2026-10-01, and by 27 since 2026-09-21. It grows
+and never moved. Upstream is **476 commits ahead** of it and released `v0.2.163` on 2026-09-30.
+The gap grew by 13 commits between 2026-09-27 and 2026-10-03, and by 28 since 2026-09-21. It grows
 every week this port does not close a slice, which is the honest way to read this number.
 
-The pin has not moved, and it should not. Three slices of the catch-up have shipped:
+The pin has not moved, and it should not. Four slices of the catch-up have shipped:
 
 - **Content blocks** (2026-09-20, released as `v0.3.0`) — the vocabulary in `domains/protocol`,
   verified against the `claude` binary and covered end to end.
@@ -55,11 +60,13 @@ The pin has not moved, and it should not. Three slices of the catch-up have ship
   hook phases, brought level with upstream HEAD and then past it: the CLI emits a `hook_progress`
   phase and five `task_started` fields that upstream's Python SDK does not model.
 - **Session state and background tasks** (2026-09-27, `v0.5.0`) — `session_state_changed` and
-  `background_tasks_changed`, typed from the 2.1.283 schemas. Upstream types neither; it reads
-  session state internally to decide when a run is over, which this port does not yet do (see
-  ROADMAP entry 0).
+  `background_tasks_changed`, typed from the 2.1.283 schemas. Upstream types neither.
+- **When a run is over** (2026-10-03, `v0.6.0`) — a `Query` waits for the CLI's `idle`, requested
+  through `CLAUDE_CODE_SDK_READS_SESSION_STATE` as upstream does, bounded by the same ceiling.
+  Upstream's in-flight agent-task tracking, for CLIs that report no state, is not ported yet
+  (ROADMAP entry 0b).
 
-That is three areas, not 475 commits, so moving the pin would advertise a currency this port does
+That is four areas, not 476 commits, so moving the pin would advertise a currency this port does
 not have.
 
 **Something here *was* broken, and the green suite said otherwise.** The SDK matched a content

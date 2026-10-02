@@ -5,20 +5,20 @@ Each entry says what breaks today, so it can be judged on its own.
 
 ## Closing the gap to `claude-agent-sdk-python`
 
-The port is pinned to `566e41f` (2026-03-30); upstream is **475 commits ahead** as of 2026-10-01
+The port is pinned to `566e41f` (2026-03-30); upstream is **476 commits ahead** as of 2026-10-03
 and released `v0.2.163` on 2026-09-30. The test suite is green and stays green, because no test
 can fail for a feature that was never ported.
 
-A single 475-commit catch-up is the change nobody dares review, so this is taken in slices,
+A single 476-commit catch-up is the change nobody dares review, so this is taken in slices,
 each of which ships something usable on its own. The `UPSTREAM.md` pin moves only as far as a
 slice actually verifies — a pin that jumps to HEAD because the tests passed is the same lie in a
 newer commit.
 
 The ordering principle is **live breaks before missing features**: a wire type the SDK gets wrong
 corrupts what a working user already receives, while a feature that was never ported merely stays
-absent. Three slices have shipped. The first two found a live break rather than a missing
-feature; the third (session state and background tasks, 2026-09-27) found one next to it —
-entry 0:
+absent. Four slices have shipped. The first two found a live break rather than a missing
+feature; the third (session state and background tasks, 2026-09-27) found one next to it, and the
+fourth (2026-10-03) fixed it for CLIs that report state, leaving entries 0b and 0c:
 
 - **Content blocks** (2026-09-20) — the SDK matched `server_tool_result`, a name no CLI emits, and
   was dropping every server-side tool result.
@@ -32,33 +32,37 @@ binary is a usable reference — it ships zod schemas naming every field of ever
 (see entry 2). Reading them also found `hook_progress`, a message upstream's Python SDK does not
 model at all.
 
-### 0. `Query` ends the run at the first result, which can be too early
+### 0b. A run that reports no `idle` it can be trusted with
 
-**Today:** `agent.Query` and `Client.Query` return at the first `ResultMessage`, and the one-shot
-`Query` then closes the CLI. On `claude` 2.1.283 a background task that finishes wakes the session
-for a follow-up turn *after* that result (seen live on 2026-09-27: `result`, then a second `init`,
-assistant turn and `result`, then `session_state_changed: idle`). So the one-shot `Query` closes
-stdin while the session still owes a turn — the bug upstream fixed as #1088 and #1190, where it
-silently disabled hooks and failed SDK MCP calls with "Stream closed". On a `Client` the late
-frames are not lost but land at the head of the *next* `Query`, attributed to the wrong prompt
-(read from the code; not yet observed in a test).
+**Today:** since 0.6.0 a `Query` waits for the CLI's `idle` whenever the CLI reports session state,
+which fixed the one-shot `Query` closing stdin under a follow-up turn on any CLI that honours
+`CLAUDE_CODE_SDK_READS_SESSION_STATE` (2.1.288 does, 2.1.283 does not). Two cases are left:
 
-It is not only background work: installing v0.5.0 from the proxy on 2026-09-27 and running the
-README example on "reply with exactly: OK" showed `running` and no `idle` — on 2.1.283 `idle`
-follows the result on every turn, so `SessionStateChanged` can never report `idle` inside a
-`Query` today.
+- **A CLI that reports no state at all**: 2.1.283 and older without the caller's own opt-in. The
+  result is still the only signal, so a background agent that finishes after it still finds stdin
+  closed. That is every user on a CLI from before the request existed.
+- **A CLI that reports `idle` at every turn's end** regardless of background work. Upstream's
+  comment says such CLIs exist; none was seen here.
 
-**Why it is not simply done:** "the run is over" has no single signal. Upstream combines three:
-the result, the tracked in-flight agent tasks from the `task_*` frames, and `session_state_changed`
-requested through `CLAUDE_CODE_SDK_READS_SESSION_STATE` (frames marked `sdk_host_only`, dropped
-before the caller sees them), plus a ceiling timer for CLIs that send no state. Porting that is
-behaviour, not types, so it needs its own end-to-end test: a background agent that fires a hook
-after the first result.
+**Why it is not simply done:** upstream covers both by tracking in-flight agent tasks from the
+`task_*` frames (`DEFERRING_TASK_TYPES`: `local_agent` and `local_workflow` only, because shells,
+monitors and teammates may never reach a terminal status and would hang the Query). That is a
+ledger with its own failure mode: a task the SDK never sees end keeps the Query open until the
+ceiling.
 
-**Shape:** port upstream's run-end logic into the session manager: set
-`CLAUDE_CODE_SDK_READS_SESSION_STATE=1` unless the caller chose a value, filter `sdk_host_only`
-frames, and end a `Query` on `idle` (or on the result when no state arrives). The typed
-`SessionStateChanged` shipped in 0.5.0 is the input it needs.
+**Shape:** port `_track_task_lifecycle` into `run`: add on `task_started` of a deferring type, and
+remove on `task_notification` or a terminal `task_updated`. A result with tasks in flight arms the
+ceiling instead of ending. The live test is the existing subagent one with the Explore agent run
+in the background on 2.1.283.
+
+### 0c. `CLIPath` pointed at an unreleased CLI is the only way to test a newer one
+
+The 0.6.0 change was verified against 2.1.288 by downloading its npm package and pointing
+`CLAUDE_SDK_LIVE_CLI_PATH` at the binary, because the installed CLI is 2.1.283 and upgrading it is
+not this repo's to do. That worked once, by hand. A maintenance pass should do the same against
+the newest published CLI every time, because the behaviour this SDK depends on (which env
+variables are honoured, where `idle` falls) changes between CLI releases with nothing in this repo
+noticing.
 
 ### 1. The rest of the `system` subtype vocabulary
 

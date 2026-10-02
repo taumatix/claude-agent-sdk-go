@@ -4,7 +4,7 @@ A Go SDK for [Claude Code](https://claude.ai/code) that lets you run Claude as a
 
 The SDK wraps the `claude` CLI binary as a subprocess and communicates over newline-delimited JSON streams, exposing a clean Go API with Go 1.23 range iterators.
 
-> **Upstream: ported from `claude-agent-sdk-python` at [`566e41f`](https://github.com/anthropics/claude-agent-sdk-python/commit/566e41f7a59377885693082d0e8436d8964a0491) (2026-03-30), which is 475 commits behind upstream as of 2026-10-01 — a six-month gap that is still widening.**
+> **Upstream: ported from `claude-agent-sdk-python` at [`566e41f`](https://github.com/anthropics/claude-agent-sdk-python/commit/566e41f7a59377885693082d0e8436d8964a0491) (2026-03-30), which is 476 commits behind upstream as of 2026-10-03 — a six-month gap that is still widening.**
 > The feature surface is the Python SDK as it stood in March 2026 — a test cannot fail for a
 > feature that was never ported. Version 0.2.0 also shipped a real bug the green suite could not
 > see: every server-side tool result was discarded, because the SDK matched a wire type the CLI
@@ -226,9 +226,23 @@ for msg, err := range agent.Query(ctx, prompt, opts) {
 
 `background_tasks_changed` lists **background** tasks only: a subagent running in the foreground
 is absent until it is backgrounded. `idle` is the CLI's authoritative "no further turn is owed",
-but on `claude` 2.1.283 it arrives *after* the `Result`, where `Query` returns — even for a
-one-line prompt — so today a `Query` shows you `running` and not `idle`. Treat the `Result` as the
-end of the turn until that is fixed; see [ROADMAP.md](ROADMAP.md).
+and it arrives *after* the `Result`.
+
+### When a `Query` ends
+
+At the first `Result` only if the CLI has nothing else to say. A background task that finishes
+after that result wakes the session for a follow-up turn, and its hooks and permission requests
+need the CLI's stdin. So the SDK asks the CLI for session state
+(`CLAUDE_CODE_SDK_READS_SESSION_STATE`, frames it keeps from you) and a `Query` runs until the CLI
+reports `idle`. You may therefore see more than one `Result` in one `Query`, the follow-up turn's
+included. If you opted in to session state yourself, `idle` is the `Query`'s last message.
+
+- A CLI that reports no state (2.1.283 does not honour the SDK's request) ends the `Query` at the
+  `Result`, as before. With your own `CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS` opt-in it reports
+  state anyway, and the `Query` waits for `idle` there too.
+- The wait after a `Result` is bounded by `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` (default 600000,
+  ten minutes), the same variable that bounds the CLI's own wait for background work.
+- Stopping the iteration early (`break`) still ends the `Query` at once.
 
 ### Tool permission callbacks
 
