@@ -81,14 +81,52 @@ type sessionState struct {
 	mu       sync.Mutex
 	reported bool
 	state    messages.SessionState
+	// inflight holds the background agents the CLI has started and not yet
+	// reported finished. Each one's end wakes the session for a follow-up
+	// turn, so a result with any in flight does not end the run. For a CLI
+	// that reports no state this ledger is the only such signal.
+	inflight map[string]struct{}
 }
 
-func newSessionState() *sessionState { return &sessionState{} }
+// deferringTaskTypes are the task types a result waits for: the ones that
+// reliably reach a terminal status. Upstream's DEFERRING_TASK_TYPES, and for the
+// same reason: a background shell or monitor can run for ever, and waiting on
+// one would hang the Query rather than delay it.
+var deferringTaskTypes = map[string]bool{"local_agent": true, "local_workflow": true}
+
+func newSessionState() *sessionState {
+	return &sessionState{inflight: make(map[string]struct{})}
+}
 
 func (s *sessionState) set(st messages.SessionState) {
 	s.mu.Lock()
 	s.reported, s.state = true, st
 	s.mu.Unlock()
+}
+
+// track updates the ledger from a task lifecycle message and reports whether
+// it took the last in-flight agent off it.
+func (s *sessionState) track(msg *messages.Message) (settled bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	before := len(s.inflight)
+	switch {
+	case msg.TaskStarted != nil:
+		if deferringTaskTypes[msg.TaskStarted.TaskType] {
+			s.inflight[msg.TaskStarted.TaskID] = struct{}{}
+		}
+	case msg.TaskNotification != nil:
+		delete(s.inflight, msg.TaskNotification.TaskID)
+	case msg.TaskUpdated != nil && msg.TaskUpdated.Status.IsTerminal():
+		delete(s.inflight, msg.TaskUpdated.TaskID)
+	}
+	return before > 0 && len(s.inflight) == 0
+}
+
+func (s *sessionState) inFlight() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.inflight)
 }
 
 func (s *sessionState) get() (st messages.SessionState, reported bool) {
@@ -97,10 +135,11 @@ func (s *sessionState) get() (st messages.SessionState, reported bool) {
 	return s.state, s.reported
 }
 
-// runOver reports whether a result just received ends the run.
+// runOver reports whether a result just received ends the run: no background
+// agent is still in flight, and the CLI has said "idle" or reports no state.
 func (s *sessionState) runOver() bool {
 	st, reported := s.get()
-	return !reported || st == messages.SessionStateIdle
+	return s.inFlight() == 0 && (!reported || st == messages.SessionStateIdle)
 }
 
 // hostOnly reports whether a session_state_changed frame was sent only because
@@ -131,6 +170,11 @@ func (sm *sessionManager) run(ctx context.Context, yield func(messages.Message, 
 		}
 	}
 	defer stopCeiling()
+	armCeiling := func() {
+		stopCeiling()
+		timer = time.NewTimer(runEndCeiling(sm.opts.Env))
+		ceiling = timer.C
+	}
 
 	for {
 		select {
@@ -158,17 +202,23 @@ func (sm *sessionManager) run(ctx context.Context, yield func(messages.Message, 
 					// arrives, by runOver.
 					continue
 				}
-				if s.State == messages.SessionStateIdle {
+				if s.State == messages.SessionStateIdle && sm.state.inFlight() == 0 {
 					return
 				}
-				// A follow-up turn started, or the CLI is waiting on the host:
-				// the ceiling only counts the wait between turns, and the next
-				// result re-arms it.
+				// A follow-up turn started, the CLI is waiting on the host, or
+				// an agent is still out: the ceiling only counts the wait
+				// between turns, and the next result re-arms it.
 				stopCeiling()
 				continue
 			}
 			if !yield(msg, nil) {
 				return
+			}
+			if sm.state.track(&msg) && resultSeen {
+				// The last background agent finished after a result. It wakes
+				// the session for a follow-up turn whose result ends the run;
+				// the ceiling covers a CLI that never sends it.
+				armCeiling()
 			}
 			if msg.Result == nil {
 				continue
@@ -177,11 +227,16 @@ func (sm *sessionManager) run(ctx context.Context, yield func(messages.Message, 
 			if sm.state.runOver() {
 				return
 			}
-			stopCeiling()
-			timer = time.NewTimer(runEndCeiling(sm.opts.Env))
-			ceiling = timer.C
+			armCeiling()
 
 		case <-ceiling:
+			if sm.state.inFlight() > 0 {
+				// An agent is still running and may still need stdin for its
+				// hooks and permission requests, so it is not cut off. The
+				// ceiling starts over when it settles.
+				stopCeiling()
+				continue
+			}
 			return
 
 		case err := <-sm.Errors():

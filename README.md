@@ -237,11 +237,16 @@ need the CLI's stdin. So the SDK asks the CLI for session state
 reports `idle`. You may therefore see more than one `Result` in one `Query`, the follow-up turn's
 included. If you opted in to session state yourself, `idle` is the `Query`'s last message.
 
-- A CLI that reports no state (2.1.283 does not honour the SDK's request) ends the `Query` at the
-  `Result`, as before. With your own `CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS` opt-in it reports
-  state anyway, and the `Query` waits for `idle` there too.
+- A CLI that reports no state (2.1.283 does not honour the SDK's request) gives the SDK only the
+  task frames to go on. A `Query` stays open while a **background agent** it saw start
+  (`task_type` `local_agent` or `local_workflow`) has not reported finishing, and ends at the
+  `Result` that follows. Background shells and monitors are not waited for, because they can run
+  for ever. With your own `CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS` opt-in, 2.1.283 reports state
+  anyway, and the `Query` also waits for `idle`.
 - The wait after a `Result` is bounded by `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` (default 600000,
-  ten minutes), the same variable that bounds the CLI's own wait for background work.
+  ten minutes), the same variable that bounds the CLI's own wait for background work. A tracked
+  agent still running is not cut off by it, so bound a `Query` that may launch agents with your
+  own context deadline.
 - Stopping the iteration early (`break`) still ends the `Query` at once.
 
 ### Tool permission callbacks

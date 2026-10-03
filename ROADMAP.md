@@ -32,28 +32,22 @@ binary is a usable reference — it ships zod schemas naming every field of ever
 (see entry 2). Reading them also found `hook_progress`, a message upstream's Python SDK does not
 model at all.
 
-### 0b. A run that reports no `idle` it can be trusted with
+### 0b. An agent whose end the SDK never sees holds a Query open indefinitely
 
-**Today:** since 0.6.0 a `Query` waits for the CLI's `idle` whenever the CLI reports session state,
-which fixed the one-shot `Query` closing stdin under a follow-up turn on any CLI that honours
-`CLAUDE_CODE_SDK_READS_SESSION_STATE` (2.1.288 does, 2.1.283 does not). Two cases are left:
+**Today:** since 0.7.0 a `Query` stays open while a background agent it saw start has not reported
+finishing, and the ceiling does not cut one off. Upstream behaves the same way. Its comment
+explains: an agent cut off loses stdin for its hooks. The cost is that if the CLI never sends the
+agent's terminal frame (it crashes, the frame is lost, or a future CLI renames the subtype), the
+`Query` never ends on its own. A caller with no context deadline waits for ever. The README says
+to set one, but that leans on the caller reading it.
 
-- **A CLI that reports no state at all**: 2.1.283 and older without the caller's own opt-in. The
-  result is still the only signal, so a background agent that finishes after it still finds stdin
-  closed. That is every user on a CLI from before the request existed.
-- **A CLI that reports `idle` at every turn's end** regardless of background work. Upstream's
-  comment says such CLIs exist; none was seen here.
+Also not exercised: a CLI that reports `idle` at every turn's end regardless of background work.
+Upstream's comment says such CLIs exist; none has been seen here. The ledger covers them in the
+code, and no test drives one.
 
-**Why it is not simply done:** upstream covers both by tracking in-flight agent tasks from the
-`task_*` frames (`DEFERRING_TASK_TYPES`: `local_agent` and `local_workflow` only, because shells,
-monitors and teammates may never reach a terminal status and would hang the Query). That is a
-ledger with its own failure mode: a task the SDK never sees end keeps the Query open until the
-ceiling.
-
-**Shape:** port `_track_task_lifecycle` into `run`: add on `task_started` of a deferring type, and
-remove on `task_notification` or a terminal `task_updated`. A result with tasks in flight arms the
-ceiling instead of ending. The live test is the existing subagent one with the Explore agent run
-in the background on 2.1.283.
+**Shape:** decide whether a tracked agent should be cut off after some multiple of the ceiling,
+and say so in the doc comment of `Query` itself rather than only in the README. A stub-CLI
+scenario that starts an agent and never ends it pins whichever choice is made.
 
 ### 0c. `CLIPath` pointed at an unreleased CLI is the only way to test a newer one
 

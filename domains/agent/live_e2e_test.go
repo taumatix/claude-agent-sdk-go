@@ -211,3 +211,53 @@ func liveCLI(t *testing.T) string {
 	}
 	return p
 }
+
+// On a CLI that reports no session state (2.1.283 without the caller's
+// opt-in), the task ledger is what keeps a Query open while a background agent
+// runs. The guarantee: an agent the Query saw start is seen to finish before
+// the Query ends. Before 0.7.0 the Query ended at the first result and the
+// agent's end, and its follow-up turn, went to nobody.
+//
+// Last run: 2026-10-04 against claude 2.1.283, passing.
+func TestLive_AQueryOutlastsTheBackgroundAgentItStarted(t *testing.T) {
+	cli := liveCLI(t)
+
+	dir := t.TempDir()
+	for _, name := range []string{"a.txt", "b.txt"} {
+		require.NoError(t, os.WriteFile(dir+"/"+name, nil, 0o600))
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	started := map[string]bool{}
+	finished := map[string]bool{}
+	results := 0
+	for msg, err := range agent.Query(ctx,
+		"Launch one Explore subagent with run_in_background set to true to count the files in "+dir+
+			". Do not wait for it: reply with exactly STARTED, and nothing else, as soon as it is launched.",
+		agent.Options{
+			CLIPath:          cli,
+			AllowedTools:     []string{"Task", "Glob", "Bash(ls:*)"},
+			WorkingDirectory: dir,
+		}) {
+		require.NoError(t, err)
+		if ts := msg.TaskStarted; ts != nil && ts.TaskType == "local_agent" {
+			started[ts.TaskID] = true
+		}
+		if tn := msg.TaskNotification; tn != nil && tn.Status.IsTerminal() {
+			finished[tn.TaskID] = true
+		}
+		if tu := msg.TaskUpdated; tu != nil && tu.Status.IsTerminal() {
+			finished[tu.TaskID] = true
+		}
+		if msg.Result != nil {
+			results++
+		}
+	}
+
+	require.NotEmpty(t, started, "the model launched no agent, so this run proves nothing")
+	for id := range started {
+		assert.True(t, finished[id], "the Query ended with agent %s still running", id)
+	}
+	t.Logf("agents %d, results %d", len(started), results)
+}

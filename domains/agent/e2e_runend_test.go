@@ -161,3 +161,38 @@ func TestE2E_AnOptedInCallerSeesIdleLastInsideTheQuery(t *testing.T) {
 		assert.Equal(t, []string{"Go 1.26 is out.", "The background agent finished."}, results(got), "run %d", i)
 	}
 }
+
+// 2.1.283 sends no session state unless the caller opts in, so for it the
+// task frames are the only sign a turn is still owed. An agent started in the
+// background and still running at the result will wake the session again;
+// upstream keeps stdin open while one is in flight (DEFERRING_TASK_TYPES).
+func TestE2E_AnOldCLIsQueryWaitsForABackgroundAgent(t *testing.T) {
+	var hookCalls atomic.Int32
+	opts := fakeOpts("old-cli-agent", nil)
+	opts.HookHandlers = map[string][]agent.HookMatcher{
+		"SubagentStop": {{Handler: func(context.Context, string, json.RawMessage) (map[string]interface{}, error) {
+			hookCalls.Add(1)
+			return map[string]interface{}{}, nil
+		}}},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	got := collect(t, agent.Query(ctx, "review in the background", opts))
+
+	assert.Equal(t, int32(1), hookCalls.Load(), "the background agent's hook was never answered")
+	assert.Equal(t, []string{"Go 1.26 is out.", "The background agent finished."}, results(got))
+}
+
+// Only agents are waited for. A background shell can run for ever and may
+// never report an end, so waiting on one would hang the Query.
+func TestE2E_ABackgroundShellDoesNotHoldTheQueryOpen(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	start := time.Now()
+	got := collect(t, agent.Query(ctx, "tail the log", fakeOpts("old-cli-shell", nil)))
+
+	assert.Equal(t, []string{"Go 1.26 is out."}, results(got))
+	assert.Less(t, time.Since(start), 5*time.Second, "a background shell held the Query open")
+}
