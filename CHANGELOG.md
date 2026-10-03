@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-04
+
+### Fixed
+
+- **On a CLI that reports no session state, a `Query` still ended under a running background
+  agent.** 0.6.0 made a `Query` wait for the CLI's `idle`, but `claude` 2.1.283 sends no state
+  unless the caller opts in. There, a `Query` still ended at the first result while an agent
+  launched in the background ran on. The agent's hook was never answered, and its follow-up turn
+  went to nobody. The SDK now keeps a ledger of background agents from the task frames
+  (`task_started` of type `local_agent` or `local_workflow`, until a terminal `task_notification`
+  or `task_updated`). A result with one in flight does not end the `Query`, and the ceiling does
+  not cut one off. This ports upstream's `DEFERRING_TASK_TYPES`. Shells and monitors are not
+  tracked, because they can run for ever.
+
+  Verified live against 2.1.283: an agent launched in the background is now seen to finish
+  before the `Query` ends (two results instead of one). With the ledger emptied, the same live
+  test fails with the agent still running.
+
+### Changed
+
+- A `Query` that launches a background agent on such a CLI now lasts until the agent finishes,
+  however long that is. Give it a context deadline if that matters to you.
+
 ## [0.6.0] - 2026-10-03
 
 ### Fixed
@@ -187,7 +210,8 @@ shapes grow with the CLI, and a raw field stays forward-compatible where a struc
 
 - CI now gates every pull request on build, `go test -race` (Go 1.23 and stable), `gofmt`, `go vet`, `staticcheck`, and an `apidiff` check that fails on incompatible public API changes.
 
-[Unreleased]: https://github.com/taumatix/claude-agent-sdk-go/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/taumatix/claude-agent-sdk-go/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.7.0
 [0.6.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.6.0
 [0.5.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.5.0
 [0.4.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.4.0
