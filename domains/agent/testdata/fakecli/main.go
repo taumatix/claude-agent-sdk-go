@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 )
 
 // turn is the reply to any user message: a server-side search whose result
@@ -126,7 +127,7 @@ func main() {
 			// result (probed 2026-10-03); 2.1.283 ignores it. The stub plays
 			// 2.1.288 unless FAKECLI_SCENARIO=old-cli.
 			scenario := os.Getenv("FAKECLI_SCENARIO")
-			hostState := os.Getenv("CLAUDE_CODE_SDK_READS_SESSION_STATE") != "" && scenario != "old-cli"
+			hostState := os.Getenv("CLAUDE_CODE_SDK_READS_SESSION_STATE") != "" && !strings.HasPrefix(scenario, "old-cli")
 			sessionState := os.Getenv("CLAUDE_CODE_EMIT_SESSION_STATE_EVENTS") != ""
 			// With both set, 2.1.288 sends one set of frames, visible to the
 			// caller, and "idle" after the result (probed 2026-10-03).
@@ -144,6 +145,32 @@ func main() {
 			if sessionState && !both {
 				// The 2.1.283 shape with only the caller's opt-in.
 				emit(sessionIdle)
+			}
+			switch scenario {
+			case "old-cli-agent":
+				// 2.1.283 without session state: an agent launched in the
+				// background is still running at the result. It finishes
+				// afterwards, the CLI asks a hook to run for it and answers the
+				// follow-up turn it woke for. The task frames are the SDK's only
+				// sign that any of that is coming.
+				emit(bgAgentStarted)
+				emit(result)
+				emit(`{"type":"control_request","request_id":"hook-after-result",` +
+					`"request":{"subtype":"hook_callback","callback_id":"hook_0","input":{"hook_event_name":"SubagentStop"}}}`)
+				if !awaitResponse(scanner, "hook-after-result") {
+					return
+				}
+				emit(bgAgentDone)
+				emit(followupTurn)
+				emit(followupResult)
+				continue
+			case "old-cli-shell":
+				// A background shell is still running at the result and never
+				// reports an end. Shells are not waited for: one can run for
+				// ever, and waiting would hang the Query.
+				emit(bgShellStarted)
+				emit(result)
+				continue
 			}
 			emit(result)
 
@@ -195,6 +222,15 @@ func awaitResponse(scanner *bufio.Scanner, requestID string) bool {
 }
 
 const (
+	// Shapes from the 2.1.267 lifecycle frames above, with ids of their own.
+	bgAgentStarted = `{"type":"system","subtype":"task_started","task_id":"tk-bg","tool_use_id":"toolu_bg",` +
+		`"description":"Background review","subagent_type":"Explore","is_backgrounded":true,"spawn_depth":1,` +
+		`"task_type":"local_agent","uuid":"u-bg-s","session_id":"e2e"}`
+	bgAgentDone = `{"type":"system","subtype":"task_notification","task_id":"tk-bg","tool_use_id":"toolu_bg",` +
+		`"status":"completed","output_file":"/tmp/tk-bg.output","summary":"Reviewed.","uuid":"u-bg-n","session_id":"e2e"}`
+	bgShellStarted = `{"type":"system","subtype":"task_started","task_id":"sh-bg","description":"tail -f log",` +
+		`"is_backgrounded":true,"task_type":"local_bash","uuid":"u-sh-s","session_id":"e2e"}`
+
 	hostRunning = `{"type":"system","subtype":"session_state_changed","state":"running","sdk_host_only":true,"uuid":"u-hr","session_id":"e2e"}`
 	hostIdle    = `{"type":"system","subtype":"session_state_changed","state":"idle","sdk_host_only":true,"uuid":"u-hi","session_id":"e2e"}`
 
