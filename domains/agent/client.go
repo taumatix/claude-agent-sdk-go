@@ -64,6 +64,12 @@ func (c *Client) Disconnect() error {
 
 // Query sends a prompt and returns a range iterator over the response messages.
 // Connect must be called before Query.
+//
+// It ends as the package-level [Query] does, including waiting for background
+// agents with ctx as the only bound. The Client remembers an agent across
+// Queries: if one's end never arrives, every later Query on this Client waits
+// for it too, until its own ctx ends. Disconnect and Connect again to start a
+// new session without it.
 func (c *Client) Query(ctx context.Context, prompt string) iter.Seq2[messages.Message, error] {
 	return func(yield func(messages.Message, error) bool) {
 		c.mu.Lock()

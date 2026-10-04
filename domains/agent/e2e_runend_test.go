@@ -3,6 +3,7 @@ package agent_test
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -195,4 +196,91 @@ func TestE2E_ABackgroundShellDoesNotHoldTheQueryOpen(t *testing.T) {
 
 	assert.Equal(t, []string{"Go 1.26 is out."}, results(got))
 	assert.Less(t, time.Since(start), 5*time.Second, "a background shell held the Query open")
+}
+
+// An agent whose end never arrives is not cut off: the ceiling does not end
+// the Query, because a cut-off agent loses stdin for its hooks (upstream's
+// reasoning, and this SDK's choice). The caller's context is what bounds it,
+// and it must still work.
+func TestE2E_AnAgentWhoseEndIsLostHoldsTheQueryUntilTheCallersDeadline(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
+	defer cancel()
+
+	start := time.Now()
+	var got []messages.Message
+	var last error
+	for msg, err := range agent.Query(ctx, "review in the background",
+		fakeOpts("old-cli-agent-lost", map[string]string{"CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "200"})) {
+		if err != nil {
+			last = err
+			continue
+		}
+		got = append(got, msg)
+	}
+	elapsed := time.Since(start)
+
+	assert.Equal(t, []string{"Go 1.26 is out."}, results(got))
+	assert.ErrorIs(t, last, context.DeadlineExceeded, "the Query must end with the caller's own deadline")
+	assert.GreaterOrEqual(t, elapsed, 1400*time.Millisecond, "the Query ended at the ceiling, cutting off an agent still in flight")
+	assert.Less(t, elapsed, 10*time.Second, "the caller's deadline was not honoured")
+}
+
+// A lost agent stays on the Client's ledger, so the next Query on that Client
+// waits for it too, here until its own deadline. Disconnecting and connecting
+// again starts a new session, and with it a new ledger.
+func TestE2E_AClientRecoversFromALostAgentByReconnecting(t *testing.T) {
+	opts := fakeOpts("old-cli-agent-lost-once", map[string]string{
+		"CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "200",
+		"FAKECLI_STATE_FILE":                   filepath.Join(t.TempDir(), "lost"),
+	})
+	client := agent.NewClient(opts)
+	bg := context.Background()
+	require.NoError(t, client.Connect(bg))
+
+	queryUntil := func(d time.Duration, prompt string) (results []string, err error) {
+		ctx, cancel := context.WithTimeout(bg, d)
+		defer cancel()
+		for msg, e := range client.Query(ctx, prompt) {
+			if e != nil {
+				err = e
+			} else if msg.Result != nil {
+				results = append(results, msg.Result.Result)
+			}
+		}
+		return results, err
+	}
+
+	_, err := queryUntil(500*time.Millisecond, "review in the background")
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	_, err = queryUntil(500*time.Millisecond, "again")
+	assert.ErrorIs(t, err, context.DeadlineExceeded,
+		"the second Query ended on its own; the lost agent is no longer held, so the doc comment is wrong")
+
+	require.NoError(t, client.Disconnect())
+	require.NoError(t, client.Connect(bg))
+	defer func() { _ = client.Disconnect() }()
+	got, err := queryUntil(10*time.Second, "after reconnecting")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"Go 1.26 is out."}, got)
+}
+
+// "idle" arriving while an agent is still in flight does not end the Query:
+// the agent's end will wake the session for another turn.
+func TestE2E_IdleWithAnAgentInFlightDoesNotEndTheQuery(t *testing.T) {
+	var hookCalls atomic.Int32
+	opts := fakeOpts("idle-every-turn", nil)
+	opts.HookHandlers = map[string][]agent.HookMatcher{
+		"SubagentStop": {{Handler: func(context.Context, string, json.RawMessage) (map[string]interface{}, error) {
+			hookCalls.Add(1)
+			return map[string]interface{}{}, nil
+		}}},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	got := collect(t, agent.Query(ctx, "review in the background", opts))
+
+	assert.Equal(t, int32(1), hookCalls.Load(), "the agent's hook was never answered")
+	assert.Equal(t, []string{"Go 1.26 is out.", "The background agent finished."}, results(got))
 }

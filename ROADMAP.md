@@ -32,22 +32,18 @@ binary is a usable reference — it ships zod schemas naming every field of ever
 (see entry 2). Reading them also found `hook_progress`, a message upstream's Python SDK does not
 model at all.
 
-### 0b. An agent whose end the SDK never sees holds a Query open indefinitely
+### 0b. A Client cannot drop one lost agent without dropping its session
 
-**Today:** since 0.7.0 a `Query` stays open while a background agent it saw start has not reported
-finishing, and the ceiling does not cut one off. Upstream behaves the same way. Its comment
-explains: an agent cut off loses stdin for its hooks. The cost is that if the CLI never sends the
-agent's terminal frame (it crashes, the frame is lost, or a future CLI renames the subtype), the
-`Query` never ends on its own. A caller with no context deadline waits for ever. The README says
-to set one, but that leans on the caller reading it.
+**Decided 2026-10-04:** a tracked agent is never cut off; the caller's context is the bound, as in
+upstream. `Query`'s and `Client.Query`'s doc comments say so, and stub-CLI tests pin it: a lost
+agent outlasts the ceiling and ends at the deadline, and `idle` with an agent in flight does not end
+the `Query`. The CLI that reports `idle` at every turn's end is now driven by a stub scenario.
 
-Also not exercised: a CLI that reports `idle` at every turn's end regardless of background work.
-Upstream's comment says such CLIs exist; none has been seen here. The ledger covers them in the
-code, and no test drives one.
-
-**Shape:** decide whether a tracked agent should be cut off after some multiple of the ceiling,
-and say so in the doc comment of `Query` itself rather than only in the README. A stub-CLI
-scenario that starts an agent and never ends it pins whichever choice is made.
+**Today:** a lost agent stays on a `Client`'s ledger, so every later `Query` on that `Client` waits
+for it until its own context ends. The only way out is `Disconnect` and `Connect`, which drops the
+session. **Shape:** clear the ledger when the CLI's own report says the agent is gone, for example a
+`background_tasks_changed` frame that no longer lists it, if the CLI sends one for agents. Check
+the binary's schema first: no live run has yet shown that frame listing a `local_agent`.
 
 ### 0c. `CLIPath` pointed at an unreleased CLI is the only way to test a newer one
 
