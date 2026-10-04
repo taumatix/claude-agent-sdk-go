@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-10-04
+
+### Fixed
+
+- **A background agent whose `task_notification` was lost no longer holds a `Query`, or every
+  later `Query` on a `Client`.** The SDK paired `task_started` with its end frame, so one missed
+  frame kept the run open until your context ended. It now also reads `background_tasks_changed`:
+  the CLI's list of every live background task, which the CLI's schema says to treat as a
+  replacement set "so a missed bookend cannot wedge a stale running indicator". An agent that
+  list stops naming counts as finished. Both claude 2.1.283 and 2.1.288 list running agents in it
+  (checked live).
+
 ## [0.7.1] - 2026-10-04
 
 No code change.

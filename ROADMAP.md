@@ -32,18 +32,15 @@ binary is a usable reference — it ships zod schemas naming every field of ever
 (see entry 2). Reading them also found `hook_progress`, a message upstream's Python SDK does not
 model at all.
 
-### 0b. A Client cannot drop one lost agent without dropping its session
+### 0b. Reset the ledger when the CLI process restarts or is re-initialized
 
-**Decided 2026-10-04:** a tracked agent is never cut off; the caller's context is the bound, as in
-upstream. `Query`'s and `Client.Query`'s doc comments say so, and stub-CLI tests pin it: a lost
-agent outlasts the ceiling and ends at the deadline, and `idle` with an agent in flight does not end
-the `Query`. The CLI that reports `idle` at every turn's end is now driven by a stub scenario.
-
-**Today:** a lost agent stays on a `Client`'s ledger, so every later `Query` on that `Client` waits
-for it until its own context ends. The only way out is `Disconnect` and `Connect`, which drops the
-session. **Shape:** clear the ledger when the CLI's own report says the agent is gone, for example a
-`background_tasks_changed` frame that no longer lists it, if the CLI sends one for agents. Check
-the binary's schema first: no live run has yet shown that frame listing a `local_agent`.
+The ledger now follows `background_tasks_changed` (0.7.2) as well as the bookends. The CLI's
+schema adds two rules this SDK does not act on yet. The level is per process, and nothing is sent
+at start-up, so a consumer must reset to empty whenever the CLI process restarts. A repeated
+`initialize` is answered with a snapshot of the current set. Today a `Client` gets a new ledger
+only through `Disconnect`/`Connect`, which is the same thing; anything that reconnects to a
+running CLI (session resume, remote transports) must reset it too. Write that down where the
+reconnect lives when it exists, with a test.
 
 ### 0c. `CLIPath` pointed at an unreleased CLI is the only way to test a newer one
 

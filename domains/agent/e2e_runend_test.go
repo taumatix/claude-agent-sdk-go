@@ -225,10 +225,10 @@ func TestE2E_AnAgentWhoseEndIsLostHoldsTheQueryUntilTheCallersDeadline(t *testin
 	assert.Less(t, elapsed, 10*time.Second, "the caller's deadline was not honoured")
 }
 
-// A lost agent stays on the Client's ledger, so the next Query on that Client
-// waits for it too, here until its own deadline. Disconnecting and connecting
-// again starts a new session, and with it a new ledger.
-func TestE2E_AClientRecoversFromALostAgentByReconnecting(t *testing.T) {
+// A lost agent does not hold the Client for good: the next background_tasks_changed
+// the CLI sends lists what is really running, and an agent it leaves out is
+// let go. Here that frame arrives with the next prompt's lifecycle frames.
+func TestE2E_AClientRecoversFromALostAgentAtTheNextLevel(t *testing.T) {
 	opts := fakeOpts("old-cli-agent-lost-once", map[string]string{
 		"CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "200",
 		"FAKECLI_STATE_FILE":                   filepath.Join(t.TempDir(), "lost"),
@@ -236,6 +236,7 @@ func TestE2E_AClientRecoversFromALostAgentByReconnecting(t *testing.T) {
 	client := agent.NewClient(opts)
 	bg := context.Background()
 	require.NoError(t, client.Connect(bg))
+	defer func() { _ = client.Disconnect() }()
 
 	queryUntil := func(d time.Duration, prompt string) (results []string, err error) {
 		ctx, cancel := context.WithTimeout(bg, d)
@@ -251,17 +252,10 @@ func TestE2E_AClientRecoversFromALostAgentByReconnecting(t *testing.T) {
 	}
 
 	_, err := queryUntil(500*time.Millisecond, "review in the background")
-	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.ErrorIs(t, err, context.DeadlineExceeded, "the lost agent was let go before the CLI said so")
 
-	_, err = queryUntil(500*time.Millisecond, "again")
-	assert.ErrorIs(t, err, context.DeadlineExceeded,
-		"the second Query ended on its own; the lost agent is no longer held, so the doc comment is wrong")
-
-	require.NoError(t, client.Disconnect())
-	require.NoError(t, client.Connect(bg))
-	defer func() { _ = client.Disconnect() }()
-	got, err := queryUntil(10*time.Second, "after reconnecting")
-	require.NoError(t, err)
+	got, err := queryUntil(10*time.Second, "again")
+	require.NoError(t, err, "the lost agent still held the Client after the CLI stopped listing it")
 	assert.Equal(t, []string{"Go 1.26 is out."}, got)
 }
 
@@ -283,4 +277,32 @@ func TestE2E_IdleWithAnAgentInFlightDoesNotEndTheQuery(t *testing.T) {
 
 	assert.Equal(t, int32(1), hookCalls.Load(), "the agent's hook was never answered")
 	assert.Equal(t, []string{"Go 1.26 is out.", "The background agent finished."}, results(got))
+}
+
+// A lost task_notification no longer holds the Query once the CLI's level
+// signal, background_tasks_changed, stops listing the agent. Here the
+// follow-up turn ends the Query; no context deadline is involved.
+func TestE2E_TheLevelSignalReleasesAnAgentWhoseBookendWasLost(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	start := time.Now()
+	got := collect(t, agent.Query(ctx, "review in the background", fakeOpts("old-cli-agent-bookend-lost", nil)))
+
+	assert.Equal(t, []string{"Go 1.26 is out.", "The background agent finished."}, results(got))
+	assert.Less(t, time.Since(start), 10*time.Second, "the Query waited for a bookend the level had made unnecessary")
+}
+
+// The level must not release an agent it still lists, nor count a shell.
+func TestE2E_TheLevelSignalKeepsAnAgentItStillLists(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
+	defer cancel()
+	var last error
+	for _, err := range agent.Query(ctx, "review in the background",
+		fakeOpts("old-cli-agent-level-stale", map[string]string{"CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "200"})) {
+		if err != nil {
+			last = err
+		}
+	}
+	assert.ErrorIs(t, last, context.DeadlineExceeded, "an agent the level still listed was let go")
 }

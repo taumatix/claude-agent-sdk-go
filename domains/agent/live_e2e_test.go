@@ -253,6 +253,13 @@ func TestLive_AQueryOutlastsTheBackgroundAgentItStarted(t *testing.T) {
 		if msg.Result != nil {
 			results++
 		}
+		if b := msg.BackgroundTasksChanged; b != nil {
+			var listed []string
+			for _, task := range b.Tasks {
+				listed = append(listed, task.TaskID+":"+task.TaskType)
+			}
+			t.Logf("background_tasks_changed %v", listed)
+		}
 	}
 
 	require.NotEmpty(t, started, "the model launched no agent, so this run proves nothing")

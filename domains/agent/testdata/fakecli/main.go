@@ -153,6 +153,9 @@ func main() {
 				// afterwards, the CLI asks a hook to run for it and answers the
 				// follow-up turn it woke for. The task frames are the SDK's only
 				// sign that any of that is coming.
+				// Level frames where 2.1.283 and 2.1.288 send them: the agent
+				// listed as it starts, and an empty list just before its end.
+				emit(levelAgent)
 				emit(bgAgentStarted)
 				emit(result)
 				emit(`{"type":"control_request","request_id":"hook-after-result",` +
@@ -160,7 +163,28 @@ func main() {
 				if !awaitResponse(scanner, "hook-after-result") {
 					return
 				}
+				emit(levelEmpty)
 				emit(bgAgentDone)
+				emit(followupTurn)
+				emit(followupResult)
+				continue
+			case "old-cli-agent-level-stale":
+				// The agent stays listed, alongside a shell, and nothing ends it.
+				emit(levelAgent)
+				emit(bgAgentStarted)
+				emit(result)
+				emit(`{"type":"system","subtype":"background_tasks_changed","tasks":[{"task_id":"tk-bg",` +
+					`"task_type":"local_agent","description":"Background review"},{"task_id":"sh-bg",` +
+					`"task_type":"local_bash","description":"tail -f log"}],"uuid":"u-lv-s","session_id":"e2e"}`)
+				continue
+			case "old-cli-agent-bookend-lost":
+				// The agent's end bookend never arrives, but the level does:
+				// the CLI's own answer to a lost bookend. The follow-up turn
+				// follows as usual.
+				emit(levelAgent)
+				emit(bgAgentStarted)
+				emit(result)
+				emit(levelEmpty)
 				emit(followupTurn)
 				emit(followupResult)
 				continue
@@ -265,6 +289,9 @@ const (
 		`"task_type":"local_agent","uuid":"u-bg-s","session_id":"e2e"}`
 	bgAgentDone = `{"type":"system","subtype":"task_notification","task_id":"tk-bg","tool_use_id":"toolu_bg",` +
 		`"status":"completed","output_file":"/tmp/tk-bg.output","summary":"Reviewed.","uuid":"u-bg-n","session_id":"e2e"}`
+	levelAgent = `{"type":"system","subtype":"background_tasks_changed","tasks":[{"task_id":"tk-bg",` +
+		`"task_type":"local_agent","description":"Background review"}],"uuid":"u-lv-a","session_id":"e2e"}`
+	levelEmpty     = `{"type":"system","subtype":"background_tasks_changed","tasks":[],"uuid":"u-lv-e","session_id":"e2e"}`
 	bgShellStarted = `{"type":"system","subtype":"task_started","task_id":"sh-bg","description":"tail -f log",` +
 		`"is_backgrounded":true,"task_type":"local_bash","uuid":"u-sh-s","session_id":"e2e"}`
 
