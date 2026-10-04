@@ -46,6 +46,9 @@ type Message struct {
 	// PermissionDenied is set for the permission_denied subtype: a tool call
 	// the CLI refused without asking.
 	PermissionDenied *PermissionDeniedMessage
+	// APIRetry is set for the api_retry subtype: an API request failed and the
+	// CLI will try it again.
+	APIRetry *APIRetryMessage
 }
 
 // UserMessage is a user-role message received from the CLI.

@@ -182,6 +182,12 @@ for msg, err := range agent.Query(ctx, prompt, opts) {
         fmt.Printf("[hook %s %s]\n",
             msg.HookEvent.HookEventName, msg.HookEvent.Phase)
 
+    case msg.APIRetry != nil:
+        // The API failed and the CLI is retrying: a run stalled here is
+        // otherwise invisible until it finishes late or fails.
+        fmt.Printf("[retry %d/%d in %s: %s]\n", msg.APIRetry.Attempt,
+            msg.APIRetry.MaxRetries, msg.APIRetry.RetryDelay, msg.APIRetry.Error)
+
     case msg.PermissionDenied != nil:
         // A tool call refused without asking: a deny rule, dontAsk, the
         // auto-mode classifier, or an ask with no CanUseTool to answer it.

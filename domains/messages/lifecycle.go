@@ -376,6 +376,13 @@ func systemPayloadFromWire(msg *Message, m *protocol.SystemMessage) {
 		}
 		msg.BackgroundTasksChanged = backgroundTasksFromWire(p)
 
+	case protocol.SystemSubtypeAPIRetry:
+		var p protocol.APIRetryPayload
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return
+		}
+		msg.APIRetry = apiRetryFromWire(p)
+
 	case protocol.SystemSubtypePermissionDenied:
 		var p protocol.PermissionDeniedPayload
 		if err := json.Unmarshal(raw, &p); err != nil {

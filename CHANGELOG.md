@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-05
+
+### Added
+
+- **`Message.APIRetry`: the CLI is retrying a failed API request.** A run stalled on an
+  overloaded, rate-limited or unreachable API was invisible until it finished late or failed. The
+  CLI reports each retry as an `api_retry` system message, which arrived only as an untyped
+  `System`. `APIRetryMessage` carries the attempt and its cap, the delay before it, the HTTP
+  status (0 when there was none), the kind of failure, and, for a first-byte timeout, how long
+  each attempt waits. Checked live against claude 2.1.283 and 2.1.288 by pointing them at a local
+  server that answers 529, which costs nothing.
+
 ## [0.8.0] - 2026-10-05
 
 ### Added

@@ -29,6 +29,7 @@ const (
 	SystemSubtypeBackgroundTasksChanged SystemSubtype = "background_tasks_changed"
 
 	SystemSubtypePermissionDenied SystemSubtype = "permission_denied"
+	SystemSubtypeAPIRetry         SystemSubtype = "api_retry"
 )
 
 // TaskUsage is the usage tally reported on task_progress and task_notification.
@@ -204,6 +205,28 @@ type PermissionDeniedPayload struct {
 	Message            string `json:"message"`
 	UUID               string `json:"uuid,omitempty"`
 	SessionID          string `json:"session_id,omitempty"`
+}
+
+// APIRetryPayload is the `system`/`api_retry` frame: an API request failed
+// with a retryable error and will be tried again after a delay. Fields from the
+// 2.1.288 schema and live frames from 2.1.283 and 2.1.288.
+type APIRetryPayload struct {
+	Attempt      int   `json:"attempt"`
+	MaxRetries   int   `json:"max_retries"`
+	RetryDelayMS int64 `json:"retry_delay_ms"`
+	// ErrorStatus is null for a failure with no HTTP response (a timeout, a
+	// refused connection). A live probe also saw null with a 529 from a
+	// server whose response the CLI did not read as an API error.
+	ErrorStatus *int `json:"error_status"`
+	// Error is a short kind, such as "overloaded" or "unknown". Kept raw: the
+	// schema does not pin it to a string.
+	Error      json.RawMessage `json:"error"`
+	NoResponse *struct {
+		WaitedMS    int64 `json:"waited_ms"`
+		RetryWaitMS int64 `json:"retry_wait_ms"`
+	} `json:"no_response,omitempty"`
+	UUID      string `json:"uuid,omitempty"`
+	SessionID string `json:"session_id,omitempty"`
 }
 
 // BackgroundTask is one entry of a background_tasks_changed set.

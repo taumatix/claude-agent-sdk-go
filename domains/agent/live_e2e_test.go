@@ -2,6 +2,9 @@ package agent_test
 
 import (
 	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"testing"
@@ -302,4 +305,46 @@ func TestLive_ADenyRuleIsReportedAsPermissionDenied(t *testing.T) {
 	assert.NotEmpty(t, denied[0].Message)
 	require.NotNil(t, result)
 	t.Logf("denied %+v", *denied[0])
+}
+
+// The real CLI against a local server that answers every request with 529:
+// each retry it makes reaches the caller as an APIRetryMessage. No credentials
+// are spent; the API is never reached.
+func TestLive_RetriesAgainstAnOverloadedAPIAreReported(t *testing.T) {
+	cli := liveCLI(t)
+	overloaded := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(529)
+		_, _ = w.Write([]byte(`{"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}`))
+	}))
+	defer overloaded.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	var retries []*messages.APIRetryMessage
+	for msg, err := range agent.Query(ctx, "hi", agent.Options{
+		CLIPath:          cli,
+		WorkingDirectory: t.TempDir(),
+		Env: map[string]string{
+			"ANTHROPIC_BASE_URL":      overloaded.URL,
+			"ANTHROPIC_API_KEY":       "sk-ant-test-not-a-key",
+			"CLAUDE_CODE_MAX_RETRIES": "2",
+		},
+	}) {
+		if err != nil {
+			break
+		}
+		if msg.APIRetry != nil {
+			retries = append(retries, msg.APIRetry)
+		}
+	}
+
+	require.Len(t, retries, 2, "one APIRetryMessage per retry, with CLAUDE_CODE_MAX_RETRIES=2")
+	assert.Equal(t, 1, retries[0].Attempt)
+	assert.Equal(t, 2, retries[1].Attempt)
+	assert.Equal(t, 2, retries[1].MaxRetries)
+	assert.Greater(t, retries[0].RetryDelay, time.Duration(0))
+	assert.NotEmpty(t, retries[1].Error)
+	t.Logf("retries: %+v %+v", *retries[0], *retries[1])
 }
