@@ -15,8 +15,21 @@ import (
 //	for msg, err := range agent.Query(ctx, "What is 2+2?", agent.DefaultOptions()) {
 //	    if err != nil { log.Fatal(err) }
 //	    if msg.Assistant != nil { /* process assistant message */ }
-//	    if msg.Result != nil { return } // final message
+//	    if msg.Result != nil { /* a turn ended; another may follow */ }
 //	}
+//
+// The iterator ends when the run is over, which is not always the first
+// [messages.ResultMessage]: a background agent that finishes after a result
+// wakes the session for a follow-up turn, with its own result. Breaking out at
+// the first result abandons that turn and leaves its hooks unanswered.
+//
+// A background agent the CLI reported starting holds the Query open until the
+// CLI reports it finished. The CLI's wait ceiling (CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS)
+// does not cut it off, because a cut-off agent loses stdin for its hooks and
+// permission requests; upstream's Python SDK makes the same choice. So if that
+// report never comes (the CLI crashed, or a later CLI renamed the frame), the
+// Query never ends on its own. **ctx is the bound:** give it a deadline, and the
+// Query ends with ctx's error when it passes.
 func Query(ctx context.Context, prompt string, opts Options) iter.Seq2[messages.Message, error] {
 	return func(yield func(messages.Message, error) bool) {
 		t := opts.Transport

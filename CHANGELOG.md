@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-04
+
+No code change.
+
+### Documentation
+
+- **`Query`'s usage example returned at the first `Result`.** Since 0.6.0 a run can carry more
+  than one result: a background agent that finishes afterwards wakes the session for a follow-up
+  turn. Breaking out at the first abandons that turn and leaves its hooks unanswered. The example
+  no longer does it.
+- `Query` and `Client.Query` now say, where a caller reads it, that a background agent is never
+  cut off and the context is the only bound. They also say that a `Client` keeps waiting for a
+  lost agent in later Queries until it reconnects. Stub-CLI tests pin both, plus a CLI that
+  reports `idle` at every turn's end.
+
 ## [0.7.0] - 2026-10-04
 
 ### Fixed

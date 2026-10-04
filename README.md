@@ -246,7 +246,10 @@ included. If you opted in to session state yourself, `idle` is the `Query`'s las
 - The wait after a `Result` is bounded by `CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS` (default 600000,
   ten minutes), the same variable that bounds the CLI's own wait for background work. A tracked
   agent still running is not cut off by it, so bound a `Query` that may launch agents with your
-  own context deadline.
+  own context deadline. That is a decision, not a gap: a cut-off agent loses stdin for its hooks,
+  and upstream's Python SDK makes the same choice. If an agent's end never arrives, a `Client`
+  keeps waiting for it in every later `Query` too; `Disconnect` and `Connect` again to start
+  clean.
 - Stopping the iteration early (`break`) still ends the `Query` at once.
 
 ### Tool permission callbacks

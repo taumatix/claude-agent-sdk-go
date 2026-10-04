@@ -164,6 +164,43 @@ func main() {
 				emit(followupTurn)
 				emit(followupResult)
 				continue
+			case "old-cli-agent-lost-once":
+				// The first process to see a prompt loses its agent; any later
+				// one answers plainly, so a test can tell a reconnect started
+				// a clean session. FAKECLI_STATE_FILE marks the first.
+				if f := os.Getenv("FAKECLI_STATE_FILE"); f != "" {
+					if _, err := os.Stat(f); err != nil {
+						_ = os.WriteFile(f, nil, 0o600)
+						emit(bgAgentStarted)
+					}
+				}
+				emit(result)
+				continue
+			case "old-cli-agent-lost":
+				// An agent starts in the background and its end never arrives:
+				// the CLI crashed, the frame was lost, or a later CLI renamed
+				// the subtype. Nothing more is sent for this prompt.
+				emit(bgAgentStarted)
+				emit(result)
+				continue
+			case "idle-every-turn":
+				// A CLI that reports "idle" at the end of every turn, background
+				// work or not. Upstream's comment says such CLIs exist. The
+				// agent then finishes, its hook runs, and the follow-up turn it
+				// woke for ends in a result and another "idle".
+				emit(bgAgentStarted)
+				emit(result)
+				emit(hostIdle)
+				emit(`{"type":"control_request","request_id":"hook-after-idle",` +
+					`"request":{"subtype":"hook_callback","callback_id":"hook_0","input":{"hook_event_name":"SubagentStop"}}}`)
+				if !awaitResponse(scanner, "hook-after-idle") {
+					return
+				}
+				emit(bgAgentDone)
+				emit(followupTurn)
+				emit(followupResult)
+				emit(hostIdle)
+				continue
 			case "old-cli-shell":
 				// A background shell is still running at the result and never
 				// reports an end. Shells are not waited for: one can run for
