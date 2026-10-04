@@ -3,6 +3,7 @@ package messages_test
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -279,6 +280,7 @@ func testMalformedPayloadDegradesToSystem(t *testing.T, subtype, line string) {
 	assert.Nil(t, msg.SessionStateChanged)
 	assert.Nil(t, msg.BackgroundTasksChanged)
 	assert.Nil(t, msg.PermissionDenied)
+	assert.Nil(t, msg.APIRetry)
 
 	require.NotNil(t, msg.System, "the caller must still receive the message")
 	assert.Equal(t, subtype, msg.System.Subtype)
@@ -287,6 +289,8 @@ func testMalformedPayloadDegradesToSystem(t *testing.T, subtype, line string) {
 
 func TestMalformedLifecyclePayloadsDegradeToSystem(t *testing.T) {
 	// Each fixture gives one field a type the CLI's schema forbids.
+	testMalformedPayloadDegradesToSystem(t, "api_retry",
+		`{"type":"system","subtype":"api_retry","attempt":"first","max_retries":2}`)
 	testMalformedPayloadDegradesToSystem(t, "permission_denied",
 		`{"type":"system","subtype":"permission_denied","tool_name":7,"tool_use_id":"t","message":"m"}`)
 
@@ -416,4 +420,44 @@ func TestPermissionDeniedCarriesItsOptionalFields(t *testing.T) {
 	assert.Equal(t, "a1", msg.PermissionDenied.AgentID)
 	assert.Equal(t, "outside_reads_blocked", msg.PermissionDenied.ReasonCode)
 	assert.Equal(t, "outside the working directory", msg.PermissionDenied.Reason)
+}
+
+// Live frames, provoked by pointing the CLI at a local server answering 529.
+// The first came from 2.1.288; the second, with a null status, from 2.1.283
+// against a different local server, which 2.1.283 reports with the status when
+// the response is the API's own error shape.
+const (
+	liveAPIRetry288 = `{"type":"system","subtype":"api_retry","attempt":2,"max_retries":2,"retry_delay_ms":1035,` +
+		`"error_status":529,"error":"overloaded","session_id":"406d9d23-ca44-4b81-8437-e3b16e94e3fd",` +
+		`"uuid":"ac807287-2e1a-4fcd-9a73-ae17b8a307f9"}`
+	liveAPIRetry283 = `{"type":"system","subtype":"api_retry","attempt":1,"max_retries":2,"retry_delay_ms":598,` +
+		`"error_status":null,"error":"unknown","session_id":"5fb38b83-3be9-4fdc-939f-4d90150e22d1",` +
+		`"uuid":"b27a61b5-d9f7-4edc-bbd8-7ee7d6b6b089"}`
+)
+
+func TestAPIRetryIsTyped(t *testing.T) {
+	msg := convert(t, liveAPIRetry288)
+	require.NotNil(t, msg.APIRetry)
+	r := msg.APIRetry
+	assert.Equal(t, 2, r.Attempt)
+	assert.Equal(t, 2, r.MaxRetries)
+	assert.Equal(t, 1035*time.Millisecond, r.RetryDelay)
+	assert.Equal(t, 529, r.ErrorStatus)
+	assert.Equal(t, "overloaded", r.Error)
+	assert.Nil(t, r.NoResponse)
+	require.NotNil(t, msg.System)
+
+	old := convert(t, liveAPIRetry283)
+	require.NotNil(t, old.APIRetry)
+	assert.Equal(t, 0, old.APIRetry.ErrorStatus, "a null status is 0")
+	assert.Equal(t, "unknown", old.APIRetry.Error)
+}
+
+func TestAPIRetryCarriesAFirstByteTimeout(t *testing.T) {
+	msg := convert(t, `{"type":"system","subtype":"api_retry","attempt":1,"max_retries":1,"retry_delay_ms":0,`+
+		`"error_status":null,"error":"unknown","no_response":{"waited_ms":30000,"retry_wait_ms":60000},"uuid":"u","session_id":"s"}`)
+	require.NotNil(t, msg.APIRetry)
+	require.NotNil(t, msg.APIRetry.NoResponse)
+	assert.Equal(t, 30*time.Second, msg.APIRetry.NoResponse.Waited)
+	assert.Equal(t, time.Minute, msg.APIRetry.NoResponse.RetryWait)
 }

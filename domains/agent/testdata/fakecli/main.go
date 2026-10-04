@@ -225,6 +225,11 @@ func main() {
 				emit(followupResult)
 				emit(hostIdle)
 				continue
+			case "old-cli-api-retry":
+				emit(`{"type":"system","subtype":"api_retry","attempt":1,"max_retries":2,"retry_delay_ms":595,` +
+					`"error_status":529,"error":"overloaded","session_id":"e2e","uuid":"u-ar"}`)
+				emit(result)
+				continue
 			case "old-cli-permission-denied":
 				// A deny rule refused a Bash call: the frame as 2.1.288 sends it.
 				emit(`{"type":"system","subtype":"permission_denied","tool_name":"Bash",` +

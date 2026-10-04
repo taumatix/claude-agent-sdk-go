@@ -321,3 +321,17 @@ func TestE2E_APermissionDenialArrivesTyped(t *testing.T) {
 	assert.Equal(t, "Bash", denied[0].ToolName)
 	assert.Equal(t, "subcommandResults", denied[0].ReasonType)
 }
+
+func TestE2E_AnAPIRetryArrivesTyped(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	var retries []*messages.APIRetryMessage
+	for _, m := range collect(t, agent.Query(ctx, "hi", fakeOpts("old-cli-api-retry", nil))) {
+		if m.APIRetry != nil {
+			retries = append(retries, m.APIRetry)
+		}
+	}
+	require.Len(t, retries, 1)
+	assert.Equal(t, 529, retries[0].ErrorStatus)
+	assert.Equal(t, "overloaded", retries[0].Error)
+}
