@@ -82,7 +82,8 @@ type sessionState struct {
 	reported bool
 	state    messages.SessionState
 	// inflight holds the background agents the CLI has started and not yet
-	// reported finished. Each one's end wakes the session for a follow-up
+	// reported finished, by a bookend or by a background_tasks_changed level
+	// that no longer lists them. Each one's end wakes the session for a follow-up
 	// turn, so a result with any in flight does not end the run. For a CLI
 	// that reports no state this ledger is the only such signal.
 	inflight map[string]struct{}
@@ -114,6 +115,19 @@ func (s *sessionState) track(msg *messages.Message) (settled bool) {
 	case msg.TaskStarted != nil:
 		if deferringTaskTypes[msg.TaskStarted.TaskType] {
 			s.inflight[msg.TaskStarted.TaskID] = struct{}{}
+		}
+	case msg.BackgroundTasksChanged != nil:
+		// The level signal: every live background task, to replace the set
+		// with rather than pair with the bookends, "so a missed bookend cannot
+		// wedge a stale running indicator" (the CLI's own schema, 2.1.288).
+		// Both 2.1.283 and 2.1.288 list a running agent in it and send an
+		// empty list once it ends (probed live 2026-10-04). Ambient tasks are
+		// left out, as the CLI's own host leaves them out of what it waits for.
+		s.inflight = make(map[string]struct{})
+		for _, task := range msg.BackgroundTasksChanged.Tasks {
+			if deferringTaskTypes[task.TaskType] && !task.Ambient {
+				s.inflight[task.TaskID] = struct{}{}
+			}
 		}
 	case msg.TaskNotification != nil:
 		delete(s.inflight, msg.TaskNotification.TaskID)

@@ -247,9 +247,9 @@ included. If you opted in to session state yourself, `idle` is the `Query`'s las
   ten minutes), the same variable that bounds the CLI's own wait for background work. A tracked
   agent still running is not cut off by it, so bound a `Query` that may launch agents with your
   own context deadline. That is a decision, not a gap: a cut-off agent loses stdin for its hooks,
-  and upstream's Python SDK makes the same choice. If an agent's end never arrives, a `Client`
-  keeps waiting for it in every later `Query` too; `Disconnect` and `Connect` again to start
-  clean.
+  and upstream's Python SDK makes the same choice. An agent counts as finished when the CLI says
+  so, either by its `task_notification` or by a `background_tasks_changed` that no longer lists
+  it. So one lost frame does not hold a `Query`; only a CLI that reports neither would.
 - Stopping the iteration early (`break`) still ends the `Query` at once.
 
 ### Tool permission callbacks
