@@ -43,6 +43,9 @@ type Message struct {
 	// BackgroundTasksChanged is set for the background_tasks_changed subtype,
 	// which the CLI sends without any opt-in.
 	BackgroundTasksChanged *BackgroundTasksChangedMessage
+	// PermissionDenied is set for the permission_denied subtype: a tool call
+	// the CLI refused without asking.
+	PermissionDenied *PermissionDeniedMessage
 }
 
 // UserMessage is a user-role message received from the CLI.

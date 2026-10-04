@@ -182,6 +182,12 @@ for msg, err := range agent.Query(ctx, prompt, opts) {
         fmt.Printf("[hook %s %s]\n",
             msg.HookEvent.HookEventName, msg.HookEvent.Phase)
 
+    case msg.PermissionDenied != nil:
+        // A tool call refused without asking: a deny rule, dontAsk, the
+        // auto-mode classifier, or an ask with no CanUseTool to answer it.
+        fmt.Printf("[denied %s: %s]\n",
+            msg.PermissionDenied.ToolName, msg.PermissionDenied.Message)
+
     case msg.System != nil:
         // Every other subtype, with its payload in Raw.
         fmt.Printf("[system: %s]\n", msg.System.Subtype)

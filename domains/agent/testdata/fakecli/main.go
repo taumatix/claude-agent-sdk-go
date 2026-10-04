@@ -225,6 +225,14 @@ func main() {
 				emit(followupResult)
 				emit(hostIdle)
 				continue
+			case "old-cli-permission-denied":
+				// A deny rule refused a Bash call: the frame as 2.1.288 sends it.
+				emit(`{"type":"system","subtype":"permission_denied","tool_name":"Bash",` +
+					`"tool_use_id":"toolu_pd","decision_reason_type":"subcommandResults",` +
+					`"message":"Permission to use Bash with command echo hi has been denied.",` +
+					`"uuid":"u-pd","session_id":"e2e"}`)
+				emit(result)
+				continue
 			case "old-cli-shell":
 				// A background shell is still running at the result and never
 				// reports an end. Shells are not waited for: one can run for

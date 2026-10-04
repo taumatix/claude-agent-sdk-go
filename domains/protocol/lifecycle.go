@@ -27,6 +27,8 @@ const (
 
 	SystemSubtypeSessionStateChanged    SystemSubtype = "session_state_changed"
 	SystemSubtypeBackgroundTasksChanged SystemSubtype = "background_tasks_changed"
+
+	SystemSubtypePermissionDenied SystemSubtype = "permission_denied"
 )
 
 // TaskUsage is the usage tally reported on task_progress and task_notification.
@@ -186,6 +188,22 @@ type BackgroundTasksChangedPayload struct {
 	Tasks     *[]BackgroundTask `json:"tasks"`
 	UUID      string            `json:"uuid,omitempty"`
 	SessionID string            `json:"session_id,omitempty"`
+}
+
+// PermissionDeniedPayload is the `system`/`permission_denied` frame: a tool
+// call the CLI refused without asking (a deny rule, dontAsk mode, the
+// auto-mode classifier, or an ask with nowhere to ask). Field names are from
+// the 2.1.288 schema and a live frame from 2.1.283 and 2.1.288.
+type PermissionDeniedPayload struct {
+	ToolName           string `json:"tool_name"`
+	ToolUseID          string `json:"tool_use_id"`
+	AgentID            string `json:"agent_id,omitempty"`
+	DecisionReasonType string `json:"decision_reason_type,omitempty"`
+	DecisionReasonCode string `json:"decision_reason_code,omitempty"`
+	DecisionReason     string `json:"decision_reason,omitempty"`
+	Message            string `json:"message"`
+	UUID               string `json:"uuid,omitempty"`
+	SessionID          string `json:"session_id,omitempty"`
 }
 
 // BackgroundTask is one entry of a background_tasks_changed set.
