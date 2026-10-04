@@ -306,3 +306,18 @@ func TestE2E_TheLevelSignalKeepsAnAgentItStillLists(t *testing.T) {
 	}
 	assert.ErrorIs(t, last, context.DeadlineExceeded, "an agent the level still listed was let go")
 }
+
+func TestE2E_APermissionDenialArrivesTyped(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	var denied []*messages.PermissionDeniedMessage
+	for _, m := range collect(t, agent.Query(ctx, "run echo hi", fakeOpts("old-cli-permission-denied", nil))) {
+		if m.PermissionDenied != nil {
+			denied = append(denied, m.PermissionDenied)
+		}
+	}
+	require.Len(t, denied, 1)
+	assert.Equal(t, "Bash", denied[0].ToolName)
+	assert.Equal(t, "subcommandResults", denied[0].ReasonType)
+}

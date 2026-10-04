@@ -59,12 +59,14 @@ still arrive as a generic `System`: `init`, `status`, `thinking_tokens`, `task_s
 `post_turn_summary`, `compact_boundary`, `files_persisted`, `file_snapshot`, `mirror_error`,
 `code_change_published`, `vcs_state_changed`, `commands_changed`, `elicitation_complete`,
 `plugin_install`, `local_command_output`, `informational`, `feedback_draft_queued`,
-`worker_shutting_down`, `auth_status`, `turn_duration`, `dev_intent`, `permission_denied`,
-`api_retry`, `session_metadata`.
+`worker_shutting_down`, `auth_status`, `turn_duration`, `dev_intent`, `api_retry`,
+`session_metadata`.
 
-`task_summary`, `post_turn_summary` and `thinking_tokens` arrived in every live run on
-2026-09-27, so they are the next candidates. `permission_denied` and `api_retry` are the ones a
-caller would act on rather than display.
+`permission_denied` is typed since 0.8.0. `api_retry` is the other one a caller would act on
+rather than display (its 2.1.288 schema: `attempt`, `max_retries`, `retry_delay_ms`,
+`error_status` (nullable), `error`, and `no_response` for a first-byte timeout), so it is next.
+After it come `task_summary`, `post_turn_summary` and `thinking_tokens`, which arrive in every live
+run.
 
 **Why it is not simply done:** that is 20+ subtypes and typing all of them in one change is the
 review nobody wants. Rank by whether a Go caller can act on it; the `@internal`-marked ones

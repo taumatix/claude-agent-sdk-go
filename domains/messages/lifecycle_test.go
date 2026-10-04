@@ -278,6 +278,7 @@ func testMalformedPayloadDegradesToSystem(t *testing.T, subtype, line string) {
 	assert.Nil(t, msg.HookEvent)
 	assert.Nil(t, msg.SessionStateChanged)
 	assert.Nil(t, msg.BackgroundTasksChanged)
+	assert.Nil(t, msg.PermissionDenied)
 
 	require.NotNil(t, msg.System, "the caller must still receive the message")
 	assert.Equal(t, subtype, msg.System.Subtype)
@@ -286,6 +287,9 @@ func testMalformedPayloadDegradesToSystem(t *testing.T, subtype, line string) {
 
 func TestMalformedLifecyclePayloadsDegradeToSystem(t *testing.T) {
 	// Each fixture gives one field a type the CLI's schema forbids.
+	testMalformedPayloadDegradesToSystem(t, "permission_denied",
+		`{"type":"system","subtype":"permission_denied","tool_name":7,"tool_use_id":"t","message":"m"}`)
+
 	testMalformedPayloadDegradesToSystem(t, "task_updated",
 		`{"type":"system","subtype":"task_updated","task_id":"t1","patch":[1,2,3],"uuid":"u","session_id":"s"}`)
 
@@ -379,4 +383,37 @@ func TestTaskNotificationDecodesResourceLinksAndFlags(t *testing.T) {
 	assert.True(t, tn.SkipTranscript)
 	assert.True(t, tn.Ambient)
 	assert.JSONEq(t, `[{"type":"resource_link","uri":"file:///tmp/a.txt"}]`, string(tn.ResourceLinks))
+}
+
+// A live frame from 2.1.288 (identical in shape from 2.1.283): a deny rule,
+// --disallowedTools 'Bash(echo:*)', refusing `echo hi`.
+const livePermissionDenied = `{"type":"system","subtype":"permission_denied","tool_name":"Bash",` +
+	`"tool_use_id":"toolu_01NkgdgFAqQEKDrTUghRf9UV","decision_reason_type":"subcommandResults",` +
+	`"message":"Permission to use Bash with command echo hi has been denied.",` +
+	`"uuid":"b830b99f-553e-40a8-b551-b930814e69c7","session_id":"3ec1722d-acc7-4e27-bf31-dc4a382db1f1"}`
+
+func TestPermissionDeniedIsTyped(t *testing.T) {
+	msg := convert(t, livePermissionDenied)
+
+	require.NotNil(t, msg.PermissionDenied)
+	pd := msg.PermissionDenied
+	assert.Equal(t, "Bash", pd.ToolName)
+	assert.Equal(t, "toolu_01NkgdgFAqQEKDrTUghRf9UV", pd.ToolUseID)
+	assert.Equal(t, "subcommandResults", pd.ReasonType)
+	assert.Equal(t, "Permission to use Bash with command echo hi has been denied.", pd.Message)
+	assert.Empty(t, pd.AgentID)
+	assert.Empty(t, pd.ReasonCode)
+	assert.Equal(t, "3ec1722d-acc7-4e27-bf31-dc4a382db1f1", pd.SessionID)
+	require.NotNil(t, msg.System, "the generic System message is still populated")
+}
+
+// The fields the live frame did not carry, from the 2.1.288 schema.
+func TestPermissionDeniedCarriesItsOptionalFields(t *testing.T) {
+	msg := convert(t, `{"type":"system","subtype":"permission_denied","tool_name":"Read","tool_use_id":"t1",`+
+		`"agent_id":"a1","decision_reason_type":"rule","decision_reason_code":"outside_reads_blocked",`+
+		`"decision_reason":"outside the working directory","message":"denied","uuid":"u","session_id":"s"}`)
+	require.NotNil(t, msg.PermissionDenied)
+	assert.Equal(t, "a1", msg.PermissionDenied.AgentID)
+	assert.Equal(t, "outside_reads_blocked", msg.PermissionDenied.ReasonCode)
+	assert.Equal(t, "outside the working directory", msg.PermissionDenied.Reason)
 }

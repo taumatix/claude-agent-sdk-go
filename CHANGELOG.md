@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-05
+
+### Added
+
+- **`Message.PermissionDenied`: a tool call the CLI refused without asking.** A deny rule,
+  `dontAsk` mode, the auto-mode classifier, or an "ask" with no `CanUseTool` callback to answer it
+  each refuse a call silently from the caller's side. The CLI reports each as a `permission_denied`
+  system message, which arrived only as an untyped `System`. `PermissionDeniedMessage` carries the
+  tool, its `ToolUseID`, which component decided (`ReasonType`), an actionable `ReasonCode` when
+  there is one, and the message the model was told. `System` is still set. Checked live against
+  claude 2.1.283 and 2.1.288 with a deny rule.
+
 ## [0.7.2] - 2026-10-04
 
 ### Fixed

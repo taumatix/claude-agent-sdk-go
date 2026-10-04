@@ -268,3 +268,38 @@ func TestLive_AQueryOutlastsTheBackgroundAgentItStarted(t *testing.T) {
 	}
 	t.Logf("agents %d, results %d", len(started), results)
 }
+
+// A deny rule refuses a Bash call, and the refusal reaches the caller as a
+// PermissionDeniedMessage naming the same tool call the result lists.
+func TestLive_ADenyRuleIsReportedAsPermissionDenied(t *testing.T) {
+	cli := liveCLI(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+
+	var denied []*messages.PermissionDeniedMessage
+	var result *messages.ResultMessage
+	maxTurns := 3
+	for msg, err := range agent.Query(ctx,
+		"Run the shell command `echo hi` with the Bash tool and tell me its output. If it is refused, just say REFUSED.",
+		agent.Options{
+			CLIPath:          cli,
+			DisallowedTools:  []string{"Bash(echo:*)"},
+			MaxTurns:         &maxTurns,
+			WorkingDirectory: t.TempDir(),
+		}) {
+		require.NoError(t, err)
+		if msg.PermissionDenied != nil {
+			denied = append(denied, msg.PermissionDenied)
+		}
+		if msg.Result != nil {
+			result = msg.Result
+		}
+	}
+
+	require.NotEmpty(t, denied, "the model did not try Bash, or the denial was not typed")
+	assert.Equal(t, "Bash", denied[0].ToolName)
+	assert.NotEmpty(t, denied[0].ToolUseID)
+	assert.NotEmpty(t, denied[0].Message)
+	require.NotNil(t, result)
+	t.Logf("denied %+v", *denied[0])
+}

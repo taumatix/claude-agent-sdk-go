@@ -375,6 +375,23 @@ func systemPayloadFromWire(msg *Message, m *protocol.SystemMessage) {
 			return
 		}
 		msg.BackgroundTasksChanged = backgroundTasksFromWire(p)
+
+	case protocol.SystemSubtypePermissionDenied:
+		var p protocol.PermissionDeniedPayload
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return
+		}
+		msg.PermissionDenied = &PermissionDeniedMessage{
+			ToolName:   p.ToolName,
+			ToolUseID:  p.ToolUseID,
+			AgentID:    p.AgentID,
+			ReasonType: p.DecisionReasonType,
+			ReasonCode: p.DecisionReasonCode,
+			Reason:     p.DecisionReason,
+			Message:    p.Message,
+			UUID:       p.UUID,
+			SessionID:  p.SessionID,
+		}
 	}
 }
 
