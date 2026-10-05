@@ -182,6 +182,11 @@ for msg, err := range agent.Query(ctx, prompt, opts) {
         fmt.Printf("[hook %s %s]\n",
             msg.HookEvent.HookEventName, msg.HookEvent.Phase)
 
+    case msg.ThinkingTokens != nil:
+        // Progress while the model thinks, before any reply text: an
+        // estimate for a spinner, not the billed count.
+        fmt.Printf("[thinking: ~%d tokens]\n", msg.ThinkingTokens.EstimatedTokens)
+
     case msg.APIRetry != nil:
         // The API failed and the CLI is retrying: a run stalled here is
         // otherwise invisible until it finishes late or fails.

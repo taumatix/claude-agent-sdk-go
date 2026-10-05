@@ -62,8 +62,12 @@ still arrive as a generic `System`: `init`, `status`, `thinking_tokens`, `task_s
 `worker_shutting_down`, `auth_status`, `turn_duration`, `dev_intent`, `session_metadata`.
 
 `permission_denied` (0.8.0) and `api_retry` (0.9.0) are typed: the two a caller would act on
-rather than display. Next come `task_summary`, `post_turn_summary` and `thinking_tokens`, which
-arrive in every live run. For anything about API failures, a local server answering 529 through
+rather than display. `thinking_tokens` (0.10.0) is typed too; a reasoning prompt produces it
+live. `task_summary` and `post_turn_summary` are **not** to be typed: the 2.1.288 schema marks
+both `@internal`, so their fields carry no promise, and a typed API over them would make one this
+SDK cannot keep. They arrive as `System`, with `Raw`. The next candidates are the public
+subtypes a caller can act on: `informational` (`content`, `level`, `prevent_continuation`) and
+`compact_boundary`. For anything about API failures, a local server answering 529 through
 `ANTHROPIC_BASE_URL` produces real frames without credentials.
 
 **Why it is not simply done:** that is 20+ subtypes and typing all of them in one change is the

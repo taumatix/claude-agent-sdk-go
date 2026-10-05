@@ -30,6 +30,7 @@ const (
 
 	SystemSubtypePermissionDenied SystemSubtype = "permission_denied"
 	SystemSubtypeAPIRetry         SystemSubtype = "api_retry"
+	SystemSubtypeThinkingTokens   SystemSubtype = "thinking_tokens"
 )
 
 // TaskUsage is the usage tally reported on task_progress and task_notification.
@@ -227,6 +228,17 @@ type APIRetryPayload struct {
 	} `json:"no_response,omitempty"`
 	UUID      string `json:"uuid,omitempty"`
 	SessionID string `json:"session_id,omitempty"`
+}
+
+// ThinkingTokensPayload is the `system`/`thinking_tokens` frame: a live
+// estimate of the current thinking block's size, sent while the model thinks.
+// Fields from the 2.1.288 schema and a live 2.1.288 frame.
+type ThinkingTokensPayload struct {
+	EstimatedTokens      int    `json:"estimated_tokens"`
+	EstimatedTokensDelta int    `json:"estimated_tokens_delta"`
+	UserMessageUUID      string `json:"user_message_uuid,omitempty"`
+	UUID                 string `json:"uuid,omitempty"`
+	SessionID            string `json:"session_id,omitempty"`
 }
 
 // BackgroundTask is one entry of a background_tasks_changed set.

@@ -49,6 +49,9 @@ type Message struct {
 	// APIRetry is set for the api_retry subtype: an API request failed and the
 	// CLI will try it again.
 	APIRetry *APIRetryMessage
+	// ThinkingTokens is set for the thinking_tokens subtype: progress while the
+	// model thinks, before any reply text.
+	ThinkingTokens *ThinkingTokensMessage
 }
 
 // UserMessage is a user-role message received from the CLI.

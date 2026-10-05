@@ -281,6 +281,7 @@ func testMalformedPayloadDegradesToSystem(t *testing.T, subtype, line string) {
 	assert.Nil(t, msg.BackgroundTasksChanged)
 	assert.Nil(t, msg.PermissionDenied)
 	assert.Nil(t, msg.APIRetry)
+	assert.Nil(t, msg.ThinkingTokens)
 
 	require.NotNil(t, msg.System, "the caller must still receive the message")
 	assert.Equal(t, subtype, msg.System.Subtype)
@@ -289,6 +290,8 @@ func testMalformedPayloadDegradesToSystem(t *testing.T, subtype, line string) {
 
 func TestMalformedLifecyclePayloadsDegradeToSystem(t *testing.T) {
 	// Each fixture gives one field a type the CLI's schema forbids.
+	testMalformedPayloadDegradesToSystem(t, "thinking_tokens",
+		`{"type":"system","subtype":"thinking_tokens","estimated_tokens":"lots","estimated_tokens_delta":1}`)
 	testMalformedPayloadDegradesToSystem(t, "api_retry",
 		`{"type":"system","subtype":"api_retry","attempt":"first","max_retries":2}`)
 	testMalformedPayloadDegradesToSystem(t, "permission_denied",
@@ -460,4 +463,21 @@ func TestAPIRetryCarriesAFirstByteTimeout(t *testing.T) {
 	require.NotNil(t, msg.APIRetry.NoResponse)
 	assert.Equal(t, 30*time.Second, msg.APIRetry.NoResponse.Waited)
 	assert.Equal(t, time.Minute, msg.APIRetry.NoResponse.RetryWait)
+}
+
+// A live 2.1.288 frame from a prompt that needed some reasoning; the user
+// message was sent with a uuid, which the frame echoes.
+const liveThinkingTokens = `{"type":"system","subtype":"thinking_tokens","estimated_tokens":150,` +
+	`"estimated_tokens_delta":100,"session_id":"b1976d84-3502-48d5-9efd-8895c59e2265",` +
+	`"uuid":"04b0e266-b500-493c-80c7-cfce7c23af3e","user_message_uuid":"11111111-2222-3333-4444-555555555555"}`
+
+func TestThinkingTokensIsTyped(t *testing.T) {
+	msg := convert(t, liveThinkingTokens)
+	require.NotNil(t, msg.ThinkingTokens)
+	tt := msg.ThinkingTokens
+	assert.Equal(t, 150, tt.EstimatedTokens)
+	assert.Equal(t, 100, tt.Delta)
+	assert.Equal(t, "11111111-2222-3333-4444-555555555555", tt.UserMessageUUID)
+	assert.Equal(t, "b1976d84-3502-48d5-9efd-8895c59e2265", tt.SessionID)
+	require.NotNil(t, msg.System)
 }

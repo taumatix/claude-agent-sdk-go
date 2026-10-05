@@ -376,6 +376,19 @@ func systemPayloadFromWire(msg *Message, m *protocol.SystemMessage) {
 		}
 		msg.BackgroundTasksChanged = backgroundTasksFromWire(p)
 
+	case protocol.SystemSubtypeThinkingTokens:
+		var p protocol.ThinkingTokensPayload
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return
+		}
+		msg.ThinkingTokens = &ThinkingTokensMessage{
+			EstimatedTokens: p.EstimatedTokens,
+			Delta:           p.EstimatedTokensDelta,
+			UserMessageUUID: p.UserMessageUUID,
+			UUID:            p.UUID,
+			SessionID:       p.SessionID,
+		}
+
 	case protocol.SystemSubtypeAPIRetry:
 		var p protocol.APIRetryPayload
 		if err := json.Unmarshal(raw, &p); err != nil {

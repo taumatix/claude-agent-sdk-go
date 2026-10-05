@@ -348,3 +348,33 @@ func TestLive_RetriesAgainstAnOverloadedAPIAreReported(t *testing.T) {
 	assert.NotEmpty(t, retries[1].Error)
 	t.Logf("retries: %+v %+v", *retries[0], *retries[1])
 }
+
+// A prompt that needs some reasoning makes the CLI report thinking progress
+// before the reply. The deltas add up to the running total within a block.
+func TestLive_ThinkingProgressIsReported(t *testing.T) {
+	cli := liveCLI(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+	defer cancel()
+	maxTurns := 1
+	var thinking []*messages.ThinkingTokensMessage
+	for msg, err := range agent.Query(ctx,
+		"Without using any tools, reason carefully: what is the smallest positive integer whose square ends in the digits 444? Reply with just the number.",
+		agent.Options{CLIPath: cli, MaxTurns: &maxTurns, WorkingDirectory: t.TempDir()}) {
+		require.NoError(t, err)
+		if msg.ThinkingTokens != nil {
+			thinking = append(thinking, msg.ThinkingTokens)
+		}
+	}
+	if len(thinking) == 0 {
+		t.Skip("the model answered without a thinking phase long enough to report; nothing to check")
+	}
+	total := 0
+	for _, tt := range thinking {
+		if tt.EstimatedTokens < total {
+			total = 0 // a new thinking block started
+		}
+		total += tt.Delta
+		assert.Equal(t, tt.EstimatedTokens, total, "deltas must add up to the running total")
+	}
+	t.Logf("%d thinking_tokens messages, last %d tokens", len(thinking), thinking[len(thinking)-1].EstimatedTokens)
+}

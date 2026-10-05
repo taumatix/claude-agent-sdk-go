@@ -335,3 +335,19 @@ func TestE2E_AnAPIRetryArrivesTyped(t *testing.T) {
 	assert.Equal(t, 529, retries[0].ErrorStatus)
 	assert.Equal(t, "overloaded", retries[0].Error)
 }
+
+// The stub's lifecycle frames, played on every prompt, include the
+// thinking_tokens frame a 2026-09-27 live run sent.
+func TestE2E_ThinkingProgressArrivesTyped(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	var thinking []*messages.ThinkingTokensMessage
+	for _, m := range collect(t, agent.Query(ctx, "hi", fakeOpts("old-cli", nil))) {
+		if m.ThinkingTokens != nil {
+			thinking = append(thinking, m.ThinkingTokens)
+		}
+	}
+	require.Len(t, thinking, 1)
+	assert.Equal(t, 50, thinking[0].EstimatedTokens)
+	assert.Equal(t, 50, thinking[0].Delta)
+}
