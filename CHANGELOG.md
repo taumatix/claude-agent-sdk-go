@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-05
+
+### Added
+
+- **`Message.ThinkingTokens`: progress while the model thinks.** During a thinking phase the API
+  streams nothing a caller can show, and the CLI reports a running estimate as `thinking_tokens`
+  system messages. These arrived as an untyped `System`. `ThinkingTokensMessage` carries the
+  running total for the current thinking block, this message's increment, and the user message
+  it answers when that carried a uuid. It is an estimate for progress display, not the billed
+  count. Checked live against claude 2.1.283 and 2.1.288.
+
+### Not added, on purpose
+
+- `task_summary` and `post_turn_summary` stay untyped. The CLI's schema marks both internal, so
+  their fields carry no promise. They still arrive as `System` with `Raw`.
+
 ## [0.9.0] - 2026-10-05
 
 ### Added
