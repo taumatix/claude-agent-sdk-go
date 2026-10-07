@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-07
+
+### Added
+
+- **`Message.CompactBoundary`: where the conversation was compacted.** When `/compact` runs, or
+  the CLI compacts on its own, it sends a `compact_boundary` system message that arrived as an
+  untyped `System`. `CompactBoundaryMessage` carries the trigger, the context size before and
+  after (`PreTokens`, `PostTokens`) and how long it took (`Duration`), so a caller can tell why
+  its context shrank. Checked live against claude 2.1.283 (the installed CLI) and a 2.1.288 frame.
+  The CLI's other compaction fields are internal and stay in `System.Raw`.
+
 ## [0.10.0] - 2026-10-05
 
 ### Added
@@ -277,7 +288,13 @@ shapes grow with the CLI, and a raw field stays forward-compatible where a struc
 
 - CI now gates every pull request on build, `go test -race` (Go 1.23 and stable), `gofmt`, `go vet`, `staticcheck`, and an `apidiff` check that fails on incompatible public API changes.
 
-[Unreleased]: https://github.com/taumatix/claude-agent-sdk-go/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/taumatix/claude-agent-sdk-go/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.11.0
+[0.10.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.10.0
+[0.9.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.9.0
+[0.8.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.8.0
+[0.7.2]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.7.2
+[0.7.1]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.7.1
 [0.7.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.7.0
 [0.6.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.6.0
 [0.5.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.5.0

@@ -2,6 +2,7 @@ package messages
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/taumatix/claude-agent-sdk-go/domains/protocol"
 )
@@ -375,6 +376,20 @@ func systemPayloadFromWire(msg *Message, m *protocol.SystemMessage) {
 			return
 		}
 		msg.BackgroundTasksChanged = backgroundTasksFromWire(p)
+
+	case protocol.SystemSubtypeCompactBoundary:
+		var p protocol.CompactBoundaryPayload
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return
+		}
+		msg.CompactBoundary = &CompactBoundaryMessage{
+			Trigger:    p.CompactMetadata.Trigger,
+			PreTokens:  p.CompactMetadata.PreTokens,
+			PostTokens: p.CompactMetadata.PostTokens,
+			Duration:   time.Duration(p.CompactMetadata.DurationMS) * time.Millisecond,
+			UUID:       p.UUID,
+			SessionID:  p.SessionID,
+		}
 
 	case protocol.SystemSubtypeThinkingTokens:
 		var p protocol.ThinkingTokensPayload

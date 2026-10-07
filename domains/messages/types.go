@@ -52,6 +52,9 @@ type Message struct {
 	// ThinkingTokens is set for the thinking_tokens subtype: progress while the
 	// model thinks, before any reply text.
 	ThinkingTokens *ThinkingTokensMessage
+	// CompactBoundary is set for the compact_boundary subtype: the conversation
+	// was compacted, by /compact or automatically.
+	CompactBoundary *CompactBoundaryMessage
 }
 
 // UserMessage is a user-role message received from the CLI.

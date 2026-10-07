@@ -74,6 +74,9 @@ var lifecycle = []string{
 	`{"type":"system","subtype":"background_tasks_changed","tasks":[],"uuid":"u-bg","session_id":"e2e"}`,
 	`{"type":"system","subtype":"thinking_tokens","estimated_tokens":50,"estimated_tokens_delta":50,` +
 		`"session_id":"e2e","uuid":"u-tt"}`,
+	`{"type":"system","subtype":"compact_boundary","content":"Conversation compacted",` +
+		`"compact_metadata":{"trigger":"manual","pre_tokens":33919,"post_tokens":3337,"duration_ms":12564},` +
+		`"session_id":"e2e","uuid":"u-cb"}`,
 }
 
 // Like the real CLI, session_state_changed is sent only when the caller opted

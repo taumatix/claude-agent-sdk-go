@@ -187,6 +187,11 @@ for msg, err := range agent.Query(ctx, prompt, opts) {
         // estimate for a spinner, not the billed count.
         fmt.Printf("[thinking: ~%d tokens]\n", msg.ThinkingTokens.EstimatedTokens)
 
+    case msg.CompactBoundary != nil:
+        // The conversation was compacted: the context just shrank.
+        fmt.Printf("[compacted %d -> %d tokens]\n",
+            msg.CompactBoundary.PreTokens, msg.CompactBoundary.PostTokens)
+
     case msg.APIRetry != nil:
         // The API failed and the CLI is retrying: a run stalled here is
         // otherwise invisible until it finishes late or fails.
