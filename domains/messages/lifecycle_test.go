@@ -282,6 +282,7 @@ func testMalformedPayloadDegradesToSystem(t *testing.T, subtype, line string) {
 	assert.Nil(t, msg.PermissionDenied)
 	assert.Nil(t, msg.APIRetry)
 	assert.Nil(t, msg.ThinkingTokens)
+	assert.Nil(t, msg.CompactBoundary)
 
 	require.NotNil(t, msg.System, "the caller must still receive the message")
 	assert.Equal(t, subtype, msg.System.Subtype)
@@ -290,6 +291,8 @@ func testMalformedPayloadDegradesToSystem(t *testing.T, subtype, line string) {
 
 func TestMalformedLifecyclePayloadsDegradeToSystem(t *testing.T) {
 	// Each fixture gives one field a type the CLI's schema forbids.
+	testMalformedPayloadDegradesToSystem(t, "compact_boundary",
+		`{"type":"system","subtype":"compact_boundary","compact_metadata":{"pre_tokens":"many"}}`)
 	testMalformedPayloadDegradesToSystem(t, "thinking_tokens",
 		`{"type":"system","subtype":"thinking_tokens","estimated_tokens":"lots","estimated_tokens_delta":1}`)
 	testMalformedPayloadDegradesToSystem(t, "api_retry",
@@ -480,4 +483,32 @@ func TestThinkingTokensIsTyped(t *testing.T) {
 	assert.Equal(t, "11111111-2222-3333-4444-555555555555", tt.UserMessageUUID)
 	assert.Equal(t, "b1976d84-3502-48d5-9efd-8895c59e2265", tt.SessionID)
 	require.NotNil(t, msg.System)
+}
+
+// The public fields of a live 2.1.288 frame, from /compact after one turn.
+// The internal fields the CLI also sends are left out of the typed message.
+const liveCompactBoundary = `{"type":"system","subtype":"compact_boundary","content":"Conversation compacted",` +
+	`"compact_metadata":{"trigger":"manual","pre_tokens":33919,"post_tokens":3337,"duration_ms":12564,` +
+	`"preserved_segment":{"head_uuid":"h","anchor_uuid":"a","tail_uuid":"t"}},` +
+	`"session_id":"b1976d84-3502-48d5-9efd-8895c59e2265","uuid":"7d1e0e44-0c0c-4c1b-8d6a-0a8c1f5b9a11",` +
+	`"logical_parent_uuid":"p"}`
+
+func TestCompactBoundaryIsTyped(t *testing.T) {
+	msg := convert(t, liveCompactBoundary)
+	require.NotNil(t, msg.CompactBoundary)
+	cb := msg.CompactBoundary
+	assert.Equal(t, "manual", cb.Trigger)
+	assert.Equal(t, 33919, cb.PreTokens)
+	assert.Equal(t, 3337, cb.PostTokens)
+	assert.Equal(t, 12564*time.Millisecond, cb.Duration)
+	assert.Equal(t, "b1976d84-3502-48d5-9efd-8895c59e2265", cb.SessionID)
+	require.NotNil(t, msg.System, "a typed message must still arrive as System, Raw intact")
+	assert.Contains(t, string(msg.System.Raw), "logical_parent_uuid")
+}
+
+func TestCompactBoundaryWithoutMetadataStillArrivesTyped(t *testing.T) {
+	msg := convert(t, `{"type":"system","subtype":"compact_boundary","session_id":"s"}`)
+	require.NotNil(t, msg.CompactBoundary)
+	assert.Zero(t, msg.CompactBoundary.PreTokens)
+	assert.Equal(t, "s", msg.CompactBoundary.SessionID)
 }

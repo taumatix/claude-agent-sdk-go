@@ -378,3 +378,33 @@ func TestLive_ThinkingProgressIsReported(t *testing.T) {
 	}
 	t.Logf("%d thinking_tokens messages, last %d tokens", len(thinking), thinking[len(thinking)-1].EstimatedTokens)
 }
+
+// /compact after one turn makes the CLI report where the conversation was cut.
+func TestLive_CompactionIsReported(t *testing.T) {
+	cli := liveCLI(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+	defer cancel()
+	client := agent.NewClient(agent.Options{CLIPath: cli, WorkingDirectory: t.TempDir()})
+	require.NoError(t, client.Connect(ctx))
+	defer func() { _ = client.Disconnect() }()
+
+	for _, prompt := range []string{"Say OK.", "/compact"} {
+		var compacted []*messages.CompactBoundaryMessage
+		for msg, err := range client.Query(ctx, prompt) {
+			require.NoError(t, err)
+			if msg.CompactBoundary != nil {
+				compacted = append(compacted, msg.CompactBoundary)
+			}
+		}
+		if prompt == "Say OK." {
+			assert.Empty(t, compacted)
+			continue
+		}
+		require.Len(t, compacted, 1)
+		cb := compacted[0]
+		assert.Equal(t, "manual", cb.Trigger)
+		assert.Greater(t, cb.PreTokens, cb.PostTokens)
+		assert.Greater(t, cb.Duration, time.Duration(0))
+		t.Logf("compaction: %+v", *cb)
+	}
+}

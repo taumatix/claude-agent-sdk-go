@@ -351,3 +351,21 @@ func TestE2E_ThinkingProgressArrivesTyped(t *testing.T) {
 	assert.Equal(t, 50, thinking[0].EstimatedTokens)
 	assert.Equal(t, 50, thinking[0].Delta)
 }
+
+// The stub plays the compact_boundary frame a live 2.1.288 /compact sent.
+func TestE2E_CompactionArrivesTyped(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	var compacted []*messages.CompactBoundaryMessage
+	for _, m := range collect(t, agent.Query(ctx, "hi", fakeOpts("old-cli", nil))) {
+		if m.CompactBoundary != nil {
+			require.NotNil(t, m.System, "a typed compaction must still arrive as System")
+			compacted = append(compacted, m.CompactBoundary)
+		}
+	}
+	require.Len(t, compacted, 1)
+	assert.Equal(t, "manual", compacted[0].Trigger)
+	assert.Equal(t, 33919, compacted[0].PreTokens)
+	assert.Equal(t, 3337, compacted[0].PostTokens)
+	assert.Equal(t, 12564*time.Millisecond, compacted[0].Duration)
+}

@@ -31,6 +31,7 @@ const (
 	SystemSubtypePermissionDenied SystemSubtype = "permission_denied"
 	SystemSubtypeAPIRetry         SystemSubtype = "api_retry"
 	SystemSubtypeThinkingTokens   SystemSubtype = "thinking_tokens"
+	SystemSubtypeCompactBoundary  SystemSubtype = "compact_boundary"
 )
 
 // TaskUsage is the usage tally reported on task_progress and task_notification.
@@ -239,6 +240,20 @@ type ThinkingTokensPayload struct {
 	UserMessageUUID      string `json:"user_message_uuid,omitempty"`
 	UUID                 string `json:"uuid,omitempty"`
 	SessionID            string `json:"session_id,omitempty"`
+}
+
+// CompactBoundaryPayload is the `system`/`compact_boundary` frame: the
+// conversation was compacted. Only the fields the 2.1.288 schema leaves public
+// are modelled; the rest of compact_metadata stays in the message's Raw.
+type CompactBoundaryPayload struct {
+	CompactMetadata struct {
+		Trigger    string `json:"trigger,omitempty"`
+		PreTokens  int    `json:"pre_tokens"`
+		PostTokens int    `json:"post_tokens"`
+		DurationMS int64  `json:"duration_ms"`
+	} `json:"compact_metadata"`
+	UUID      string `json:"uuid,omitempty"`
+	SessionID string `json:"session_id,omitempty"`
 }
 
 // BackgroundTask is one entry of a background_tasks_changed set.

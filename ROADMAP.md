@@ -65,10 +65,12 @@ still arrive as a generic `System`: `init`, `status`, `thinking_tokens`, `task_s
 rather than display. `thinking_tokens` (0.10.0) is typed too; a reasoning prompt produces it
 live. `task_summary` and `post_turn_summary` are **not** to be typed: the 2.1.288 schema marks
 both `@internal`, so their fields carry no promise, and a typed API over them would make one this
-SDK cannot keep. They arrive as `System`, with `Raw`. The next candidates are the public
-subtypes a caller can act on: `informational` (`content`, `level`, `prevent_continuation`) and
-`compact_boundary`. For anything about API failures, a local server answering 529 through
-`ANTHROPIC_BASE_URL` produces real frames without credentials.
+SDK cannot keep. They arrive as `System`, with `Raw`. `compact_boundary` (0.11.0) is typed with
+only its public fields (`trigger`, token counts, duration); `/compact` after one turn produces a
+real frame for about $0.1. The one trigger value seen live is `manual`; an automatic compaction
+has not been captured, so its `trigger` value is unverified. The next candidate is
+`informational` (`content`, `level`, `prevent_continuation`). For anything about API failures, a
+local server answering 529 through `ANTHROPIC_BASE_URL` produces real frames without credentials.
 
 **Why it is not simply done:** that is 20+ subtypes and typing all of them in one change is the
 review nobody wants. Rank by whether a Go caller can act on it; the `@internal`-marked ones
