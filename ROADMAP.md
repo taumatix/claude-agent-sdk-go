@@ -175,15 +175,16 @@ the extraction itself finds nothing — the failure mode to design against is a 
 pattern that stopped matching. Falsify it against a deliberately wrong constant before trusting
 a clean run.
 
-## Make `transport.Send` honour the context it is given
+## A cancelled `Send` poisons the session
 
-**Today:** `Receive` honours its context (2026-10-09); `Send(ctx)` still ignores `ctx` and blocks in
-a pipe write. A CLI that stops reading stdin with its pipe buffer full blocks `Send` while holding the
-transport mutex, and `Close` takes the same mutex, so a stuck write can also stall shutdown.
+**Today:** `Send(ctx)` honours its context (2026-10-09). A write abandoned part-way may have put half
+a JSON line on the CLI's stdin, so the transport closes stdin and every later `Send` fails; the
+session manager treats that as a transport error, not as "your context expired". A caller whose
+`Query` context times out on a slow write has to reconnect.
 
-**Shape:** the write on its own goroutine with a select on `ctx.Done()` and `done`, closing stdin to
-abandon a stuck write; the contract goes in the `Transport` doc comment as `Receive`'s did. Test with
-a script that never reads stdin and a payload larger than the pipe buffer.
+**Shape:** check how `sessionManager` reports the failure and whether a cancel before any byte was
+written (the common case: the pipe was merely full) could leave the stream intact. Writing the line
+in one `Write` call and tracking bytes written would show it. Test with a script that reads slowly.
 
 ## Declare and enforce the `claude` CLI version floor
 

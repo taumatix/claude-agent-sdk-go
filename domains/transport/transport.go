@@ -8,6 +8,10 @@ import "context"
 // but multiple goroutines MAY call Receive and Close concurrently.
 type Transport interface {
 	// Send writes data to the process stdin. Must be safe for concurrent use.
+	//
+	// A conforming Send returns ctx.Err() promptly once ctx is done, even if the write is blocked.
+	// A write abandoned part-way leaves the stream unusable, so the transport may refuse later
+	// calls. Close must also unblock a Send that is waiting.
 	Send(ctx context.Context, data []byte) error
 
 	// Receive returns the next line of output. Returns io.EOF when the stream ends.
