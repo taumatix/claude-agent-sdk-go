@@ -259,6 +259,47 @@ func TestE2E_AClientRecoversFromALostAgentAtTheNextLevel(t *testing.T) {
 	assert.Equal(t, []string{"Go 1.26 is out."}, got)
 }
 
+// The ledger is the CLI process's: the CLI sends nothing at start-up, so a new
+// process has no agent in flight whatever the last one left. A Client that
+// Disconnects and Connects again has a new process, and must not wait for an
+// agent the old one lost. The stub's second process sends no level frame, so
+// nothing but a fresh ledger lets the Query end.
+func TestE2E_AReconnectedClientDoesNotWaitForTheOldProcessesAgent(t *testing.T) {
+	opts := fakeOpts("old-cli-agent-lost-once", map[string]string{
+		"FAKECLI_NO_LEVEL":                     "1",
+		"CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS": "200",
+		"FAKECLI_STATE_FILE":                   filepath.Join(t.TempDir(), "lost"),
+	})
+	client := agent.NewClient(opts)
+	bg := context.Background()
+	require.NoError(t, client.Connect(bg))
+	defer func() { _ = client.Disconnect() }()
+
+	first, cancel := context.WithTimeout(bg, 500*time.Millisecond)
+	var held error
+	for _, err := range client.Query(first, "review in the background") {
+		if err != nil {
+			held = err
+		}
+	}
+	cancel()
+	require.ErrorIs(t, held, context.DeadlineExceeded, "the first process's agent was not held; the test proves nothing")
+
+	require.NoError(t, client.Disconnect())
+	require.NoError(t, client.Connect(bg))
+
+	second, cancel := context.WithTimeout(bg, 10*time.Second)
+	defer cancel()
+	var got []string
+	for msg, err := range client.Query(second, "again") {
+		require.NoError(t, err, "the new process was held by the old one's agent")
+		if msg.Result != nil {
+			got = append(got, msg.Result.Result)
+		}
+	}
+	assert.Equal(t, []string{"Go 1.26 is out."}, got)
+}
+
 // "idle" arriving while an agent is still in flight does not end the Query:
 // the agent's end will wake the session for another turn.
 func TestE2E_IdleWithAnAgentInFlightDoesNotEndTheQuery(t *testing.T) {
