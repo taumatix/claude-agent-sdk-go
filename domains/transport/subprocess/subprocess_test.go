@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -128,4 +129,56 @@ func TestReceive_CloseUnblocksAReceiveWithNoDeadline(t *testing.T) {
 	case <-time.After(15 * time.Second):
 		t.Fatal("Receive stayed blocked after Close")
 	}
+}
+
+func TestSend_ReturnsWhenContextIsCancelledAndTheProcessNeverReadsStdin(t *testing.T) {
+	tr := scriptTransport(t, "sleep 30")
+	big := []byte(strings.Repeat("x", 4<<20))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	err := tr.Send(ctx, big)
+
+	assert.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Less(t, time.Since(start), 2*time.Second)
+}
+
+func TestSend_AlreadyCancelledContextWritesNothing(t *testing.T) {
+	tr := scriptTransport(t, "read -r _")
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	assert.ErrorIs(t, tr.Send(ctx, []byte(`{"a":1}`)), context.Canceled)
+}
+
+func TestSend_CloseUnblocksAStuckSendWithoutAContextDeadline(t *testing.T) {
+	tr := scriptTransport(t, "sleep 30")
+	errc := make(chan error, 1)
+	go func() { errc <- tr.Send(context.Background(), []byte(strings.Repeat("x", 4<<20))) }()
+	time.Sleep(200 * time.Millisecond)
+
+	closed := make(chan struct{})
+	go func() { _ = tr.Close(); close(closed) }()
+
+	select {
+	case err := <-errc:
+		assert.Error(t, err)
+	case <-time.After(10 * time.Second):
+		t.Fatal("Send was not released by Close")
+	}
+	select {
+	case <-closed:
+	case <-time.After(20 * time.Second):
+		t.Fatal("Close did not return")
+	}
+}
+
+func TestSend_DeliversALineToAProcessThatReads(t *testing.T) {
+	tr := scriptTransport(t, `read -r line; echo "got:$line"; read -r _`)
+	require.NoError(t, tr.Send(context.Background(), []byte("hello")))
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	line, err := tr.Receive(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "got:hello", string(line))
 }

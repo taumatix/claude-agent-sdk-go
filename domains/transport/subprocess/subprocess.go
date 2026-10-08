@@ -54,6 +54,8 @@ type Transport struct {
 	mu     sync.Mutex
 	once   sync.Once
 
+	stdinOnce sync.Once
+
 	lines   chan []byte
 	readErr error
 	done    chan struct{}
@@ -109,10 +111,38 @@ func New(ctx context.Context, cfg Config) (*Transport, error) {
 }
 
 // Send writes data to the subprocess stdin as a JSON line.
+//
+// Send returns ctx.Err() as soon as ctx is done. If the write was already under way it may have
+// reached the process in part, so the stream can no longer be trusted: stdin is closed to release the
+// blocked write and later calls to Send fail. It returns io.ErrClosedPipe once the transport is closed.
 func (t *Transport) Send(ctx context.Context, data []byte) error {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	return t.writer.WriteLine(data)
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	select {
+	case <-t.done:
+		return io.ErrClosedPipe
+	default:
+	}
+	res := make(chan error, 1)
+	go func() {
+		t.mu.Lock()
+		defer t.mu.Unlock()
+		res <- t.writer.WriteLine(data)
+	}()
+	select {
+	case err := <-res:
+		return err
+	case <-ctx.Done():
+		t.closeStdin()
+		return ctx.Err()
+	case <-t.done:
+		return io.ErrClosedPipe
+	}
+}
+
+func (t *Transport) closeStdin() {
+	t.stdinOnce.Do(func() { _ = t.stdin.Close() })
 }
 
 // pump reads stdout on its own goroutine so Receive can select on a context. A line is only
@@ -161,9 +191,7 @@ func (t *Transport) Close() error {
 		close(t.done)
 
 		// Close stdin to signal EOF to the subprocess
-		t.mu.Lock()
-		_ = t.stdin.Close()
-		t.mu.Unlock()
+		t.closeStdin()
 
 		// Wait for graceful exit
 		done := make(chan error, 1)

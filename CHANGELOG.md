@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`Transport.Send` now honours its context.** The subprocess transport ignored `ctx` and blocked in a
+  pipe write, so a CLI that stopped reading stdin with its pipe full hung the caller, and a stuck write
+  also stalled `Close`. `Send` now returns `ctx.Err()` as soon as the context is done and `Close`
+  releases a blocked `Send`. A write abandoned part-way leaves the stream unusable, so stdin is closed
+  and later `Send` calls fail. The contract is on the `Transport` interface.
 - **`Transport.Receive` now honours its context.** The subprocess transport ignored `ctx` and blocked
   in a pipe read, so cancelling it did nothing until the CLI wrote a line or exited. It now returns
   `ctx.Err()` as soon as the context is done, without losing a line (the next `Receive` returns it),
