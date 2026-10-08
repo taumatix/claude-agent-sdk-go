@@ -18,7 +18,10 @@ The ordering principle is **live breaks before missing features**: a wire type t
 corrupts what a working user already receives, while a feature that was never ported merely stays
 absent. Four slices have shipped. The first two found a live break rather than a missing
 feature; the third (session state and background tasks, 2026-09-27) found one next to it, and the
-fourth (2026-10-03) fixed it for CLIs that report state, leaving entries 0b and 0c:
+fourth (2026-10-03) fixed it for CLIs that report state. A fifth (2026-10-09) closed the
+ledger-reset question: a ledger lives and dies with its `sessionManager`, so every `Connect` starts
+empty, and a repeated `initialize` cannot occur because this SDK initializes once per process.
+Entry 0b remains:
 
 - **Content blocks** (2026-09-20) — the SDK matched `server_tool_result`, a name no CLI emits, and
   was dropping every server-side tool result.
@@ -32,17 +35,7 @@ binary is a usable reference — it ships zod schemas naming every field of ever
 (see entry 2). Reading them also found `hook_progress`, a message upstream's Python SDK does not
 model at all.
 
-### 0b. Reset the ledger when the CLI process restarts or is re-initialized
-
-The ledger now follows `background_tasks_changed` (0.7.2) as well as the bookends. The CLI's
-schema adds two rules this SDK does not act on yet. The level is per process, and nothing is sent
-at start-up, so a consumer must reset to empty whenever the CLI process restarts. A repeated
-`initialize` is answered with a snapshot of the current set. Today a `Client` gets a new ledger
-only through `Disconnect`/`Connect`, which is the same thing; anything that reconnects to a
-running CLI (session resume, remote transports) must reset it too. Write that down where the
-reconnect lives when it exists, with a test.
-
-### 0c. `CLIPath` pointed at an unreleased CLI is the only way to test a newer one
+### 0b. `CLIPath` pointed at an unreleased CLI is the only way to test a newer one
 
 The 0.6.0 change was verified against 2.1.288 by downloading its npm package and pointing
 `CLAUDE_SDK_LIVE_CLI_PATH` at the binary, because the installed CLI is 2.1.283 and upgrading it is

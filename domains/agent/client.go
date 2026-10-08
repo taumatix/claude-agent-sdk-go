@@ -25,6 +25,10 @@ func NewClient(opts Options) *Client {
 }
 
 // Connect starts the subprocess and performs the initialization handshake.
+//
+// Each Connect starts a new CLI process and a new record of its background
+// agents: the CLI reports none at start-up, so nothing the previous process
+// left running carries over.
 func (c *Client) Connect(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()

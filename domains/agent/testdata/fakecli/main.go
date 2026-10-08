@@ -142,6 +142,12 @@ func main() {
 				emit(hostRunning)
 			}
 			for _, line := range lifecycle {
+				// FAKECLI_NO_LEVEL drops the level frame, which otherwise
+				// empties the SDK's ledger every turn and hides whether a
+				// reconnect did.
+				if os.Getenv("FAKECLI_NO_LEVEL") != "" && strings.Contains(line, `"background_tasks_changed"`) {
+					continue
+				}
 				emit(line)
 			}
 			emit(compact(turn))
