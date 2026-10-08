@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`Transport.Receive` now honours its context.** The subprocess transport ignored `ctx` and blocked
+  in a pipe read, so cancelling it did nothing until the CLI wrote a line or exited. It now returns
+  `ctx.Err()` as soon as the context is done, without losing a line (the next `Receive` returns it),
+  keeps returning `io.EOF` once the stream has ended, and `Close` unblocks a waiting `Receive`. The
+  `transport.Transport` doc comment states this contract for custom implementations.
+
 ## [0.11.0] - 2026-10-07
 
 ### Added

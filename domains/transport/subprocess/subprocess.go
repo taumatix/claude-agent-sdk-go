@@ -53,6 +53,10 @@ type Transport struct {
 	writer *jsonlines.Writer
 	mu     sync.Mutex
 	once   sync.Once
+
+	lines   chan []byte
+	readErr error
+	done    chan struct{}
 }
 
 // New creates a new subprocess Transport. It locates the CLI binary, optionally checks
@@ -97,7 +101,10 @@ func New(ctx context.Context, cfg Config) (*Transport, error) {
 		stdin:  stdin,
 		reader: jsonlines.NewReader(stdout),
 		writer: jsonlines.NewWriter(stdin),
+		lines:  make(chan []byte),
+		done:   make(chan struct{}),
 	}
+	go t.pump()
 	return t, nil
 }
 
@@ -108,16 +115,51 @@ func (t *Transport) Send(ctx context.Context, data []byte) error {
 	return t.writer.WriteLine(data)
 }
 
-// Receive returns the next line from the subprocess stdout.
-// Returns io.EOF when the stream ends.
+// pump reads stdout on its own goroutine so Receive can select on a context. A line is only
+// read from the pipe, never dropped: it waits on the unbuffered channel until a Receive takes it.
+func (t *Transport) pump() {
+	defer close(t.lines)
+	for {
+		line, err := t.reader.ReadLine()
+		if err != nil {
+			t.readErr = err
+			return
+		}
+		select {
+		case t.lines <- line:
+		case <-t.done:
+			t.readErr = io.EOF
+			return
+		}
+	}
+}
+
+// Receive returns the next line from the subprocess stdout. It returns ctx.Err() as soon as ctx is
+// done, without consuming a line, so a later Receive still sees every line. It returns io.EOF when
+// the stream ends or the transport is closed, and keeps returning it.
 func (t *Transport) Receive(ctx context.Context) ([]byte, error) {
-	return t.reader.ReadLine()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	select {
+	case line, ok := <-t.lines:
+		if !ok {
+			return nil, t.readErr
+		}
+		return line, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-t.done:
+		return nil, io.EOF
+	}
 }
 
 // Close shuts down the subprocess gracefully: close stdin → wait 5s → SIGTERM → wait 5s → SIGKILL.
 func (t *Transport) Close() error {
 	var closeErr error
 	t.once.Do(func() {
+		close(t.done)
+
 		// Close stdin to signal EOF to the subprocess
 		t.mu.Lock()
 		_ = t.stdin.Close()

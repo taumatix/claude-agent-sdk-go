@@ -175,20 +175,15 @@ the extraction itself finds nothing — the failure mode to design against is a 
 pattern that stopped matching. Falsify it against a deliberately wrong constant before trusting
 a clean run.
 
-## Make `transport.Receive` honour the context it is given
+## Make `transport.Send` honour the context it is given
 
-**Today:** `Receive(ctx)` ignores `ctx` entirely and blocks in a pipe read. Cancelling the context
-does not interrupt it. This caused the `Disconnect` deadlock fixed on 2026-09-20, which is worked
-around by closing the transport before waiting for the read loop — correct, but it leaves a public
-interface whose context parameter is decorative. Any other caller that expects cancellation to
-work will hit the same wall, and a custom `transport.Transport` implementation has no way to know
-the parameter is not honoured.
+**Today:** `Receive` honours its context (2026-10-09); `Send(ctx)` still ignores `ctx` and blocks in
+a pipe write. A CLI that stops reading stdin with its pipe buffer full blocks `Send` while holding the
+transport mutex, and `Close` takes the same mutex, so a stuck write can also stall shutdown.
 
-**Shape:** a reader goroutine per transport handing lines to a channel, with `Receive` selecting
-on that channel and `ctx.Done()`. Changes the contract for every implementation, so the
-`transport.Transport` doc comment has to say what a conforming `Receive` must do. Test that a
-cancelled context unblocks `Receive` against a subprocess that never writes — the stub CLI can be
-told to go silent.
+**Shape:** the write on its own goroutine with a select on `ctx.Done()` and `done`, closing stdin to
+abandon a stuck write; the contract goes in the `Transport` doc comment as `Receive`'s did. Test with
+a script that never reads stdin and a payload larger than the pipe buffer.
 
 ## Declare and enforce the `claude` CLI version floor
 
