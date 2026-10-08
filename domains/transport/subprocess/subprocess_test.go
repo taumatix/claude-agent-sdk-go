@@ -73,7 +73,7 @@ func scriptTransport(t *testing.T, body string) *subprocess.Transport {
 }
 
 func TestReceive_ReturnsWhenContextIsCancelledAndTheProcessIsSilent(t *testing.T) {
-	tr := scriptTransport(t, "exec cat >/dev/null")
+	tr := scriptTransport(t, "read -r _")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
@@ -85,7 +85,7 @@ func TestReceive_ReturnsWhenContextIsCancelledAndTheProcessIsSilent(t *testing.T
 }
 
 func TestReceive_ACancelledReceiveDoesNotLoseTheNextLine(t *testing.T) {
-	tr := scriptTransport(t, `sleep 0.4; echo '{"n":1}'; echo '{"n":2}'; exec cat >/dev/null`)
+	tr := scriptTransport(t, `sleep 0.4; echo '{"n":1}'; echo '{"n":2}'; read -r _`)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
@@ -112,7 +112,7 @@ func TestReceive_EOFIsStickyAfterTheProcessExits(t *testing.T) {
 }
 
 func TestReceive_CloseUnblocksAReceiveWithNoDeadline(t *testing.T) {
-	tr := scriptTransport(t, "exec cat >/dev/null")
+	tr := scriptTransport(t, "read -r _")
 
 	errCh := make(chan error, 1)
 	go func() {
