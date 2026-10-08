@@ -11,6 +11,10 @@ type Transport interface {
 	Send(ctx context.Context, data []byte) error
 
 	// Receive returns the next line of output. Returns io.EOF when the stream ends.
+	//
+	// A conforming Receive returns ctx.Err() promptly once ctx is done, even if no output is
+	// pending, and must not discard a line when it does: the next Receive returns it. Close must
+	// also unblock a Receive that is waiting.
 	Receive(ctx context.Context) ([]byte, error)
 
 	// Close shuts down the transport, releasing all resources.
