@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Five more CLI flags as typed `Options`**: `JSONSchema` (`--json-schema`), `NoSessionPersistence`,
+  `StrictMCPConfig`, `PluginDirs` (`--plugin-dir`, repeated, which the `ExtraArgs` map cannot express) and
+  `IncludeHookEvents`. All are zero-valued off, so nothing that runs today changes. The spellings are
+  from `claude --help` on 2.1.283; none was exercised against a live session.
 - **`Options.RequireMinimumCLIVersion`** (and `subprocess.Config.EnforceMinimumVersion`) turns a CLI
   older than 2.0.0 into a `*errors.CLIVersionError` (`Found`, `Required`, `CLIPath`) from `Query` and
   `Client.Connect`, instead of a log line followed by a protocol error that points at this library.

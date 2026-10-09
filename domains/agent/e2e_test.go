@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -165,4 +166,29 @@ func TestE2E_QueryTerminatesOnResult(t *testing.T) {
 	require.NotNil(t, last.Result, "the iterator must stop on the result message")
 	assert.False(t, last.Result.IsError)
 	assert.Equal(t, "Go 1.26 is out.", last.Result.Result)
+}
+
+// The new flags cross the real process boundary: the stub CLI records the argv it was started
+// with. Only the spelling is proven here; that the real CLI accepts each flag is from
+// `claude --help` (2.1.283), not from a live session.
+func TestE2E_SessionAndPluginFlagsReachTheCLI(t *testing.T) {
+	argsFile := filepath.Join(t.TempDir(), "argv")
+	queryFakeCLIWith(t, agent.Options{
+		CLIPath:              fakeCLIPath,
+		Env:                  map[string]string{"FAKECLI_ARGS_FILE": argsFile},
+		JSONSchema:           `{"type":"object","properties":{"name":{"type":"string"}}}`,
+		NoSessionPersistence: true,
+		StrictMCPConfig:      true,
+		PluginDirs:           []string{"/p/a", "/p/b.zip"},
+		IncludeHookEvents:    true,
+	}, "hi")
+
+	raw, err := os.ReadFile(argsFile)
+	require.NoError(t, err)
+	argv := strings.Split(string(raw), "\n")
+	assert.Contains(t, argv, "--no-session-persistence")
+	assert.Contains(t, argv, "--strict-mcp-config")
+	assert.Contains(t, argv, "--include-hook-events")
+	assert.Contains(t, argv, `{"type":"object","properties":{"name":{"type":"string"}}}`)
+	assert.Equal(t, 2, strings.Count(string(raw), "--plugin-dir"))
 }

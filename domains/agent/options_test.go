@@ -30,3 +30,37 @@ func TestBuildCLIArgs_SettingSources(t *testing.T) {
 	// non-empty: flag present
 	testBuildCLIArgsContains(t, agent.Options{SettingSources: []string{"global", "local"}}, "--setting-sources")
 }
+
+func TestBuildCLIArgs_SessionAndPluginFlags(t *testing.T) {
+	assert.NotContains(t, agent.BuildCLIArgs(agent.Options{}), "--json-schema")
+
+	args := agent.BuildCLIArgs(agent.Options{
+		JSONSchema:           `{"type":"object"}`,
+		NoSessionPersistence: true,
+		StrictMCPConfig:      true,
+		PluginDirs:           []string{"/p/a", "/p/b.zip"},
+		IncludeHookEvents:    true,
+	})
+	assert.Contains(t, args, "--no-session-persistence")
+	assert.Contains(t, args, "--strict-mcp-config")
+	assert.Contains(t, args, "--include-hook-events")
+	i := indexOf(args, "--json-schema")
+	assert.GreaterOrEqual(t, i, 0)
+	assert.Equal(t, `{"type":"object"}`, args[i+1])
+	var dirs []string
+	for j, a := range args {
+		if a == "--plugin-dir" {
+			dirs = append(dirs, args[j+1])
+		}
+	}
+	assert.Equal(t, []string{"/p/a", "/p/b.zip"}, dirs, "--plugin-dir repeats, which ExtraArgs cannot express")
+}
+
+func indexOf(args []string, flag string) int {
+	for i, a := range args {
+		if a == flag {
+			return i
+		}
+	}
+	return -1
+}
