@@ -128,9 +128,9 @@ Python dataclass and assuming.
 `--no-session-persistence`, `--strict-mcp-config`, `--plugin-dir`, `--include-hook-events`). `ExtraArgs`
 is the escape hatch, but it is a map, so a repeatable flag or an ordering needs a typed option.
 
-**Left:** `claude --help` (2.1.283) lists more with no typed option: `--agents`, `--bare`,
-`--disable-slash-commands`, `--replay-user-messages`, `--permission-prompt-tool`, `--from-pr`,
-`--worktree`, `--plugin-url`. Several change the stream (`--replay-user-messages`, `--bare`), so each
+**Left:** `claude --help` (2.1.283) lists more with no typed option: `--bare` (it changes how the CLI
+authenticates), `--replay-user-messages`, `--permission-prompt-tool`, `--from-pr`, `--worktree`, and
+the fields of `--agents` beyond `description` and `prompt` (tools, model: unverified). Several change the stream (`--replay-user-messages`, `--bare`), so each
 needs a look at what the SDK does with the new frames before it is exposed. With `JSONSchema` set the
 answer is structured output: check whether `ResultMessage` carries it, and add the field if it does.
 Also diff against upstream's `_build_command`, since upstream's list has been behind the CLI before.

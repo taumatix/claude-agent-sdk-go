@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`Options.Agents`** (`--agents`, a map of name to `AgentDefinition{Description, Prompt}`), **`DisableSlashCommands`**
+  and **`PluginURLs`** (`--plugin-url`, repeated). `AgentDefinition` carries only the two fields the CLI's
+  help documents. Spellings are from `claude --help` on 2.1.283; not exercised against a live session.
 - **Five more CLI flags as typed `Options`**: `JSONSchema` (`--json-schema`), `NoSessionPersistence`,
   `StrictMCPConfig`, `PluginDirs` (`--plugin-dir`, repeated, which the `ExtraArgs` map cannot express) and
   `IncludeHookEvents`. All are zero-valued off, so nothing that runs today changes. The spellings are
