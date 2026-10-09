@@ -135,18 +135,23 @@ needs a look at what the SDK does with the new frames before it is exposed. With
 answer is structured output: check whether `ResultMessage` carries it, and add the field if it does.
 Also diff against upstream's `_build_command`, since upstream's list has been behind the CLI before.
 
-### 6. Client lifecycle and session semantics
+### 6. Client lifecycle and session semantics, after the conformance harness
 
-**Today:** upstream grew `session_resume`, `session_import`, `session_summary`,
-`transcript_mirror_batcher` and a `testing/session_store_conformance` harness — roughly 2,700 new
-lines across `_internal/sessions*.py`. This SDK's `domains/sessions` predates all of it.
+**Done:** `sessions.SessionStore` (`Append`/`Load`, with optional `SessionLister`, `SessionDeleter`,
+`SubkeyLister`), `MemorySessionStore`, and `sessionstoretest` — contracts 1 to 13 of upstream's
+`session_store_conformance`. The older `sessions.Store` is untouched.
 
-**Why it is not simply done:** this is behavioural parity, not type parity, so it needs the
-conformance harness ported before the features are — otherwise "done" is unfalsifiable.
+**Left, in order** (each ships something usable):
 
-**Shape:** port `session_store_conformance` first and run this SDK's store against it. What fails
-becomes the sub-entries. Re-measure the gap before planning further; the slices above will have
-moved it.
+- **6a. Contract 14 and summaries:** `list_session_summaries` and `fold_session_summary`, then the
+  14th contract. Needs upstream's summary shape read first.
+- **6b. Transcript mirroring:** `transcript_mirror` frames from the CLI appended to a configured
+  `SessionStore` (`Options.SessionStore`), batched and eager flush modes, `mirror_error` surfaced when
+  an `Append` fails. Needs an e2e against the fake CLI emitting those frames.
+- **6c. Store-backed resume:** `Resume` materialising a session from the store when the local
+  transcript is absent (`session_resume`), and `session_import`.
+
+The frame names and flush semantics are from upstream's source, not a live CLI; verify 6b against one.
 
 ## Check the SDK's wire vocabulary against the CLI binary, mechanically
 

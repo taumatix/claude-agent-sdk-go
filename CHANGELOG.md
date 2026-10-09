@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`sessions.SessionStore`**, a transcript store interface tracking upstream's (`SessionKey`, `Append`,
+  `Load`; optional `SessionLister`, `SessionDeleter`, `SubkeyLister`), a `MemorySessionStore`, and the
+  **`sessions/sessionstoretest`** conformance suite for adapter authors (`sessionstoretest.Run`), a port of
+  contracts 1 to 13 of upstream's `session_store_conformance`. Nothing yet feeds a store from a running
+  session; that is the next roadmap slice.
 - **`Options.Worktree`/`WorktreeName`** (`--worktree [name]`), **`FromPR`** (`--from-pr`),
   **`PermissionPromptTool`** (`--permission-prompt-tool`) and **`PermissionPrompts`** (`--permission-prompts`).
   Zero-valued off. `FromPR` empty is not sent, since the bare flag opens an interactive picker. Spellings
