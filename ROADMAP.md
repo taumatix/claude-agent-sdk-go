@@ -124,13 +124,16 @@ Python dataclass and assuming.
 
 ### 5. Options and CLI flags
 
-**Today:** `domains/agent/options.go` maps the flags as of March 2026. An option upstream added
-that this does not map is a feature a user cannot reach at all — `BuildCLIArgs` has no escape
-hatch for an unmapped flag.
+**Today:** `BuildCLIArgs` maps the flags as of March 2026 plus five added 2026-10-09 (`--json-schema`,
+`--no-session-persistence`, `--strict-mcp-config`, `--plugin-dir`, `--include-hook-events`). `ExtraArgs`
+is the escape hatch, but it is a map, so a repeatable flag or an ordering needs a typed option.
 
-**Shape:** diff `BuildCLIArgs` against upstream's `_build_command` and against `claude --help`
-from the pinned CLI. Two sources, because upstream's own list has been behind the CLI before. Add
-the missing flags, and consider a raw pass-through so the next gap is not a hard block.
+**Left:** `claude --help` (2.1.283) lists more with no typed option: `--agents`, `--bare`,
+`--disable-slash-commands`, `--replay-user-messages`, `--permission-prompt-tool`, `--from-pr`,
+`--worktree`, `--plugin-url`. Several change the stream (`--replay-user-messages`, `--bare`), so each
+needs a look at what the SDK does with the new frames before it is exposed. With `JSONSchema` set the
+answer is structured output: check whether `ResultMessage` carries it, and add the field if it does.
+Also diff against upstream's `_build_command`, since upstream's list has been behind the CLI before.
 
 ### 6. Client lifecycle and session semantics
 

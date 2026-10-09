@@ -99,6 +99,10 @@ func main() {
 		}
 	}
 
+	if f := os.Getenv("FAKECLI_ARGS_FILE"); f != "" {
+		_ = os.WriteFile(f, []byte(strings.Join(os.Args[1:], "\n")), 0o600)
+	}
+
 	out := bufio.NewWriter(os.Stdout)
 	defer out.Flush()
 

@@ -78,6 +78,22 @@ type Options struct {
 	MaxThinkingTokens *int
 	Effort            string
 
+	// JSONSchema is a JSON Schema the CLI validates the final answer against (--json-schema).
+	JSONSchema string
+
+	// NoSessionPersistence keeps the session off disk, so it cannot be resumed
+	// (--no-session-persistence).
+	NoSessionPersistence bool
+
+	// StrictMCPConfig ignores every MCP configuration except MCPServers (--strict-mcp-config).
+	StrictMCPConfig bool
+
+	// PluginDirs load a plugin directory or .zip for this session only (--plugin-dir, repeated).
+	PluginDirs []string
+
+	// IncludeHookEvents streams the hook lifecycle events (--include-hook-events).
+	IncludeHookEvents bool
+
 	// Extra arbitrary CLI flags (key → value, nil value = boolean flag)
 	ExtraArgs map[string]string
 
@@ -222,6 +238,22 @@ func BuildCLIArgs(opts Options) []string {
 
 	if opts.Effort != "" {
 		args = append(args, "--effort", opts.Effort)
+	}
+
+	if opts.JSONSchema != "" {
+		args = append(args, "--json-schema", opts.JSONSchema)
+	}
+	if opts.NoSessionPersistence {
+		args = append(args, "--no-session-persistence")
+	}
+	if opts.StrictMCPConfig {
+		args = append(args, "--strict-mcp-config")
+	}
+	for _, dir := range opts.PluginDirs {
+		args = append(args, "--plugin-dir", dir)
+	}
+	if opts.IncludeHookEvents {
+		args = append(args, "--include-hook-events")
 	}
 
 	// Extra arbitrary flags
