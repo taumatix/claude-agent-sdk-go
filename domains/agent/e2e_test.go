@@ -221,11 +221,13 @@ func TestE2E_WorktreePRAndPermissionPromptFlagsReachTheCLI(t *testing.T) {
 		FromPR:               "123",
 		PermissionPromptTool: "mcp__auth__approve",
 		PermissionPrompts:    "host",
+		Brief:                true,
 	}, "hi")
 
 	raw, err := os.ReadFile(argsFile)
 	require.NoError(t, err)
 	argv := strings.Split(string(raw), "\n")
+	assert.Contains(t, argv, "--brief")
 	for flag, want := range map[string]string{
 		"--worktree": "fix-a", "--from-pr": "123",
 		"--permission-prompt-tool": "mcp__auth__approve", "--permission-prompts": "host",

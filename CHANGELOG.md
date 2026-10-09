@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`Options.Brief`** (`--brief`), which enables the CLI's SendUserMessage tool. Zero-valued off. Spelling from
+  `claude --help` on 2.1.283; not exercised against a live session.
 - **`sessions.SessionStore`**, a transcript store interface tracking upstream's (`SessionKey`, `Append`,
   `Load`; optional `SessionLister`, `SessionDeleter`, `SubkeyLister`), a `MemorySessionStore`, and the
   **`sessions/sessionstoretest`** conformance suite for adapter authors (`sessionstoretest.Run`), a port of

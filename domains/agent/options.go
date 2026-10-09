@@ -123,6 +123,8 @@ type Options struct {
 	// PermissionPrompts says who answers permission prompts under --print: "host"
 	// or "none" (--permission-prompts).
 	PermissionPrompts string
+	// Brief enables the CLI's SendUserMessage tool, for agent-to-user communication (--brief).
+	Brief bool
 
 	// IncludeHookEvents streams the hook lifecycle events (--include-hook-events).
 	IncludeHookEvents bool
@@ -314,6 +316,9 @@ func BuildCLIArgs(opts Options) []string {
 	}
 	if opts.PermissionPrompts != "" {
 		args = append(args, "--permission-prompts", opts.PermissionPrompts)
+	}
+	if opts.Brief {
+		args = append(args, "--brief")
 	}
 
 	// Extra arbitrary flags
