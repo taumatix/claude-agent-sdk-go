@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`ResultMessage.DeferredToolUse`** (`ID`, `Name`, `Input`): the tool call a PreToolUse hook deferred by answering
+  `"defer"`, on which the run stopped. It was dropped before, so a deferred turn looked like one with nothing
+  pending. Shape from upstream's `DeferredToolUse`; tested against the stub CLI, not a live one.
 - **`Options.Brief`** (`--brief`), which enables the CLI's SendUserMessage tool. Zero-valued off. Spelling from
   `claude --help` on 2.1.283; not exercised against a live session.
 - **`sessions.SessionStore`**, a transcript store interface tracking upstream's (`SessionKey`, `Append`,

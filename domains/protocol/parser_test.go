@@ -256,3 +256,27 @@ func TestParseControlRequestBody_UnknownSubtype(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown control request subtype")
 }
+
+// Shape from claude-agent-sdk-python types.py DeferredToolUse and message_parser.py: a PreToolUse
+// hook that answers "defer" stops the run and the result carries the call.
+func TestParseLine_ResultMessageDeferredToolUse(t *testing.T) {
+	data := []byte(`{"type":"result","subtype":"success","session_id":"s","duration_ms":1,"duration_api_ms":1,` +
+		`"is_error":false,"num_turns":1,"deferred_tool_use":{"id":"toolu_1","name":"Bash","input":{"command":"ls"}}}`)
+	msg, err := protocol.ParseLine(data)
+	require.NoError(t, err)
+	require.NotNil(t, msg.Result)
+	require.NotNil(t, msg.Result.DeferredToolUse)
+	assert.Equal(t, "toolu_1", msg.Result.DeferredToolUse.ID)
+	assert.Equal(t, "Bash", msg.Result.DeferredToolUse.Name)
+	assert.JSONEq(t, `{"command":"ls"}`, string(msg.Result.DeferredToolUse.Input))
+}
+
+func TestParseLine_ResultMessageWithoutDeferredToolUse(t *testing.T) {
+	for _, extra := range []string{``, `,"deferred_tool_use":null`} {
+		data := []byte(`{"type":"result","subtype":"success","session_id":"s","duration_ms":1,"duration_api_ms":1,` +
+			`"is_error":false,"num_turns":1` + extra + `}`)
+		msg, err := protocol.ParseLine(data)
+		require.NoError(t, err)
+		assert.Nil(t, msg.Result.DeferredToolUse, extra)
+	}
+}

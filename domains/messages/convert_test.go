@@ -336,3 +336,15 @@ func TestFromWire_AssistantWithUsage(t *testing.T) {
 	require.NotNil(t, msg.Assistant)
 	assert.NotNil(t, msg.Assistant.Usage)
 }
+
+func TestFromWire_ResultDeferredToolUse(t *testing.T) {
+	w := wireMsg(t, `{"type":"result","subtype":"success","session_id":"s1","duration_ms":1,`+
+		`"duration_api_ms":1,"is_error":false,"num_turns":1,`+
+		`"deferred_tool_use":{"id":"toolu_1","name":"Bash","input":{"command":"ls"}}}`)
+	msg, err := messages.FromWire(w)
+	require.NoError(t, err)
+	require.NotNil(t, msg.Result.DeferredToolUse)
+	assert.Equal(t, "toolu_1", msg.Result.DeferredToolUse.ID)
+	assert.Equal(t, "Bash", msg.Result.DeferredToolUse.Name)
+	assert.JSONEq(t, `{"command":"ls"}`, string(msg.Result.DeferredToolUse.Input))
+}

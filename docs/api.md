@@ -530,6 +530,8 @@ type ResultMessage struct {
     PermissionDenials json.RawMessage // tool calls denied during the turn
     Errors            []string
     Origin            json.RawMessage // provenance of the triggering user message
+
+    DeferredToolUse *DeferredToolUse // a PreToolUse hook answered "defer"; the run stopped on this call (ID, Name, Input)
 }
 ```
 

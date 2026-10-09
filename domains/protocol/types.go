@@ -163,6 +163,15 @@ type ResultMessage struct {
 	PermissionDenials json.RawMessage `json:"permission_denials,omitempty"`
 	Errors            []string        `json:"errors,omitempty"`
 	Origin            json.RawMessage `json:"origin,omitempty"`
+	// DeferredToolUse is set when a PreToolUse hook answered "defer" and the run stopped.
+	DeferredToolUse *DeferredToolUse `json:"deferred_tool_use,omitempty"`
+}
+
+// DeferredToolUse is the tool call a PreToolUse hook deferred to the caller.
+type DeferredToolUse struct {
+	ID    string          `json:"id"`
+	Name  string          `json:"name"`
+	Input json.RawMessage `json:"input"`
 }
 
 // ConversationResetMessage is emitted when the session's conversation is

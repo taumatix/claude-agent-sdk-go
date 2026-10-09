@@ -111,8 +111,16 @@ func fromWireResult(m *protocol.ResultMessage) (*Message, error) {
 			PermissionDenials: m.PermissionDenials,
 			Errors:            m.Errors,
 			Origin:            m.Origin,
+			DeferredToolUse:   deferredToolUse(m.DeferredToolUse),
 		},
 	}, nil
+}
+
+func deferredToolUse(d *protocol.DeferredToolUse) *DeferredToolUse {
+	if d == nil {
+		return nil
+	}
+	return &DeferredToolUse{ID: d.ID, Name: d.Name, Input: d.Input}
 }
 
 func fromWireConvReset(m *protocol.ConversationResetMessage) (*Message, error) {
