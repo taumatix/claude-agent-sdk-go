@@ -129,10 +129,12 @@ Python dataclass and assuming.
 is the escape hatch, but it is a map, so a repeatable flag or an ordering needs a typed option.
 
 **Left:** `claude --help` (2.1.283) lists more with no typed option: `--bare` (it changes how the CLI
-authenticates), `--replay-user-messages`, `--tmux` (needs `--worktree`), `--brief`, `--ide`, and
-the fields of `--agents` beyond `description` and `prompt` (tools, model: unverified). Several change the stream (`--replay-user-messages`, `--bare`), so each
-needs a look at what the SDK does with the new frames before it is exposed. With `JSONSchema` set the
-answer is structured output: check whether `ResultMessage` carries it, and add the field if it does.
+authenticates), `--replay-user-messages` (adds frames to the stream), `--tmux` (needs `--worktree`; interactive),
+`--ide` (interactive), and the fields of `--agents` beyond `description` and `prompt` (tools, model:
+unverified). `--brief` is typed (`Options.Brief`, 2026-10-09); what its SendUserMessage tool does to the
+stream is unobserved. `ResultMessage.StructuredOutput` already carries `--json-schema`'s answer (parser
+test only; no live run). Each remaining flag needs a look at what the SDK does with the new frames before
+it is exposed.
 Also diff against upstream's `_build_command`, since upstream's list has been behind the CLI before.
 
 ### 6. Client lifecycle and session semantics, after the conformance harness

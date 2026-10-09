@@ -103,6 +103,9 @@ func TestBuildCLIArgs_WorktreePRAndPermissionPromptFlags(t *testing.T) {
 	assert.Equal(t, "mcp__auth__approve", args[indexOf(args, "--permission-prompt-tool")+1])
 	assert.Equal(t, "none", args[indexOf(args, "--permission-prompts")+1])
 
+	assert.NotContains(t, agent.BuildCLIArgs(agent.Options{}), "--brief")
+	assert.Contains(t, agent.BuildCLIArgs(agent.Options{Brief: true}), "--brief")
+
 	bare := agent.BuildCLIArgs(agent.Options{Worktree: true})
 	i = indexOf(bare, "--worktree")
 	assert.GreaterOrEqual(t, i, 0)
