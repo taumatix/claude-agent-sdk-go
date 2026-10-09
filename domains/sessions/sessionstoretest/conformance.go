@@ -217,7 +217,7 @@ func Contracts() []Contract {
 			s := n()
 			d := s.(sessions.SessionDeleter)
 			if err := d.Delete(ctx, sessions.SessionKey{ProjectKey: "proj", SessionID: "never-written"}); err != nil {
-				return fmt.Errorf("Delete of a key never written: %w", err)
+				return fmt.Errorf("deleting a key never written: %w", err)
 			}
 			if err := app(ctx, s, key, entry("n", 1)); err != nil {
 				return err
@@ -248,7 +248,7 @@ func Contracts() []Contract {
 				got, _ := l.ListSessions(ctx, key.ProjectKey)
 				for _, e := range got {
 					if e.SessionID == key.SessionID {
-						return fmt.Errorf("ListSessions still lists the deleted session")
+						return fmt.Errorf("the deleted session is still listed by ListSessions")
 					}
 				}
 			}
