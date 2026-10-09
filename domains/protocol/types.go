@@ -157,9 +157,13 @@ type ResultMessage struct {
 	TerminalReason *string `json:"terminal_reason,omitempty"`
 	// APIErrorStatus is the HTTP status of the failing API call when IsError is
 	// true and Subtype is "success". Safe to log — carries no message content.
-	APIErrorStatus    *int            `json:"api_error_status,omitempty"`
-	StructuredOutput  json.RawMessage `json:"structured_output,omitempty"`
-	ModelUsage        json.RawMessage `json:"model_usage,omitempty"`
+	APIErrorStatus   *int            `json:"api_error_status,omitempty"`
+	StructuredOutput json.RawMessage `json:"structured_output,omitempty"`
+	ModelUsage       json.RawMessage `json:"model_usage,omitempty"`
+	// ModelUsageCamel is the same breakdown under the key the CLI sends
+	// ("modelUsage", seen on 2.1.283); ModelUsage is kept for CLIs that used
+	// the snake_case spelling.
+	ModelUsageCamel   json.RawMessage `json:"modelUsage,omitempty"`
 	PermissionDenials json.RawMessage `json:"permission_denials,omitempty"`
 	Errors            []string        `json:"errors,omitempty"`
 	Origin            json.RawMessage `json:"origin,omitempty"`

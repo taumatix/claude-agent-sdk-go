@@ -348,3 +348,13 @@ func TestFromWire_ResultDeferredToolUse(t *testing.T) {
 	assert.Equal(t, "Bash", msg.Result.DeferredToolUse.Name)
 	assert.JSONEq(t, `{"command":"ls"}`, string(msg.Result.DeferredToolUse.Input))
 }
+
+func TestFromWire_ResultModelUsageUnderEitherKey(t *testing.T) {
+	for _, key := range []string{"modelUsage", "model_usage"} {
+		w := wireMsg(t, `{"type":"result","subtype":"success","session_id":"s1","`+key+`":{"m":{"inputTokens":1}}}`)
+		msg, err := messages.FromWire(w)
+		require.NoError(t, err, key)
+		require.NotNil(t, msg.Result)
+		assert.JSONEq(t, `{"m":{"inputTokens":1}}`, string(msg.Result.ModelUsage), key)
+	}
+}

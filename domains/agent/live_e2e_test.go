@@ -2,6 +2,7 @@ package agent_test
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -406,5 +407,31 @@ func TestLive_CompactionIsReported(t *testing.T) {
 		assert.Greater(t, cb.PreTokens, cb.PostTokens)
 		assert.Greater(t, cb.Duration, time.Duration(0))
 		t.Logf("compaction: %+v", *cb)
+	}
+}
+
+// A real result carries the per-model usage under "modelUsage"; the SDK once read a key no CLI emits.
+func TestLive_ResultCarriesModelUsage(t *testing.T) {
+	cli := liveCLI(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	maxTurns := 1
+	var res *messages.ResultMessage
+	for msg, err := range agent.Query(ctx, "Reply with the single word ok.",
+		agent.Options{CLIPath: cli, MaxTurns: &maxTurns, WorkingDirectory: t.TempDir()}) {
+		require.NoError(t, err)
+		if msg.Result != nil {
+			res = msg.Result
+		}
+	}
+	require.NotNil(t, res)
+	var usage map[string]struct {
+		InputTokens  int `json:"inputTokens"`
+		OutputTokens int `json:"outputTokens"`
+	}
+	require.NoError(t, json.Unmarshal(res.ModelUsage, &usage))
+	require.NotEmpty(t, usage, "ModelUsage empty: the CLI's key was not read")
+	for model, u := range usage {
+		assert.Positive(t, u.OutputTokens, model)
 	}
 }

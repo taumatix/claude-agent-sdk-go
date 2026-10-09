@@ -39,6 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`ResultMessage.ModelUsage` was always empty.** The CLI sends the per-model usage as `modelUsage` (captured
+  from 2.1.283: `inputTokens`, `outputTokens`, `costUSD`, `contextWindow`, ...); the SDK read `model_usage`, a key
+  no CLI emits, so the field never filled. It now reads either spelling, `modelUsage` first. The field stays raw
+  JSON, and `protocol.ResultMessage` gains `ModelUsageCamel` (additive).
 - **A cancelled `Send` no longer poisons the session when none of the line was written.** `Send`
   closed stdin on every cancellation, so a `Query` whose context timed out on a full pipe made
   every later call fail and forced a reconnect. Now the line is abandoned and the transport keeps

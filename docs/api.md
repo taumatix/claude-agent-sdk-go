@@ -526,7 +526,7 @@ type ResultMessage struct {
     TerminalReason    *string         // why the loop ended; nil on older CLIs
     APIErrorStatus    *int            // HTTP status of the failing call, when IsError
     StructuredOutput  json.RawMessage
-    ModelUsage        json.RawMessage // per-model usage, keyed by model name
+    ModelUsage        json.RawMessage // per-model usage, keyed by model name (inputTokens, outputTokens, costUSD, ...)
     PermissionDenials json.RawMessage // tool calls denied during the turn
     Errors            []string
     Origin            json.RawMessage // provenance of the triggering user message
