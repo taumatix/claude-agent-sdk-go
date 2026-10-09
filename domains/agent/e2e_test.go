@@ -192,3 +192,21 @@ func TestE2E_SessionAndPluginFlagsReachTheCLI(t *testing.T) {
 	assert.Contains(t, argv, `{"type":"object","properties":{"name":{"type":"string"}}}`)
 	assert.Equal(t, 2, strings.Count(string(raw), "--plugin-dir"))
 }
+
+func TestE2E_AgentsAndPluginURLsReachTheCLI(t *testing.T) {
+	argsFile := filepath.Join(t.TempDir(), "argv")
+	queryFakeCLIWith(t, agent.Options{
+		CLIPath:              fakeCLIPath,
+		Env:                  map[string]string{"FAKECLI_ARGS_FILE": argsFile},
+		Agents:               map[string]agent.AgentDefinition{"reviewer": {Description: "Reviews code", Prompt: "You are a code reviewer"}},
+		DisableSlashCommands: true,
+		PluginURLs:           []string{"https://example.com/a.zip", "https://example.com/b.zip"},
+	}, "hi")
+
+	raw, err := os.ReadFile(argsFile)
+	require.NoError(t, err)
+	argv := strings.Split(string(raw), "\n")
+	assert.Contains(t, argv, `{"reviewer":{"description":"Reviews code","prompt":"You are a code reviewer"}}`)
+	assert.Contains(t, argv, "--disable-slash-commands")
+	assert.Equal(t, 2, strings.Count(string(raw), "--plugin-url"))
+}

@@ -1,6 +1,7 @@
 package agent_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,4 +64,24 @@ func indexOf(args []string, flag string) int {
 		}
 	}
 	return -1
+}
+
+func TestBuildCLIArgs_AgentsSlashCommandsAndPluginURLs(t *testing.T) {
+	assert.NotContains(t, agent.BuildCLIArgs(agent.Options{}), "--agents")
+
+	args := agent.BuildCLIArgs(agent.Options{
+		Agents: map[string]agent.AgentDefinition{
+			"reviewer": {Description: "Reviews code", Prompt: "You are a code reviewer"},
+			"a":        {Description: "d", Prompt: "p"},
+		},
+		DisableSlashCommands: true,
+		PluginURLs:           []string{"https://x/a.zip", "https://x/b.zip"},
+	})
+	i := indexOf(args, "--agents")
+	assert.GreaterOrEqual(t, i, 0)
+	assert.JSONEq(t,
+		`{"a":{"description":"d","prompt":"p"},"reviewer":{"description":"Reviews code","prompt":"You are a code reviewer"}}`,
+		args[i+1])
+	assert.Contains(t, args, "--disable-slash-commands")
+	assert.Equal(t, 2, strings.Count(strings.Join(args, " "), "--plugin-url"))
 }

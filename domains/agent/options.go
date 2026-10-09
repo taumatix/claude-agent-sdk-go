@@ -19,6 +19,13 @@ const (
 	PermissionModeBypass      PermissionMode = "bypassPermissions"
 )
 
+// AgentDefinition is a custom subagent passed to the CLI with --agents. The CLI's help documents
+// exactly these two fields; others it may accept are not modelled until checked.
+type AgentDefinition struct {
+	Description string `json:"description"`
+	Prompt      string `json:"prompt"`
+}
+
 // MCPServerConfig describes a single MCP server configuration.
 type MCPServerConfig struct {
 	Name    string
@@ -90,6 +97,15 @@ type Options struct {
 
 	// PluginDirs load a plugin directory or .zip for this session only (--plugin-dir, repeated).
 	PluginDirs []string
+
+	// Agents defines custom subagents by name (--agents).
+	Agents map[string]AgentDefinition
+
+	// DisableSlashCommands disables all skills (--disable-slash-commands).
+	DisableSlashCommands bool
+
+	// PluginURLs fetch a plugin .zip for this session only (--plugin-url, repeated).
+	PluginURLs []string
 
 	// IncludeHookEvents streams the hook lifecycle events (--include-hook-events).
 	IncludeHookEvents bool
@@ -251,6 +267,18 @@ func BuildCLIArgs(opts Options) []string {
 	}
 	for _, dir := range opts.PluginDirs {
 		args = append(args, "--plugin-dir", dir)
+	}
+	if len(opts.Agents) > 0 {
+		// A map marshals with sorted keys, so the argument is the same on every run.
+		if agentsJSON, err := json.Marshal(opts.Agents); err == nil {
+			args = append(args, "--agents", string(agentsJSON))
+		}
+	}
+	if opts.DisableSlashCommands {
+		args = append(args, "--disable-slash-commands")
+	}
+	for _, u := range opts.PluginURLs {
+		args = append(args, "--plugin-url", u)
 	}
 	if opts.IncludeHookEvents {
 		args = append(args, "--include-hook-events")
