@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A cancelled `Send` no longer poisons the session when none of the line was written.** `Send`
+  closed stdin on every cancellation, so a `Query` whose context timed out on a full pipe made
+  every later call fail and forced a reconnect. Now the line is abandoned and the transport keeps
+  working when the cancel came before the write began (another `Send` still held the pipe) or the
+  write had landed no byte; a write cut off part-way still closes stdin, since the CLI has seen half
+  a JSON line. An abandoned line is never delivered later. On a platform whose pipes have no write
+  deadline the old behaviour (close stdin) remains.
 - **`Transport.Send` now honours its context.** The subprocess transport ignored `ctx` and blocked in a
   pipe write, so a CLI that stopped reading stdin with its pipe full hung the caller, and a stuck write
   also stalled `Close`. `Send` now returns `ctx.Err()` as soon as the context is done and `Close`
