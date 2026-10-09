@@ -186,20 +186,16 @@ session manager treats that as a transport error, not as "your context expired".
 written (the common case: the pipe was merely full) could leave the stream intact. Writing the line
 in one `Write` call and tracking bytes written would show it. Test with a script that reads slowly.
 
-## Declare and enforce the `claude` CLI version floor
+## Make the `claude` CLI version floor the default
 
-**Today:** the SDK spawns `@anthropic-ai/claude-code` (latest 2.1.278) and speaks its stdio
-protocol. It *does* check the version — `checkVersion` has run `claude -v` since the original port
-and logs a warning below `MinimumCLIVersion` (2.0.0) — but the check is non-fatal and writes to
-`log.Printf`, so a library consumer with a structured logger never sees it. The run then continues
-and fails later with a protocol or JSON decode error that points at this library rather than at the
-real cause. Until 2026-09-21 both this entry and `UPSTREAM.md` claimed there was no check at all.
+**Today:** `Options.RequireMinimumCLIVersion` refuses a CLI below 2.0.0 with `*errors.CLIVersionError`
+(2026-10-09), but it is opt-in, so a library consumer who does not know of it still gets the log line
+and a later protocol error. The floor itself (2.0.0) is from the original port; nothing has measured
+what the oldest CLI this SDK really works with is.
 
-**Shape:** make the floor a refusal, not a warning — a typed error from `domains/errors` naming the
-CLI, the version found and the version required, returned from transport construction. That is a
-behaviour change for anyone running an ancient CLI *successfully*, so it needs an opt-out
-(`Config.SkipVersionCheck`) rather than a silent break. The end-to-end test needs a real CLI on
-PATH plus a stub that reports an old version.
+**Shape:** announce in a release's notes, then flip the default in the next minor with
+`Options.SkipVersionCheck` as the opt-out; first run the live test against the oldest CLI still on npm
+that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows.
 
 ## Surface parity checked by a test, not by a pass
 

@@ -93,6 +93,11 @@ type Options struct {
 
 	// Environment variables to pass to the subprocess
 	Env map[string]string
+
+	// RequireMinimumCLIVersion makes a CLI older than the supported minimum an error
+	// (*errors.CLIVersionError) rather than a logged warning. Off by default so existing callers
+	// keep working; a future release will turn it on.
+	RequireMinimumCLIVersion bool
 }
 
 // DefaultOptions returns Options with sensible defaults.

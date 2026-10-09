@@ -38,10 +38,11 @@ func (c *Client) Connect(ctx context.Context) error {
 	t := c.opts.Transport
 	if t == nil {
 		st, err := subprocess.New(ctx, subprocess.Config{
-			CLIPath:          c.opts.CLIPath,
-			Args:             BuildCLIArgs(c.opts),
-			Env:              subprocessEnv(c.opts.Env),
-			WorkingDirectory: c.opts.WorkingDirectory,
+			CLIPath:               c.opts.CLIPath,
+			Args:                  BuildCLIArgs(c.opts),
+			Env:                   subprocessEnv(c.opts.Env),
+			WorkingDirectory:      c.opts.WorkingDirectory,
+			EnforceMinimumVersion: c.opts.RequireMinimumCLIVersion,
 		})
 		if err != nil {
 			return err

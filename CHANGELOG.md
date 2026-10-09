@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`Options.RequireMinimumCLIVersion`** (and `subprocess.Config.EnforceMinimumVersion`) turns a CLI
+  older than 2.0.0 into a `*errors.CLIVersionError` (`Found`, `Required`, `CLIPath`) from `Query` and
+  `Client.Connect`, instead of a log line followed by a protocol error that points at this library.
+  It is off by default, so nothing that runs today stops; the default will flip in a later minor,
+  announced here first. A CLI whose `-v` output cannot be read is let through either way, and
+  `CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK` still disables the check.
+
 ### Fixed
 
 - **`Transport.Send` now honours its context.** The subprocess transport ignored `ctx` and blocked in a

@@ -42,6 +42,11 @@ type Config struct {
 
 	// WorkingDirectory sets the working directory for the subprocess.
 	WorkingDirectory string
+
+	// EnforceMinimumVersion makes a CLI older than MinimumCLIVersion an error
+	// (*errors.CLIVersionError) instead of a logged warning. A CLI whose version cannot be
+	// read is let through either way. CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK still disables the check.
+	EnforceMinimumVersion bool
 }
 
 // Transport implements transport.Transport by spawning the claude CLI as a subprocess
@@ -70,7 +75,9 @@ func New(ctx context.Context, cfg Config) (*Transport, error) {
 	}
 
 	if os.Getenv("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK") == "" {
-		checkVersion(cliPath)
+		if err := checkVersion(cliPath, cfg.EnforceMinimumVersion); err != nil {
+			return nil, err
+		}
 	}
 
 	// Build subprocess environment: inherit minus CLAUDECODE, plus SDK markers, plus cfg.Env.
@@ -272,32 +279,37 @@ func findCLI(cliPath string) (string, error) {
 	}
 }
 
-// checkVersion runs claude -v and logs a warning if below MinimumCLIVersion. Non-fatal.
-func checkVersion(cliPath string) {
+// checkVersion runs claude -v. A version below MinimumCLIVersion is logged, or returned as a
+// *CLIVersionError when enforce is set. An unreadable version is never an error.
+func checkVersion(cliPath string, enforce bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), versionCheckTimeout)
 	defer cancel()
 
 	out, err := exec.CommandContext(ctx, cliPath, "-v").Output()
 	if err != nil {
-		return
+		return nil
 	}
 
-	re := regexp.MustCompile(`(\d+)\.(\d+)\.(\d+)`)
-	m := re.FindStringSubmatch(string(out))
+	m := regexp.MustCompile(`(\d+)\.(\d+)\.(\d+)`).FindStringSubmatch(string(out))
 	if m == nil {
-		return
+		return nil
 	}
-
-	var major, minor, patch int
-	fmt.Sscanf(m[1], "%d", &major)
-	fmt.Sscanf(m[2], "%d", &minor)
-	fmt.Sscanf(m[3], "%d", &patch)
-
-	const minMajor, minMinor, minPatch = 2, 0, 0
-	if major < minMajor || (major == minMajor && minor < minMinor) || (major == minMajor && minor == minMinor && patch < minPatch) {
-		log.Printf("WARNING: Claude Code version %d.%d.%d is below minimum required %s. Some features may not work correctly.",
-			major, minor, patch, MinimumCLIVersion)
+	var v, min [3]int
+	for i := range v {
+		fmt.Sscanf(m[i+1], "%d", &v[i])
 	}
+	fmt.Sscanf(MinimumCLIVersion, "%d.%d.%d", &min[0], &min[1], &min[2])
+
+	if v[0] > min[0] || (v[0] == min[0] && (v[1] > min[1] || (v[1] == min[1] && v[2] >= min[2]))) {
+		return nil
+	}
+	found := fmt.Sprintf("%d.%d.%d", v[0], v[1], v[2])
+	if enforce {
+		return &sdkerrors.CLIVersionError{CLIPath: cliPath, Found: found, Required: MinimumCLIVersion}
+	}
+	log.Printf("WARNING: Claude Code version %s is below minimum required %s. Some features may not work correctly.",
+		found, MinimumCLIVersion)
+	return nil
 }
 
 // buildEnv constructs the subprocess environment.

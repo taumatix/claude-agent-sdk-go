@@ -173,6 +173,7 @@ type Options struct {
     // Overrides
     Transport transport.Transport  // nil = spawn subprocess
     CLIPath   string               // "" = auto-detect on PATH
+    RequireMinimumCLIVersion bool  // refuse a CLI below 2.0.0 with *errors.CLIVersionError (default: warn)
     Env       map[string]string    // extra env vars merged into subprocess environment
 }
 ```
@@ -806,7 +807,7 @@ func New(ctx context.Context, cfg Config) (*Transport, error)
 
 Locates the CLI binary, optionally checks its version, and starts the process. Returns `*CLINotFoundError` if the binary cannot be found, or `*CLIConnectionError` if the process cannot be started.
 
-Version checking can be skipped by setting `CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK` in the environment.
+A CLI older than `MinimumCLIVersion` is logged as a warning; with `Config.EnforceMinimumVersion` (`Options.RequireMinimumCLIVersion` at the agent level) it is returned as `*errors.CLIVersionError` instead. Version checking can be skipped by setting `CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK` in the environment.
 
 ### `Transport`
 
