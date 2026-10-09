@@ -46,6 +46,17 @@ func (r reversing) Load(ctx context.Context, k sessions.SessionKey) ([]sessions.
 	return es, err
 }
 
+// staleSummaries stamps sidecars in epoch seconds, off the clock ListSessions uses.
+type staleSummaries struct{ *sessions.MemorySessionStore }
+
+func (s staleSummaries) ListSessionSummaries(ctx context.Context, p string) ([]sessions.SessionSummaryEntry, error) {
+	got, err := s.MemorySessionStore.ListSessionSummaries(ctx, p)
+	for i := range got {
+		got[i].MtimeMs /= 1000
+	}
+	return got, err
+}
+
 func TestBrokenStoresAreCaught(t *testing.T) {
 	cases := map[string]struct {
 		store sessions.SessionStore
@@ -53,6 +64,7 @@ func TestBrokenStoresAreCaught(t *testing.T) {
 	}{
 		"subpath ignored": {brokenStore{sessions.NewMemorySessionStore()}, "a subpath is stored apart"},
 		"order reversed":  {reversing{sessions.NewMemorySessionStore()}, "append then load"},
+		"summary clock":   {staleSummaries{sessions.NewMemorySessionStore()}, "ListSessionSummaries"},
 	}
 	for name, c := range cases {
 		failed := []string{}
@@ -64,6 +76,8 @@ func TestBrokenStoresAreCaught(t *testing.T) {
 				case reversing:
 					_ = s
 					return reversing{sessions.NewMemorySessionStore()}
+				case staleSummaries:
+					return staleSummaries{sessions.NewMemorySessionStore()}
 				}
 				return nil
 			}); err != nil {
