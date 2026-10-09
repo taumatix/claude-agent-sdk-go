@@ -2,6 +2,7 @@ package subprocess_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -238,4 +239,66 @@ func TestNew_TheSkipVariableDisablesEnforcement(t *testing.T) {
 	tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path, EnforceMinimumVersion: true})
 	require.NoError(t, err)
 	require.NoError(t, tr.Close())
+}
+
+func receiveUntil(t *testing.T, tr *subprocess.Transport, stop string) []string {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	var got []string
+	for {
+		line, err := tr.Receive(ctx)
+		require.NoError(t, err)
+		got = append(got, string(line))
+		if string(line) == stop {
+			return got
+		}
+	}
+}
+
+func TestSend_ACancelledSendThatNeverStartedWritingLeavesTheTransportUsable(t *testing.T) {
+	tr := scriptTransport(t, `sleep 1; while IFS= read -r l; do echo "len:${#l}"; done`)
+
+	first := make(chan error, 1)
+	go func() { first <- tr.Send(context.Background(), []byte(strings.Repeat("a", 200000))) }()
+	time.Sleep(200 * time.Millisecond)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	assert.ErrorIs(t, tr.Send(ctx, []byte("bbbbb")), context.DeadlineExceeded)
+
+	require.NoError(t, <-first)
+	require.NoError(t, tr.Send(context.Background(), []byte("ccc")))
+	got := receiveUntil(t, tr, "len:3")
+	assert.Equal(t, []string{"len:200000", "len:3"}, got, "the abandoned line must never reach the process")
+}
+
+func TestSend_ACancelledSendWhoseWriteLandedNothingLeavesTheTransportUsable(t *testing.T) {
+	tr := scriptTransport(t, `sleep 1; while IFS= read -r l; do echo "$l"; done`)
+	pad := strings.Repeat("p", 250) // under PIPE_BUF everywhere, so a write is whole or nothing
+
+	var sent []string
+	var timedOut string
+	for i := 0; i < 100000; i++ {
+		line := fmt.Sprintf("%06d%s", i, pad)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+		err := tr.Send(ctx, []byte(line))
+		cancel()
+		if err != nil {
+			require.ErrorIs(t, err, context.DeadlineExceeded)
+			timedOut = line[:6]
+			break
+		}
+		sent = append(sent, line[:6])
+	}
+	require.NotEmpty(t, timedOut, "the pipe never filled")
+
+	require.NoError(t, tr.Send(context.Background(), []byte("marker")), "a send that landed nothing must not poison the stream")
+	got := receiveUntil(t, tr, "marker")
+	var ids []string
+	for _, l := range got[:len(got)-1] {
+		ids = append(ids, l[:6])
+	}
+	assert.Equal(t, sent, ids, "every acknowledged line arrives once, and the cancelled one does not")
+	assert.NotContains(t, ids, timedOut)
 }

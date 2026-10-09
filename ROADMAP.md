@@ -175,16 +175,17 @@ the extraction itself finds nothing — the failure mode to design against is a 
 pattern that stopped matching. Falsify it against a deliberately wrong constant before trusting
 a clean run.
 
-## A cancelled `Send` poisons the session
+## A `Send` cut off part-way still poisons the session
 
-**Today:** `Send(ctx)` honours its context (2026-10-09). A write abandoned part-way may have put half
-a JSON line on the CLI's stdin, so the transport closes stdin and every later `Send` fails; the
-session manager treats that as a transport error, not as "your context expired". A caller whose
-`Query` context times out on a slow write has to reconnect.
+**Today:** a cancelled `Send` that landed no byte, or never started, leaves the transport usable
+(2026-10-09). One that was cut off after some bytes closes stdin and every later `Send` fails, because
+the CLI has half a JSON line and the next message would be glued to it. Only lines over the pipe buffer
+(64 KiB on Linux, 16-64 KiB on macOS) can end up there, which in practice means a large attachment.
 
-**Shape:** check how `sessionManager` reports the failure and whether a cancel before any byte was
-written (the common case: the pipe was merely full) could leave the stream intact. Writing the line
-in one `Write` call and tracking bytes written would show it. Test with a script that reads slowly.
+**Shape:** the stream could be repaired rather than closed: after a partial write, finish the line
+with a `\n` the CLI will reject as malformed, and see what the CLI does with it. Needs the live CLI to
+show whether it survives a bad line; until then closing is the safe answer. Also unchecked: Windows,
+where pipes have no write deadline and every cancel mid-write still closes stdin.
 
 ## Make the `claude` CLI version floor the default
 

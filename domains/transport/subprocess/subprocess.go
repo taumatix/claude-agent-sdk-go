@@ -4,6 +4,7 @@ package subprocess
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -53,9 +54,8 @@ type Config struct {
 // and communicating over its stdin/stdout.
 type Transport struct {
 	cmd    *exec.Cmd
-	stdin  io.WriteCloser
+	stdin  *os.File
 	reader *jsonlines.Reader
-	writer *jsonlines.Writer
 	mu     sync.Mutex
 	once   sync.Once
 
@@ -89,27 +89,32 @@ func New(ctx context.Context, cfg Config) (*Transport, error) {
 		cmd.Dir = cfg.WorkingDirectory
 	}
 
-	stdin, err := cmd.StdinPipe()
+	// The pipe is made here rather than by cmd.StdinPipe so the write end is an *os.File whose
+	// write deadline Send can use to interrupt a blocked write and learn how much of it landed.
+	stdinR, stdin, err := os.Pipe()
 	if err != nil {
 		return nil, &sdkerrors.CLIConnectionError{Msg: "failed to create stdin pipe: " + err.Error()}
 	}
+	cmd.Stdin = stdinR
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		stdinR.Close()
 		stdin.Close()
 		return nil, &sdkerrors.CLIConnectionError{Msg: "failed to create stdout pipe: " + err.Error()}
 	}
 
 	if err := cmd.Start(); err != nil {
+		stdinR.Close()
 		stdin.Close()
 		return nil, &sdkerrors.CLIConnectionError{Msg: "failed to start claude: " + err.Error()}
 	}
+	stdinR.Close()
 
 	t := &Transport{
 		cmd:    cmd,
 		stdin:  stdin,
 		reader: jsonlines.NewReader(stdout),
-		writer: jsonlines.NewWriter(stdin),
 		lines:  make(chan []byte),
 		done:   make(chan struct{}),
 	}
@@ -119,9 +124,11 @@ func New(ctx context.Context, cfg Config) (*Transport, error) {
 
 // Send writes data to the subprocess stdin as a JSON line.
 //
-// Send returns ctx.Err() as soon as ctx is done. If the write was already under way it may have
-// reached the process in part, so the stream can no longer be trusted: stdin is closed to release the
-// blocked write and later calls to Send fail. It returns io.ErrClosedPipe once the transport is closed.
+// Send returns ctx.Err() as soon as ctx is done. If nothing of the line had reached the process
+// by then (the pipe was full, or an earlier Send still held the write), the line is abandoned and
+// the transport stays usable. If the write was already under way it may have reached the process
+// in part, so the stream can no longer be trusted: stdin is closed and later calls to Send fail.
+// It returns io.ErrClosedPipe once the transport is closed.
 func (t *Transport) Send(ctx context.Context, data []byte) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -131,21 +138,80 @@ func (t *Transport) Send(ctx context.Context, data []byte) error {
 		return io.ErrClosedPipe
 	default:
 	}
-	res := make(chan error, 1)
+
+	line := make([]byte, len(data)+1)
+	copy(line, data)
+	line[len(data)] = '\n'
+
+	type result struct {
+		n   int
+		err error
+	}
+	const (
+		pending = iota
+		writing
+		finished
+		abandoned
+	)
+	var (
+		stateMu sync.Mutex
+		state   = pending
+	)
+	res := make(chan result, 1)
 	go func() {
 		t.mu.Lock()
 		defer t.mu.Unlock()
-		res <- t.writer.WriteLine(data)
+		stateMu.Lock()
+		if state == abandoned {
+			stateMu.Unlock()
+			res <- result{}
+			return
+		}
+		state = writing
+		stateMu.Unlock()
+		n, err := t.stdin.Write(line)
+		stateMu.Lock()
+		state = finished
+		stateMu.Unlock()
+		// A deadline set by a cancel that lost the race must not outlive this write.
+		_ = t.stdin.SetWriteDeadline(time.Time{})
+		res <- result{n, err}
 	}()
+
 	select {
-	case err := <-res:
-		return err
-	case <-ctx.Done():
-		t.closeStdin()
-		return ctx.Err()
+	case r := <-res:
+		return r.err
 	case <-t.done:
 		return io.ErrClosedPipe
+	case <-ctx.Done():
 	}
+
+	stateMu.Lock()
+	switch state {
+	case pending:
+		state = abandoned
+		stateMu.Unlock()
+		return ctx.Err()
+	case writing:
+		if t.stdin.SetWriteDeadline(time.Unix(1, 0)) != nil {
+			// No deadlines on this platform's pipe: the only way to release the write is to close it.
+			stateMu.Unlock()
+			t.closeStdin()
+			return ctx.Err()
+		}
+	}
+	stateMu.Unlock()
+
+	r := <-res
+	switch {
+	case r.err == nil && r.n == len(line):
+		// The write finished before the cancel took effect: the line went through whole.
+		return nil
+	case r.n == 0 && errors.Is(r.err, os.ErrDeadlineExceeded):
+		return ctx.Err()
+	}
+	t.closeStdin()
+	return ctx.Err()
 }
 
 func (t *Transport) closeStdin() {
