@@ -182,3 +182,60 @@ func TestSend_DeliversALineToAProcessThatReads(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "got:hello", string(line))
 }
+
+func versionStub(t *testing.T, version string) string {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("uses a /bin/sh script as the CLI")
+	}
+	t.Setenv("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK", "")
+	path := filepath.Join(t.TempDir(), "claude")
+	body := "#!/bin/sh\ncase \"$1\" in -v) echo '" + version + "'; exit 0;; esac\nread -r _\n"
+	require.NoError(t, os.WriteFile(path, []byte(body), 0o755))
+	return path
+}
+
+func TestNew_ACLIBelowTheFloorIsRefusedWhenEnforced(t *testing.T) {
+	path := versionStub(t, "1.9.3 (Claude Code)")
+	tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path, EnforceMinimumVersion: true})
+	if tr != nil {
+		_ = tr.Close()
+	}
+	var verr *sdkerrors.CLIVersionError
+	require.ErrorAs(t, err, &verr)
+	assert.Equal(t, "1.9.3", verr.Found)
+	assert.Equal(t, subprocess.MinimumCLIVersion, verr.Required)
+	assert.Equal(t, path, verr.CLIPath)
+	assert.Nil(t, tr)
+}
+
+func TestNew_ACLIBelowTheFloorStillStartsByDefault(t *testing.T) {
+	path := versionStub(t, "1.9.3 (Claude Code)")
+	tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path})
+	require.NoError(t, err)
+	require.NoError(t, tr.Close())
+}
+
+func TestNew_ACLIAtOrAboveTheFloorStartsWhenEnforced(t *testing.T) {
+	for _, v := range []string{"2.0.0 (Claude Code)", "2.1.283 (Claude Code)", "10.0.0"} {
+		path := versionStub(t, v)
+		tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path, EnforceMinimumVersion: true})
+		require.NoError(t, err, v)
+		require.NoError(t, tr.Close())
+	}
+}
+
+func TestNew_AnUnreadableVersionIsNotRefusedWhenEnforced(t *testing.T) {
+	path := versionStub(t, "not a version")
+	tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path, EnforceMinimumVersion: true})
+	require.NoError(t, err)
+	require.NoError(t, tr.Close())
+}
+
+func TestNew_TheSkipVariableDisablesEnforcement(t *testing.T) {
+	path := versionStub(t, "1.0.0")
+	t.Setenv("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK", "1")
+	tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path, EnforceMinimumVersion: true})
+	require.NoError(t, err)
+	require.NoError(t, tr.Close())
+}

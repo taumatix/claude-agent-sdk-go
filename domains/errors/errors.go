@@ -16,6 +16,19 @@ func (e *CLINotFoundError) Error() string {
 	return e.Msg
 }
 
+// CLIVersionError is returned when the CLI is older than the version this SDK supports and the
+// caller asked for that to be enforced (Options.RequireMinimumCLIVersion).
+type CLIVersionError struct {
+	CLIPath  string
+	Found    string
+	Required string
+}
+
+func (e *CLIVersionError) Error() string {
+	return fmt.Sprintf("Claude Code %s at %s is older than the minimum supported %s; upgrade it with "+
+		"npm install -g @anthropic-ai/claude-code", e.Found, e.CLIPath, e.Required)
+}
+
 // CLIConnectionError is returned when a connection to the CLI subprocess fails.
 type CLIConnectionError struct {
 	Msg string

@@ -37,10 +37,11 @@ func Query(ctx context.Context, prompt string, opts Options) iter.Seq2[messages.
 		t := opts.Transport
 		if t == nil {
 			st, err := subprocess.New(ctx, subprocess.Config{
-				CLIPath:          opts.CLIPath,
-				Args:             BuildCLIArgs(opts),
-				Env:              subprocessEnv(opts.Env),
-				WorkingDirectory: opts.WorkingDirectory,
+				CLIPath:               opts.CLIPath,
+				Args:                  BuildCLIArgs(opts),
+				Env:                   subprocessEnv(opts.Env),
+				WorkingDirectory:      opts.WorkingDirectory,
+				EnforceMinimumVersion: opts.RequireMinimumCLIVersion,
 			})
 			if err != nil {
 				yield(messages.Message{}, err)
