@@ -130,6 +130,12 @@ result keys a caller would act on (`subagent_stats`, `terminal_reason` is done) 
 `--no-session-persistence`, `--strict-mcp-config`, `--plugin-dir`, `--include-hook-events`), then `--agents`, `--disable-slash-commands`, `--plugin-url`, `--worktree`, `--from-pr`, `--permission-prompt-tool` and `--permission-prompts` (the last four 2026-10-09). `--permission-prompt-tool` is typed but nothing checks how it interacts with the SDK's own `can_use_tool` control path. `ExtraArgs`
 is the escape hatch, but it is a map, so a repeatable flag or an ordering needs a typed option.
 
+**Upstream diff** (2026-10-10, against `_build_command` on main): upstream's flags missing here were
+`--thinking`, `--thinking-display` and `--system-prompt-file` (typed since), `--task-budget` and `--session-mirror`.
+`--task-budget` is accepted by 2.1.283 but a small value (5000) ended a turn at once with no cost, so its
+semantics (a token budget for the task? a minimum?) need a look before it is typed; `--session-mirror` belongs to
+entry 6b.
+
 **Left:** `claude --help` (2.1.283) lists more with no typed option: `--bare` (it changes how the CLI
 authenticates), `--replay-user-messages` (adds frames to the stream), `--tmux` (needs `--worktree`; interactive),
 `--ide` (interactive), and the fields of `--agents` beyond `description` and `prompt` (tools, model:

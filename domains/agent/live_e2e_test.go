@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -434,4 +435,27 @@ func TestLive_ResultCarriesModelUsage(t *testing.T) {
 	for model, u := range usage {
 		assert.Positive(t, u.OutputTokens, model)
 	}
+}
+
+// The flags behind Thinking, ThinkingDisplay and SystemPromptFile were seen accepted by 2.1.283 (`claude -p`);
+// this runs one turn through the SDK with all three, so a CLI that rejects one fails here.
+func TestLive_ThinkingAndSystemPromptFileAreAccepted(t *testing.T) {
+	cli := liveCLI(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	file := filepath.Join(t.TempDir(), "prompt.md")
+	require.NoError(t, os.WriteFile(file, []byte("You answer with one word."), 0o600))
+	maxTurns := 1
+	var res *messages.ResultMessage
+	for msg, err := range agent.Query(ctx, "Say hello.", agent.Options{
+		CLIPath: cli, MaxTurns: &maxTurns, WorkingDirectory: t.TempDir(),
+		Thinking: "adaptive", ThinkingDisplay: "summarized", SystemPromptFile: file,
+	}) {
+		require.NoError(t, err)
+		if msg.Result != nil {
+			res = msg.Result
+		}
+	}
+	require.NotNil(t, res)
+	assert.False(t, res.IsError, res.Result)
 }

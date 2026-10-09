@@ -111,3 +111,37 @@ func TestBuildCLIArgs_WorktreePRAndPermissionPromptFlags(t *testing.T) {
 	assert.GreaterOrEqual(t, i, 0)
 	assert.True(t, strings.HasPrefix(bare[i+1], "--"), "no name is sent for an unnamed worktree")
 }
+
+func TestBuildCLIArgs_ThinkingAndSystemPromptFile(t *testing.T) {
+	budget := 4000
+	args := agent.BuildCLIArgs(agent.Options{Thinking: "adaptive", ThinkingDisplay: "summarized", MaxThinkingTokens: &budget})
+	assert.Equal(t, []string{"--thinking", "adaptive", "--thinking-display", "summarized"}, sliceFrom(args, "--thinking"))
+	assert.NotContains(t, args, "--max-thinking-tokens", "Thinking takes the place of MaxThinkingTokens")
+
+	args = agent.BuildCLIArgs(agent.Options{Thinking: "disabled", ThinkingDisplay: "summarized"})
+	assert.Contains(t, args, "disabled")
+	assert.NotContains(t, args, "--thinking-display")
+
+	args = agent.BuildCLIArgs(agent.Options{MaxThinkingTokens: &budget, ThinkingDisplay: "omitted"})
+	assert.Contains(t, args, "--max-thinking-tokens")
+	assert.Contains(t, args, "--thinking-display")
+	assert.NotContains(t, args, "--thinking")
+
+	args = agent.BuildCLIArgs(agent.Options{SystemPromptFile: "/tmp/p.md", SystemPrompt: "ignored", AppendSystemPrompt: "more"})
+	assert.Equal(t, []string{"--system-prompt-file", "/tmp/p.md", "--append-system-prompt", "more"}, sliceFrom(args, "--system-prompt-file"))
+	assert.NotContains(t, args, "--system-prompt")
+
+	args = agent.BuildCLIArgs(agent.Options{})
+	assert.NotContains(t, args, "--thinking")
+	assert.NotContains(t, args, "--system-prompt-file")
+}
+
+// sliceFrom returns args[i:i+len] starting at flag, as long as the expected pairs need.
+func sliceFrom(args []string, flag string) []string {
+	for i, a := range args {
+		if a == flag {
+			return args[i:min(i+4, len(args))]
+		}
+	}
+	return nil
+}

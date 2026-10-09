@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`Options.Thinking`** (`--thinking adaptive|disabled`), **`Options.ThinkingDisplay`** (`--thinking-display`) and
+  **`Options.SystemPromptFile`** (`--system-prompt-file`), the three flags upstream's `_build_command` sends that this
+  SDK did not. `Thinking` takes the place of `MaxThinkingTokens` when set; `SystemPromptFile` is sent instead of
+  `SystemPrompt`. Zero-valued, nothing changes. Each was accepted by `claude` 2.1.283 in a live turn; what
+  `ThinkingDisplay` values exist is not checked.
 - **`ResultMessage.DeferredToolUse`** (`ID`, `Name`, `Input`): the tool call a PreToolUse hook deferred by answering
   `"defer"`, on which the run stopped. It was dropped before, so a deferred turn looked like one with nothing
   pending. Shape from upstream's `DeferredToolUse`; tested against the stub CLI, not a live one.

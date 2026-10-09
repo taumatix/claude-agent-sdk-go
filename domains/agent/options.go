@@ -55,6 +55,9 @@ type Options struct {
 	// Prompting
 	SystemPrompt       string
 	AppendSystemPrompt string
+	// SystemPromptFile is a file the CLI reads the system prompt from (--system-prompt-file). When
+	// set it is sent instead of SystemPrompt; AppendSystemPrompt still applies on top.
+	SystemPromptFile string
 
 	// Tool control
 	AllowedTools    []string
@@ -84,6 +87,12 @@ type Options struct {
 	// Thinking / effort
 	MaxThinkingTokens *int
 	Effort            string
+	// Thinking is "adaptive" or "disabled" (--thinking). When set it takes the place of
+	// MaxThinkingTokens, as upstream's thinking config does.
+	Thinking string
+	// ThinkingDisplay is how thinking is shown, e.g. "summarized" or "omitted" (--thinking-display).
+	// Not sent with Thinking "disabled".
+	ThinkingDisplay string
 
 	// JSONSchema is a JSON Schema the CLI validates the final answer against (--json-schema).
 	JSONSchema string
@@ -166,7 +175,12 @@ func BuildCLIArgs(opts Options) []string {
 	args := []string{"--output-format", "stream-json", "--verbose"}
 
 	// System prompt — always set (empty string clears it)
-	if opts.AppendSystemPrompt != "" {
+	if opts.SystemPromptFile != "" {
+		args = append(args, "--system-prompt-file", opts.SystemPromptFile)
+		if opts.AppendSystemPrompt != "" {
+			args = append(args, "--append-system-prompt", opts.AppendSystemPrompt)
+		}
+	} else if opts.AppendSystemPrompt != "" {
 		args = append(args, "--append-system-prompt", opts.AppendSystemPrompt)
 	} else {
 		args = append(args, "--system-prompt", opts.SystemPrompt)
@@ -267,8 +281,18 @@ func BuildCLIArgs(opts Options) []string {
 		args = append(args, "--setting-sources", strings.Join(opts.SettingSources, ","))
 	}
 
-	if opts.MaxThinkingTokens != nil {
-		args = append(args, "--max-thinking-tokens", strconv.Itoa(*opts.MaxThinkingTokens))
+	if opts.Thinking != "" {
+		args = append(args, "--thinking", opts.Thinking)
+		if opts.Thinking != "disabled" && opts.ThinkingDisplay != "" {
+			args = append(args, "--thinking-display", opts.ThinkingDisplay)
+		}
+	} else {
+		if opts.MaxThinkingTokens != nil {
+			args = append(args, "--max-thinking-tokens", strconv.Itoa(*opts.MaxThinkingTokens))
+		}
+		if opts.ThinkingDisplay != "" {
+			args = append(args, "--thinking-display", opts.ThinkingDisplay)
+		}
 	}
 
 	if opts.Effort != "" {
