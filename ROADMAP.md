@@ -113,14 +113,17 @@ frames to a golden file, replay it through the transport in CI, and have the mai
 re-record and diff. The recording catches wire drift; it does not catch a CLI that stops speaking
 to us at all.
 
-### 4. `deferred_tool_use` on the result message
+### 4. `ResultMessage.ModelUsage` probably never fills
 
-**Today:** `ResultMessage` drops the `deferred_tool_use` field upstream added. A turn that ended
-with a tool call deferred to the caller looks, in Go, like a turn that ended with nothing pending.
+**Today:** `protocol.ResultMessage` reads `model_usage`; upstream's parser reads `modelUsage`
+(`message_parser.py`, `data.get("modelUsage")`, checked 2026-10-10). Our tests feed it the key we expect, so
+they pass whatever the CLI sends, the same shape as the `server_tool_result` and `data` breaks. If the CLI
+emits `modelUsage`, every caller reads an empty field. `DeferredToolUse` (2026-10-10) was added from the same
+upstream parser and has the same unverified-live caveat.
 
-**Shape:** a `DeferredToolUse` struct (`ID`, `Name`, `Input`) on `ResultMessage`. Small; the work
-is confirming against the CLI binary what actually populates it and when, rather than copying the
-Python dataclass and assuming.
+**Shape:** capture a real result frame (one cheap turn) and read the key. Accept both spellings if the CLI is
+camelCase, keeping the old one for CLIs that sent it. The live run also checks `deferred_tool_use` if a hook
+can be made to answer `"defer"`.
 
 ### 5. Options and CLI flags
 

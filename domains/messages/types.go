@@ -158,6 +158,17 @@ type ResultMessage struct {
 	// Origin is the CLI's raw provenance object for the user message that
 	// triggered this turn. See UserMessage.Origin.
 	Origin json.RawMessage
+	// DeferredToolUse is the tool call a PreToolUse hook deferred by answering
+	// "defer". The run stopped there; nil when nothing was deferred.
+	DeferredToolUse *DeferredToolUse
+}
+
+// DeferredToolUse is a tool call a PreToolUse hook deferred to the caller, who
+// can inspect it and decide whether to resume.
+type DeferredToolUse struct {
+	ID    string
+	Name  string
+	Input json.RawMessage
 }
 
 // StreamEventMessage carries a partial streaming API event.

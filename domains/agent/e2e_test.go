@@ -242,3 +242,30 @@ func TestE2E_WorktreePRAndPermissionPromptFlagsReachTheCLI(t *testing.T) {
 		assert.Equal(t, want, argv[i+1], flag)
 	}
 }
+
+// A PreToolUse hook that answers "defer" ends the run with the tool call on the result message. Before
+// DeferredToolUse the field was dropped, so a deferred turn looked like one that ended with nothing pending.
+// The frame is the stub's, in upstream's shape; a live CLI has not been made to defer.
+func TestE2E_DeferredToolUseReachesTheCaller(t *testing.T) {
+	t.Setenv("FAKECLI_SCENARIO", "deferred")
+	got := queryFakeCLI(t, "run ls")
+	var res *messages.ResultMessage
+	for _, m := range got {
+		if m.Result != nil {
+			res = m.Result
+		}
+	}
+	require.NotNil(t, res)
+	require.NotNil(t, res.DeferredToolUse)
+	assert.Equal(t, "toolu_01", res.DeferredToolUse.ID)
+	assert.Equal(t, "Bash", res.DeferredToolUse.Name)
+	assert.JSONEq(t, `{"command":"ls -la"}`, string(res.DeferredToolUse.Input))
+}
+
+func TestE2E_ATurnWithNothingDeferredHasNoDeferredToolUse(t *testing.T) {
+	for _, m := range queryFakeCLI(t, "hi") {
+		if m.Result != nil {
+			assert.Nil(t, m.Result.DeferredToolUse)
+		}
+	}
+}

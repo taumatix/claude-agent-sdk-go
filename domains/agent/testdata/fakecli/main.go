@@ -87,10 +87,15 @@ const (
 	sessionIdle    = `{"type":"system","subtype":"session_state_changed","state":"idle","uuid":"u-ssi","session_id":"e2e"}`
 )
 
-const result = `{"type":"result","subtype":"success","session_id":"e2e","duration_ms":12,` +
+var result = `{"type":"result","subtype":"success","session_id":"e2e","duration_ms":12,` +
 	`"duration_api_ms":9,"is_error":false,"num_turns":1,"result":"Go 1.26 is out.","terminal_reason":"completed"}`
 
 func main() {
+	// A PreToolUse hook that answered "defer" ends the run with the call on the result.
+	if os.Getenv("FAKECLI_SCENARIO") == "deferred" {
+		result = strings.TrimSuffix(result, "}") +
+			`,"deferred_tool_use":{"id":"toolu_01","name":"Bash","input":{"command":"ls -la"}}}`
+	}
 	// A `-v` probe from the transport's version check, not a protocol session.
 	for _, arg := range os.Args[1:] {
 		if arg == "-v" || arg == "--version" {
