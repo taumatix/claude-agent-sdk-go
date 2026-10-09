@@ -210,3 +210,33 @@ func TestE2E_AgentsAndPluginURLsReachTheCLI(t *testing.T) {
 	assert.Contains(t, argv, "--disable-slash-commands")
 	assert.Equal(t, 2, strings.Count(string(raw), "--plugin-url"))
 }
+
+func TestE2E_WorktreePRAndPermissionPromptFlagsReachTheCLI(t *testing.T) {
+	argsFile := filepath.Join(t.TempDir(), "argv")
+	queryFakeCLIWith(t, agent.Options{
+		CLIPath:              fakeCLIPath,
+		Env:                  map[string]string{"FAKECLI_ARGS_FILE": argsFile},
+		Worktree:             true,
+		WorktreeName:         "fix-a",
+		FromPR:               "123",
+		PermissionPromptTool: "mcp__auth__approve",
+		PermissionPrompts:    "host",
+	}, "hi")
+
+	raw, err := os.ReadFile(argsFile)
+	require.NoError(t, err)
+	argv := strings.Split(string(raw), "\n")
+	for flag, want := range map[string]string{
+		"--worktree": "fix-a", "--from-pr": "123",
+		"--permission-prompt-tool": "mcp__auth__approve", "--permission-prompts": "host",
+	} {
+		i := -1
+		for j, a := range argv {
+			if a == flag {
+				i = j
+			}
+		}
+		require.GreaterOrEqual(t, i, 0, flag)
+		assert.Equal(t, want, argv[i+1], flag)
+	}
+}

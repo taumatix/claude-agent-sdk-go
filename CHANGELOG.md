@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`Options.Worktree`/`WorktreeName`** (`--worktree [name]`), **`FromPR`** (`--from-pr`),
+  **`PermissionPromptTool`** (`--permission-prompt-tool`) and **`PermissionPrompts`** (`--permission-prompts`).
+  Zero-valued off. `FromPR` empty is not sent, since the bare flag opens an interactive picker. Spellings
+  from `claude --help` on 2.1.283; not exercised against a live session.
 - **`Options.Agents`** (`--agents`, a map of name to `AgentDefinition{Description, Prompt}`), **`DisableSlashCommands`**
   and **`PluginURLs`** (`--plugin-url`, repeated). `AgentDefinition` carries only the two fields the CLI's
   help documents. Spellings are from `claude --help` on 2.1.283; not exercised against a live session.

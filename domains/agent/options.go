@@ -107,6 +107,23 @@ type Options struct {
 	// PluginURLs fetch a plugin .zip for this session only (--plugin-url, repeated).
 	PluginURLs []string
 
+	// Worktree runs the session in a new git worktree (--worktree); WorktreeName
+	// names it, and is ignored unless Worktree is set.
+	Worktree     bool
+	WorktreeName string
+
+	// FromPR resumes the session linked to a pull request, by number or URL
+	// (--from-pr). Empty is not sent: the bare flag opens an interactive picker.
+	FromPR string
+
+	// PermissionPromptTool is the MCP tool that answers permission prompts
+	// (--permission-prompt-tool).
+	PermissionPromptTool string
+
+	// PermissionPrompts says who answers permission prompts under --print: "host"
+	// or "none" (--permission-prompts).
+	PermissionPrompts string
+
 	// IncludeHookEvents streams the hook lifecycle events (--include-hook-events).
 	IncludeHookEvents bool
 
@@ -282,6 +299,21 @@ func BuildCLIArgs(opts Options) []string {
 	}
 	if opts.IncludeHookEvents {
 		args = append(args, "--include-hook-events")
+	}
+	if opts.Worktree {
+		args = append(args, "--worktree")
+		if opts.WorktreeName != "" {
+			args = append(args, opts.WorktreeName)
+		}
+	}
+	if opts.FromPR != "" {
+		args = append(args, "--from-pr", opts.FromPR)
+	}
+	if opts.PermissionPromptTool != "" {
+		args = append(args, "--permission-prompt-tool", opts.PermissionPromptTool)
+	}
+	if opts.PermissionPrompts != "" {
+		args = append(args, "--permission-prompts", opts.PermissionPrompts)
 	}
 
 	// Extra arbitrary flags

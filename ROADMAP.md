@@ -125,11 +125,11 @@ Python dataclass and assuming.
 ### 5. Options and CLI flags
 
 **Today:** `BuildCLIArgs` maps the flags as of March 2026 plus five added 2026-10-09 (`--json-schema`,
-`--no-session-persistence`, `--strict-mcp-config`, `--plugin-dir`, `--include-hook-events`). `ExtraArgs`
+`--no-session-persistence`, `--strict-mcp-config`, `--plugin-dir`, `--include-hook-events`), then `--agents`, `--disable-slash-commands`, `--plugin-url`, `--worktree`, `--from-pr`, `--permission-prompt-tool` and `--permission-prompts` (the last four 2026-10-09). `--permission-prompt-tool` is typed but nothing checks how it interacts with the SDK's own `can_use_tool` control path. `ExtraArgs`
 is the escape hatch, but it is a map, so a repeatable flag or an ordering needs a typed option.
 
 **Left:** `claude --help` (2.1.283) lists more with no typed option: `--bare` (it changes how the CLI
-authenticates), `--replay-user-messages`, `--permission-prompt-tool`, `--from-pr`, `--worktree`, and
+authenticates), `--replay-user-messages`, `--tmux` (needs `--worktree`), `--brief`, `--ide`, and
 the fields of `--agents` beyond `description` and `prompt` (tools, model: unverified). Several change the stream (`--replay-user-messages`, `--bare`), so each
 needs a look at what the SDK does with the new frames before it is exposed. With `JSONSchema` set the
 answer is structured output: check whether `ResultMessage` carries it, and add the field if it does.

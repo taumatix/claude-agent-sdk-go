@@ -85,3 +85,26 @@ func TestBuildCLIArgs_AgentsSlashCommandsAndPluginURLs(t *testing.T) {
 	assert.Contains(t, args, "--disable-slash-commands")
 	assert.Equal(t, 2, strings.Count(strings.Join(args, " "), "--plugin-url"))
 }
+
+func TestBuildCLIArgs_WorktreePRAndPermissionPromptFlags(t *testing.T) {
+	none := agent.BuildCLIArgs(agent.Options{WorktreeName: "x"})
+	for _, f := range []string{"--worktree", "--from-pr", "--permission-prompt-tool", "--permission-prompts"} {
+		assert.NotContains(t, none, f)
+	}
+
+	args := agent.BuildCLIArgs(agent.Options{
+		Worktree: true, WorktreeName: "fix-a", FromPR: "123",
+		PermissionPromptTool: "mcp__auth__approve", PermissionPrompts: "none",
+	})
+	i := indexOf(args, "--worktree")
+	assert.GreaterOrEqual(t, i, 0)
+	assert.Equal(t, "fix-a", args[i+1])
+	assert.Equal(t, "123", args[indexOf(args, "--from-pr")+1])
+	assert.Equal(t, "mcp__auth__approve", args[indexOf(args, "--permission-prompt-tool")+1])
+	assert.Equal(t, "none", args[indexOf(args, "--permission-prompts")+1])
+
+	bare := agent.BuildCLIArgs(agent.Options{Worktree: true})
+	i = indexOf(bare, "--worktree")
+	assert.GreaterOrEqual(t, i, 0)
+	assert.True(t, strings.HasPrefix(bare[i+1], "--"), "no name is sent for an unnamed worktree")
+}
