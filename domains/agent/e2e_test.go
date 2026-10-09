@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -289,4 +290,26 @@ func TestE2E_ModelUsageReachesTheCaller(t *testing.T) {
 	require.NoError(t, json.Unmarshal(res.ModelUsage, &usage))
 	assert.Equal(t, 2, usage["claude-opus-5-5"].InputTokens)
 	assert.InDelta(t, 0.19, usage["claude-opus-5-5"].CostUSD, 1e-9)
+}
+
+func TestE2E_ThinkingAndSystemPromptFileReachTheCLI(t *testing.T) {
+	argsFile := filepath.Join(t.TempDir(), "argv")
+	queryFakeCLIWith(t, agent.Options{
+		CLIPath:          fakeCLIPath,
+		Env:              map[string]string{"FAKECLI_ARGS_FILE": argsFile},
+		Thinking:         "adaptive",
+		ThinkingDisplay:  "summarized",
+		SystemPromptFile: "/tmp/prompt.md",
+	}, "hi")
+
+	raw, err := os.ReadFile(argsFile)
+	require.NoError(t, err)
+	argv := strings.Split(string(raw), "\n")
+	for flag, want := range map[string]string{
+		"--thinking": "adaptive", "--thinking-display": "summarized", "--system-prompt-file": "/tmp/prompt.md",
+	} {
+		i := slices.Index(argv, flag)
+		require.GreaterOrEqual(t, i, 0, flag)
+		assert.Equal(t, want, argv[i+1], flag)
+	}
 }

@@ -161,6 +161,8 @@ type Options struct {
     // Thinking configuration
     MaxThinkingTokens *int   // nil = not set
     Effort            string // "low" | "medium" | "high" | "max"
+    Thinking          string // "adaptive" | "disabled" (--thinking); replaces MaxThinkingTokens when set
+    ThinkingDisplay   string // how thinking is shown, e.g. "summarized" (--thinking-display)
 
     // Arbitrary extra CLI flags
     // Key is the flag name (without --). Empty string value = boolean flag.
