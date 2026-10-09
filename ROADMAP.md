@@ -113,17 +113,16 @@ frames to a golden file, replay it through the transport in CI, and have the mai
 re-record and diff. The recording catches wire drift; it does not catch a CLI that stops speaking
 to us at all.
 
-### 4. `ResultMessage.ModelUsage` probably never fills
+### 4. `deferred_tool_use` is unverified against a live CLI
 
-**Today:** `protocol.ResultMessage` reads `model_usage`; upstream's parser reads `modelUsage`
-(`message_parser.py`, `data.get("modelUsage")`, checked 2026-10-10). Our tests feed it the key we expect, so
-they pass whatever the CLI sends, the same shape as the `server_tool_result` and `data` breaks. If the CLI
-emits `modelUsage`, every caller reads an empty field. `DeferredToolUse` (2026-10-10) was added from the same
-upstream parser and has the same unverified-live caveat.
+**Today:** `ModelUsage` was confirmed broken against 2.1.283 and fixed (2026-10-10: the CLI sends `modelUsage`;
+every result frame has it). `DeferredToolUse` (2026-10-10) came from upstream's parser and has not been seen live.
+Several other `ResultMessage` keys the SDK reads were not compared against a live frame either; a live 2.1.283
+result carries `result_index`, `subagent_stats`, `fast_mode_state`, `queued_turn_count`, `ttft_ms` and
+`first_content_frame_ms`, which the SDK does not model.
 
-**Shape:** capture a real result frame (one cheap turn) and read the key. Accept both spellings if the CLI is
-camelCase, keeping the old one for CLIs that sent it. The live run also checks `deferred_tool_use` if a hook
-can be made to answer `"defer"`.
+**Shape:** make a PreToolUse hook answer `"defer"` against a live run to see the key; decide which of the unmodelled
+result keys a caller would act on (`subagent_stats`, `terminal_reason` is done) and type those.
 
 ### 5. Options and CLI flags
 

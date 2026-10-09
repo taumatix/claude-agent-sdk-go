@@ -280,3 +280,11 @@ func TestParseLine_ResultMessageWithoutDeferredToolUse(t *testing.T) {
 		assert.Nil(t, msg.Result.DeferredToolUse, extra)
 	}
 }
+
+func TestParseLine_ResultMessageReadsCamelCaseModelUsage(t *testing.T) {
+	msg, err := protocol.ParseLine([]byte(`{"type":"result","subtype":"success","session_id":"s",` +
+		`"modelUsage":{"claude-opus-5-5":{"inputTokens":2}}}`))
+	require.NoError(t, err)
+	require.NotNil(t, msg.Result)
+	assert.JSONEq(t, `{"claude-opus-5-5":{"inputTokens":2}}`, string(msg.Result.ModelUsageCamel))
+}

@@ -2,6 +2,7 @@ package agent_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -268,4 +269,24 @@ func TestE2E_ATurnWithNothingDeferredHasNoDeferredToolUse(t *testing.T) {
 			assert.Nil(t, m.Result.DeferredToolUse)
 		}
 	}
+}
+
+// The CLI sends the per-model usage as "modelUsage"; the SDK read "model_usage", so ModelUsage was always empty.
+// The frame is the shape a live 2.1.283 result carries.
+func TestE2E_ModelUsageReachesTheCaller(t *testing.T) {
+	t.Setenv("FAKECLI_SCENARIO", "modelusage")
+	var res *messages.ResultMessage
+	for _, m := range queryFakeCLI(t, "hi") {
+		if m.Result != nil {
+			res = m.Result
+		}
+	}
+	require.NotNil(t, res)
+	var usage map[string]struct {
+		InputTokens int     `json:"inputTokens"`
+		CostUSD     float64 `json:"costUSD"`
+	}
+	require.NoError(t, json.Unmarshal(res.ModelUsage, &usage))
+	assert.Equal(t, 2, usage["claude-opus-5-5"].InputTokens)
+	assert.InDelta(t, 0.19, usage["claude-opus-5-5"].CostUSD, 1e-9)
 }

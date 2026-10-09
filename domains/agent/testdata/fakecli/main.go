@@ -96,6 +96,14 @@ func main() {
 		result = strings.TrimSuffix(result, "}") +
 			`,"deferred_tool_use":{"id":"toolu_01","name":"Bash","input":{"command":"ls -la"}}}`
 	}
+	// The CLI spells the per-model usage key "modelUsage" (captured from 2.1.283).
+	if os.Getenv("FAKECLI_SCENARIO") == "modelusage" {
+		result = strings.TrimSuffix(result, "}") +
+			`,"modelUsage":{"claude-opus-5-5":{"inputTokens":2,"outputTokens":4,"cacheReadInputTokens":12029,` +
+			`"cacheCreationInputTokens":23436,"webSearchRequests":0,"costUSD":0.19,"contextWindow":1000000,` +
+			`"maxOutputTokens":128000,"thinkingTokens":0,"canonicalModel":"claude-opus-5-5","provider":"firstParty",` +
+			`"costBasis":"list"}}}`
+	}
 	// A `-v` probe from the transport's version check, not a protocol session.
 	for _, arg := range os.Args[1:] {
 		if arg == "-v" || arg == "--version" {

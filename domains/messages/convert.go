@@ -107,7 +107,7 @@ func fromWireResult(m *protocol.ResultMessage) (*Message, error) {
 			TerminalReason:    m.TerminalReason,
 			APIErrorStatus:    m.APIErrorStatus,
 			StructuredOutput:  m.StructuredOutput,
-			ModelUsage:        m.ModelUsage,
+			ModelUsage:        modelUsage(m),
 			PermissionDenials: m.PermissionDenials,
 			Errors:            m.Errors,
 			Origin:            m.Origin,
@@ -268,4 +268,12 @@ func serverToolResultFromWire(b *protocol.ContentBlock) *ServerToolResultBlock {
 		IsError:   isError,
 		Type:      b.Type,
 	}
+}
+
+// modelUsage is the per-model usage breakdown under whichever key the CLI sent.
+func modelUsage(m *protocol.ResultMessage) json.RawMessage {
+	if len(m.ModelUsageCamel) > 0 {
+		return m.ModelUsageCamel
+	}
+	return m.ModelUsage
 }
