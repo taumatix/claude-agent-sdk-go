@@ -153,8 +153,11 @@ Also diff against upstream's `_build_command`, since upstream's list has been be
 
 **Left, in order** (each ships something usable):
 
-- **6a. Contract 14 and summaries:** `list_session_summaries` and `fold_session_summary`, then the
-  14th contract. Needs upstream's summary shape read first.
+- **6a. Use the summaries:** a `ListSessionsFromStore` that takes `SessionSummaryLister`'s one call when the store
+  has it and falls back to `ListSessions` plus a `Load` per session, with upstream's freshness check (a summary older
+  than the session's listed mtime is refolded from a `Load`). `FoldSessionSummary`, the interface, the memory
+  store and contract 14 shipped (2026-10-10); nothing in the SDK calls them yet, and no real adapter has been run
+  against contract 14.
 - **6b. Transcript mirroring:** `transcript_mirror` frames from the CLI appended to a configured
   `SessionStore` (`Options.SessionStore`), batched and eager flush modes, `mirror_error` surfaced when
   an `Append` fails. Needs an e2e against the fake CLI emitting those frames.

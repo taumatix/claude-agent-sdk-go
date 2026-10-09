@@ -1,6 +1,6 @@
 // Package sessionstoretest is the conformance suite for sessions.SessionStore adapters, a
-// port of upstream's session_store_conformance (contracts 1 to 13 of 14; the 14th, summaries,
-// needs fold_session_summary, which this SDK does not have yet).
+// port of upstream's session_store_conformance (all 14 contracts; the 14th, summaries, runs
+// only for a store that implements sessions.SessionSummaryLister).
 //
 //	func TestMyStore(t *testing.T) {
 //		sessionstoretest.Run(t, func(t *testing.T) sessions.SessionStore { return newMyStore(t) })
@@ -56,6 +56,8 @@ func missing(s sessions.SessionStore, optional string) string {
 		_, ok = s.(sessions.SessionDeleter)
 	case "SubkeyLister":
 		_, ok = s.(sessions.SubkeyLister)
+	case "SessionSummaryLister":
+		_, ok = s.(sessions.SessionSummaryLister)
 	}
 	if ok {
 		return ""
@@ -213,6 +215,7 @@ func Contracts() []Contract {
 			}
 			return nil
 		}},
+		{Name: "ListSessionSummaries returns summaries that fold again", Optional: "SessionSummaryLister", Check: checkSummaries},
 		{Name: "deleting the main transcript makes it load as nil", Optional: "SessionDeleter", Check: func(ctx context.Context, n func() sessions.SessionStore) error {
 			s := n()
 			d := s.(sessions.SessionDeleter)
@@ -304,4 +307,72 @@ func Contracts() []Contract {
 			return nil
 		}},
 	}
+}
+
+func checkSummaries(ctx context.Context, n func() sessions.SessionStore) error {
+	s := n()
+	l := s.(sessions.SessionSummaryLister)
+	k := sessions.SessionKey{ProjectKey: "proj", SessionID: "summ-sess"}
+	if err := firstErr(
+		app(ctx, s, k,
+			entry("timestamp", "2024-01-01T00:00:00.000Z", "customTitle", "first"),
+			entry("timestamp", "2024-01-01T00:00:01.000Z")),
+		app(ctx, s, k, entry("timestamp", "2024-01-01T00:00:02.000Z", "customTitle", "second")),
+		app(ctx, s, sessions.SessionKey{ProjectKey: "other", SessionID: "elsewhere"},
+			entry("timestamp", "2024-01-01T00:00:00.000Z")),
+	); err != nil {
+		return err
+	}
+	got, err := l.ListSessionSummaries(ctx, "proj")
+	if err != nil {
+		return err
+	}
+	if len(got) != 1 || got[0].SessionID != "summ-sess" {
+		return fmt.Errorf("ListSessionSummaries(proj) = %v, want only summ-sess", got)
+	}
+	sum := got[0]
+	if sum.MtimeMs < 1e12 {
+		return fmt.Errorf("summary mtime %d is not epoch milliseconds", sum.MtimeMs)
+	}
+	if ls, ok := s.(sessions.SessionLister); ok {
+		list, _ := ls.ListSessions(ctx, "proj")
+		for _, e := range list {
+			if e.SessionID == "summ-sess" && sum.MtimeMs < e.MtimeMs {
+				return fmt.Errorf("summary mtime %d is older than ListSessions mtime %d: the two must share a clock", sum.MtimeMs, e.MtimeMs)
+			}
+		}
+	}
+	if sum.Data == nil {
+		return fmt.Errorf("summary Data is nil")
+	}
+	if info, ok := sessions.SummaryToSessionInfo(sum, ""); !ok || info.CustomTitle != "second" {
+		return fmt.Errorf("summary folded to %+v, %v; want custom title %q", info, ok, "second")
+	}
+	re := sessions.FoldSessionSummary(&sum, k, []sessions.SessionStoreEntry{entry("timestamp", "2024-01-01T00:00:03.000Z")})
+	if re.SessionID != "summ-sess" || re.MtimeMs != sum.MtimeMs {
+		return fmt.Errorf("refolding changed the id or mtime: %+v from %+v", re, sum)
+	}
+	sub := sessions.SessionKey{ProjectKey: "proj", SessionID: "summ-sess", Subpath: "subagents/agent-1"}
+	if err := app(ctx, s, sub, entry("timestamp", "2024-01-01T00:00:09.000Z", "customTitle", "subagent")); err != nil {
+		return err
+	}
+	after, err := l.ListSessionSummaries(ctx, "proj")
+	if err != nil {
+		return err
+	}
+	if len(after) != 1 || !reflect.DeepEqual(after[0].Data, sum.Data) {
+		return fmt.Errorf("a sub-transcript append changed the main summary: %v -> %v", sum.Data, after)
+	}
+	if none, _ := l.ListSessionSummaries(ctx, "never-appended-project"); len(none) != 0 {
+		return fmt.Errorf("an unknown project has summaries: %v", none)
+	}
+	if d, ok := s.(sessions.SessionDeleter); ok {
+		if err := d.Delete(ctx, k); err != nil {
+			return err
+		}
+		if gone, _ := l.ListSessionSummaries(ctx, "proj"); len(gone) != 0 {
+			return fmt.Errorf("a deleted session still has a summary: %v", gone)
+		}
+	}
+	return nil
 }

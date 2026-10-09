@@ -13,6 +13,9 @@ import (
 type MemorySessionStore struct {
 	mu    sync.Mutex
 	items map[SessionKey]*memoryTranscript
+	// summaries is the sidecar FoldSessionSummary maintains, keyed by project and session.
+	summaries map[[2]string]SessionSummaryEntry
+	lastMtime int64
 }
 
 type memoryTranscript struct {
@@ -22,7 +25,7 @@ type memoryTranscript struct {
 
 // NewMemorySessionStore returns an empty store.
 func NewMemorySessionStore() *MemorySessionStore {
-	return &MemorySessionStore{items: map[SessionKey]*memoryTranscript{}}
+	return &MemorySessionStore{items: map[SessionKey]*memoryTranscript{}, summaries: map[[2]string]SessionSummaryEntry{}}
 }
 
 // Append implements SessionStore.
@@ -38,7 +41,20 @@ func (m *MemorySessionStore) Append(_ context.Context, key SessionKey, entries [
 		m.items[key] = t
 	}
 	t.entries = append(t.entries, entries...)
-	t.mtimeMs = time.Now().UnixMilli()
+	// Strictly increasing, so a summary stamped by a later append is never older than
+	// the mtime ListSessions reports for it.
+	t.mtimeMs = max(time.Now().UnixMilli(), m.lastMtime+1)
+	m.lastMtime = t.mtimeMs
+	if key.Subpath == "" {
+		sk := [2]string{key.ProjectKey, key.SessionID}
+		var prev *SessionSummaryEntry
+		if p, ok := m.summaries[sk]; ok {
+			prev = &p
+		}
+		folded := FoldSessionSummary(prev, key, entries)
+		folded.MtimeMs = t.mtimeMs
+		m.summaries[sk] = folded
+	}
 	return nil
 }
 
@@ -74,6 +90,7 @@ func (m *MemorySessionStore) Delete(_ context.Context, key SessionKey) error {
 		delete(m.items, key)
 		return nil
 	}
+	delete(m.summaries, [2]string{key.ProjectKey, key.SessionID})
 	for k := range m.items {
 		if k.ProjectKey == key.ProjectKey && k.SessionID == key.SessionID {
 			delete(m.items, k)
@@ -93,5 +110,23 @@ func (m *MemorySessionStore) ListSubkeys(_ context.Context, key SessionKey) ([]s
 		}
 	}
 	sort.Strings(out)
+	return out, nil
+}
+
+// ListSessionSummaries implements SessionSummaryLister.
+func (m *MemorySessionStore) ListSessionSummaries(_ context.Context, projectKey string) ([]SessionSummaryEntry, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	out := []SessionSummaryEntry{}
+	for k, e := range m.summaries {
+		if k[0] == projectKey {
+			data := make(map[string]any, len(e.Data))
+			for dk, dv := range e.Data {
+				data[dk] = dv
+			}
+			e.Data = data
+			out = append(out, e)
+		}
+	}
 	return out, nil
 }

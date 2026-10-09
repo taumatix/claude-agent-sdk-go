@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Session summaries for `SessionStore` adapters** (`domains/sessions`), ported from upstream's `fold_session_summary`:
+  `FoldSessionSummary` keeps a per-session `SessionSummaryEntry` current inside `Append` (first prompt, custom and AI
+  titles, last prompt, git branch, cwd, tag, creation time), the optional `SessionSummaryLister` interface returns them
+  in one call, and `SummaryToSessionInfo` turns one into a `SessionInfo`. `MemorySessionStore` implements it, and
+  `sessionstoretest` has the 14th contract (summaries round-trip, share `ListSessions`' clock, ignore sub-transcripts,
+  vanish on delete). Purely additive; a store that does not implement it is unchanged. Timestamps are parsed as
+  RFC 3339, which is stricter than Python's `fromisoformat`.
 - **`Options.Thinking`** (`--thinking adaptive|disabled`), **`Options.ThinkingDisplay`** (`--thinking-display`) and
   **`Options.SystemPromptFile`** (`--system-prompt-file`), the three flags upstream's `_build_command` sends that this
   SDK did not. `Thinking` takes the place of `MaxThinkingTokens` when set; `SystemPromptFile` is sent instead of
