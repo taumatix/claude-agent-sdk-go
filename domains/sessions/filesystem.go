@@ -151,13 +151,38 @@ func (s *FilesystemStore) ForkSession(sessionID string, upToMessage int) (string
 	return newID, nil
 }
 
-// projectDir returns the directory for a given project path.
+// projectDir returns the directory for a given project path: the CLI's name for it, or, when
+// that does not exist, the name earlier versions of this package used, or for a path long
+// enough to carry a hash the one directory that shares its first 200 characters (the CLI and
+// this package can disagree on the hash).
 func (s *FilesystemStore) projectDir(projectPath string) string {
 	if projectPath == "" {
 		return s.baseDir
 	}
-	sanitized := sanitizePath(projectPath)
-	return filepath.Join(s.baseDir, sanitized)
+	name := sanitizePath(projectPath)
+	exact := filepath.Join(s.baseDir, name)
+	if isDir(exact) {
+		return exact
+	}
+	if legacy := filepath.Join(s.baseDir, legacySanitizePath(projectPath)); isDir(legacy) {
+		return legacy
+	}
+	if len(name) > maxSanitizedLength {
+		prefix := name[:maxSanitizedLength] + "-"
+		if entries, err := os.ReadDir(s.baseDir); err == nil {
+			for _, e := range entries {
+				if e.IsDir() && strings.HasPrefix(e.Name(), prefix) {
+					return filepath.Join(s.baseDir, e.Name())
+				}
+			}
+		}
+	}
+	return exact
+}
+
+func isDir(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && st.IsDir()
 }
 
 // findSessionFile searches for a session file by ID across all project subdirectories.
@@ -222,16 +247,6 @@ func (s *FilesystemStore) readSessionInfo(dir, sessionID string, entry os.DirEnt
 	}
 
 	return si, nil
-}
-
-// sanitizePath converts an absolute filesystem path to a safe directory name,
-// matching the convention used by the Claude Code CLI.
-func sanitizePath(path string) string {
-	// Replace path separators and other unsafe characters with hyphens
-	s := strings.ReplaceAll(path, string(os.PathSeparator), "-")
-	s = strings.ReplaceAll(s, ":", "-")
-	s = strings.TrimPrefix(s, "-")
-	return s
 }
 
 // newUUID generates a random UUID v4 string.

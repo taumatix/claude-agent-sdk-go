@@ -923,6 +923,8 @@ func NewFilesystemStore(baseDir string) (*FilesystemStore, error)
 
 Implements `Store` using JSONL files under `~/.claude/projects/`. Pass an empty string for `baseDir` to use the default location.
 
+`ListSessions(projectPath)` looks in the directory the CLI names for that path: every character that is not an ASCII letter or digit becomes `-` (so `/Users/me/my_repo` is `-Users-me-my-repo`), and a name over 200 characters is cut and given a hash. A directory named the way versions before this one did is still found. `ProjectKeyForDirectory(dir)` returns that name for a directory (symlinks resolved, `""` is the current directory); it is also the `SessionKey.ProjectKey` to use with a `SessionStore`. It does not NFC-normalise as upstream does.
+
 ### `FileSessionStore`
 
 ```go
