@@ -232,8 +232,8 @@ by what limits a deployment:
    `stop_task`, and others in `_internal/query.py`). `MCPStatus`, `ContextUsage`, `ReconnectMCPServer` and
    `ToggleMCPServer` are verified against the stub CLI only, whose bodies and request shapes (`mcp_reconnect`,
    `mcp_toggle`) are read from the Python SDK, not captured from a live CLI.
-3. **Store-backed session functions** (`get_session_info_from_store`, `get_session_messages_from_store`, the
-   `*_via_store` rename, tag, delete and fork, subagent listing): the store can be listed but not otherwise operated on.
+3. **Store-backed session functions** (the `*_via_store` rename, tag, delete and fork, subagent listing; the info
+   and message reads shipped 2026-10-10): the store can be listed but not otherwise operated on.
 4. **Sandbox settings, `TaskBudget`, typed hook inputs and outputs**, and `CanUseToolShadowedWarning`.
 
 **Done:** permission results (`Options.ToolPermissionFunc`, 2026-10-10). Not yet seen against a live CLI: whether a

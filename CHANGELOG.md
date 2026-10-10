@@ -35,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `sessionstoretest` has the 14th contract (summaries round-trip, share `ListSessions`' clock, ignore sub-transcripts,
   vanish on delete). Purely additive; a store that does not implement it is unchanged. Timestamps are parsed as
   RFC 3339, which is stricter than Python's `fromisoformat`.
+- **`sessions.GetSessionMessagesFromStore(ctx, store, projectKey, sessionID, limit, offset)`**: a session's user and
+  assistant messages from any `SessionStore`, oldest first, on the main chain only: the newest non-sidechain leaf walked
+  back through `parentUuid`, so a rewound or edited branch is not returned, and meta, sidechain, team and system entries
+  are left out (compact summaries are kept). Same chain rules as upstream's function, read from its source. Purely
+  additive.
 - **`sessions.GetSessionInfoFromStore(ctx, store, projectKey, projectPath, sessionID)`**: one session's metadata from
   any `SessionStore` with a single `Load`; `nil, nil` when it is absent, a sidechain, or has nothing to show. Its
   `LastModified` is the last entry's timestamp (or now), since a bare `Load` has no mtime. Purely additive.
