@@ -147,3 +147,61 @@ func TestListSessionsFromStoreNeedsAListing(t *testing.T) {
 	_, err := ListSessionsFromStore(context.Background(), loadOnlyStore{}, "p", "", 0, 0)
 	assert.Error(t, err)
 }
+
+func TestGetSessionInfoFromStore(t *testing.T) {
+	ctx := context.Background()
+	m := NewMemorySessionStore()
+	key := SessionKey{ProjectKey: "p", SessionID: "s1"}
+	require.NoError(t, m.Append(ctx, key, []SessionStoreEntry{
+		user("first prompt", "timestamp", "2026-01-02T03:04:05Z"),
+		{"type": "custom-title", "customTitle": "Named", "timestamp": "2026-01-02T03:04:06Z"},
+	}))
+	side := SessionKey{ProjectKey: "p", SessionID: "side"}
+	require.NoError(t, m.Append(ctx, side, []SessionStoreEntry{user("x", "isSidechain", true)}))
+
+	// A store that offers only Append and Load is enough.
+	info, err := GetSessionInfoFromStore(ctx, loadOnlyStore{m}, "p", "/work", "s1")
+	require.NoError(t, err)
+	require.NotNil(t, info)
+	assert.Equal(t, "s1", info.SessionID)
+	assert.Equal(t, "Named", info.Summary)
+	assert.Equal(t, "first prompt", info.FirstPrompt)
+	assert.Equal(t, int64(1767323046000), info.LastModified)
+
+	for name, id := range map[string]string{"missing": "nope", "sidechain": "side"} {
+		got, err := GetSessionInfoFromStore(ctx, m, "p", "/work", id)
+		require.NoError(t, err, name)
+		assert.Nil(t, got, name)
+	}
+	other, err := GetSessionInfoFromStore(ctx, m, "other", "/work", "s1")
+	require.NoError(t, err)
+	assert.Nil(t, other, "a session is found only under its own project key")
+}
+
+type failingLoad struct{ loadOnlyStore }
+
+func (failingLoad) Load(context.Context, SessionKey) ([]SessionStoreEntry, error) {
+	return nil, fmt.Errorf("backend down")
+}
+
+func TestGetSessionInfoFromStoreReturnsLoadErrors(t *testing.T) {
+	_, err := GetSessionInfoFromStore(context.Background(), failingLoad{}, "p", "/w", "s1")
+	assert.EqualError(t, err, "backend down")
+}
+
+// The single lookup and the listing derive a session's metadata the same way.
+func TestGetSessionInfoFromStoreAgreesWithTheListing(t *testing.T) {
+	ctx := context.Background()
+	m := NewMemorySessionStore()
+	seed(t, m, 3)
+	listed, err := ListSessionsFromStore(ctx, m, "p", "/work", 0, 0)
+	require.NoError(t, err)
+	require.Len(t, listed, 3)
+	for _, want := range listed {
+		got, err := GetSessionInfoFromStore(ctx, m, "p", "/work", want.SessionID)
+		require.NoError(t, err)
+		require.NotNil(t, got)
+		want.LastModified, got.LastModified = 0, 0
+		assert.Equal(t, want, *got)
+	}
+}

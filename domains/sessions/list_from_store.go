@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sort"
 	"sync"
+	"time"
 )
 
 const storeListLoadConcurrency = 16
@@ -157,4 +158,33 @@ func deriveViaLoad(ctx context.Context, store SessionStore, projectKey, projectP
 	}
 	wg.Wait()
 	return out
+}
+
+// GetSessionInfoFromStore reads the metadata of one session from a SessionStore with a
+// single Load, whatever optional interfaces the store implements.
+//
+// It returns nil, nil when the session is not in the store, is a sidechain, or has nothing to
+// show as a summary. A Load error is returned. The session's LastModified is the timestamp
+// of its last entry, or the current time when that entry carries none, since a bare Load
+// cannot ask the store for an mtime.
+func GetSessionInfoFromStore(ctx context.Context, store SessionStore, projectKey, projectPath, sessionID string) (*SessionInfo, error) {
+	key := SessionKey{ProjectKey: projectKey, SessionID: sessionID}
+	entries, err := store.Load(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	if len(entries) == 0 {
+		return nil, nil
+	}
+	sum := FoldSessionSummary(nil, key, entries)
+	if ms, ok := isoToEpochMs(entries[len(entries)-1]["timestamp"]); ok {
+		sum.MtimeMs = ms
+	} else {
+		sum.MtimeMs = time.Now().UnixMilli()
+	}
+	info, ok := SummaryToSessionInfo(sum, projectPath)
+	if !ok {
+		return nil, nil
+	}
+	return &info, nil
 }

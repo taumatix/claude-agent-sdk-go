@@ -158,7 +158,7 @@ Also diff against upstream's `_build_command`, since upstream's list has been be
   `MemorySessionStore` and counting stores as its only tests; no adapter outside this repo (Postgres, S3, Redis) has
   been run against contract 14 or this listing, so the freshness rule (summary mtime >= listed mtime) is unproven on a
   store whose two clocks differ. Add a reference adapter over a real backend, or a conformance case that injects clock
-  skew. Also: `GetSessionInfoFromStore` for a single session (upstream has it), which needs no listing.
+  skew.
 - **6b. Transcript mirroring:** `transcript_mirror` frames from the CLI appended to a configured
   `SessionStore` (`Options.SessionStore`), batched and eager flush modes, `mirror_error` surfaced when
   an `Append` fails. Needs an e2e against the fake CLI emitting those frames.
