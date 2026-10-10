@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`sessions.RenameSessionViaStore`, `TagSessionViaStore` and `DeleteSessionViaStore`**: change a session held in a
+  `SessionStore` the way upstream's `*_via_store` functions do. Rename and tag append a `custom-title` or `tag` entry (a nil
+  tag clears it), so `ListSessionsFromStore` and `GetSessionInfoFromStore` show the change at once; delete calls the store's
+  `Delete` and leaves an append-only store untouched. A bad session ID returns `ErrInvalidSessionID`. Tags are stripped of
+  format, private-use and unassigned characters but not NFKC-normalised.
 - **`Client.ReconnectMCPServer` and `Client.ToggleMCPServer`**: retry a failed or disconnected MCP server, or enable or disable one,
   for the running session (the `mcp_reconnect` and `mcp_toggle` control requests). `MCPStatus` shows which servers need it; an
   unknown server name returns the CLI's error.
