@@ -1,0 +1,37 @@
+name: Upstream surface
+
+# Compares docs/upstream-surface.txt with what the Python SDK exports today. A
+# new upstream export fails this until the inventory says what the Go SDK does
+# about it; it is a schedule because upstream moves without a commit here.
+on:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - docs/upstream-surface.txt
+      - upstream_surface_test.go
+      - .github/workflows/upstream-surface.yml
+
+permissions:
+  contents: read
+
+jobs:
+  surface:
+    name: Inventory matches upstream
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Fetch the Python SDK's default branch
+        run: git clone --depth 1 https://github.com/anthropics/claude-agent-sdk-python "$RUNNER_TEMP/pysdk"
+
+      - name: Compare
+        env:
+          UPSTREAM_PYTHON_SDK: ${{ runner.temp }}/pysdk
+        run: go test -count=1 -v -run 'TestUpstreamSurface' .

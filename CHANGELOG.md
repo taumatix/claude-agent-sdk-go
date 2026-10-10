@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **CI: `Upstream surface` workflow** compares `docs/upstream-surface.txt` with the Python SDK's `__all__` every Monday and on
+  changes to the inventory, so a new upstream export fails a check instead of waiting for someone to run the test. No library change.
 - `messages.InformationalMessage` on `System`-bearing messages (`Informational`): the CLI's `informational` notice with
   `Content`, `Level` and `PreventContinuation`. Built from the CLI's schema; not yet observed live.
 - **`docs/upstream-surface.txt`**: every name the Python SDK exports, with whether this SDK ports it, ports part

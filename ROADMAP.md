@@ -236,7 +236,8 @@ by what limits a deployment:
    `*_via_store` rename, tag, delete and fork, subagent listing): the store can be listed but not otherwise operated on.
 5. **Sandbox settings, `TaskBudget`, typed hook inputs and outputs**.
 
-**Shape:** each of 1-4 is its own entry when it reaches the top; do not ship them as one. Separately, nothing runs
-`TestUpstreamSurfaceMatchesUpstream` on a schedule: it needs `UPSTREAM_PYTHON_SDK` pointed at a checkout, so a new
-upstream export is caught only when someone runs it. Wire it into the maintenance pass (clone the pinned upstream
-HEAD, run the test) or a CI job; then a new export becomes a failing check instead of a surprise.
+**Shape:** each of 1-4 is its own entry when it reaches the top; do not ship them as one.
+
+Left over from the CI wiring: the `Upstream surface` workflow (2026-10-10, weekly and on changes to the inventory) fails when upstream
+exports a name the inventory does not account for, but nothing makes a failed scheduled run reach a pass: the
+maintenance pass should read it, and `check-repo-health.py` counts only the `CI` workflow.
