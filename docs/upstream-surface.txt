@@ -8,7 +8,7 @@ ClaudeSDKClient|ported|domains/agent.Client
 PermissionMode|ported|domains/agent.PermissionMode
 EffortLevel|partial|domains/agent.Options: Effort is a plain string, not a typed enum
 McpServerConfig|ported|domains/agent.MCPServerConfig
-McpSdkServerConfig|missing|in-process SDK MCP servers (create_sdk_mcp_server) have no Go counterpart
+McpSdkServerConfig|ported|domains/agent.SDKMCPServerConfig
 McpServerStatus|ported|domains/agent.MCPServerStatus
 McpServerStatusConfig|partial|domains/agent.MCPServerStatus: Config is raw JSON, not a typed union
 McpServerConnectionStatus|missing|part of the MCP status response
@@ -150,10 +150,10 @@ SdkBeta|partial|domains/agent.Options: Betas is []string
 SandboxSettings|missing|no sandbox options
 SandboxNetworkConfig|missing|no sandbox options
 SandboxIgnoreViolations|missing|no sandbox options
-create_sdk_mcp_server|missing|in-process SDK MCP servers
-tool|missing|in-process SDK MCP servers
-SdkMcpTool|missing|in-process SDK MCP servers
-ToolAnnotations|missing|in-process SDK MCP servers
+create_sdk_mcp_server|ported|domains/agent.NewSDKMCPServer
+tool|ported|domains/agent.MCPTool
+SdkMcpTool|ported|domains/agent.MCPTool
+ToolAnnotations|ported|domains/agent.MCPToolAnnotations
 ClaudeSDKError|skipped|Go has no base-class hierarchy; the error types in domains/errors are matched with errors.As
 CLIConnectionError|ported|domains/errors.CLIConnectionError
 CLINotFoundError|ported|domains/errors.CLINotFoundError

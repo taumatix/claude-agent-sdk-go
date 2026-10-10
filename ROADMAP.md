@@ -222,28 +222,34 @@ that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows.
 
 ## What the surface inventory found missing
 
-**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (2026-10-10): 65 ported, 48
-partial (a string or raw JSON where upstream has a type), 44 missing, 2 skipped. Missing is not evenly spread. Ordered
+**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (2026-10-10): 77 ported, 48
+partial (a string or raw JSON where upstream has a type), 32 missing, 2 skipped. Missing is not evenly spread. Ordered
 by what limits a deployment:
 
-1. **In-process SDK MCP servers** (`create_sdk_mcp_server`, `tool`, `McpSdkServerConfig`, `SdkMcpTool`,
-   `ToolAnnotations`): a Go caller cannot expose a function as a tool without running a separate MCP process.
-2. **The typed `system/init` message**, and the remaining control requests upstream's client sends (`rewind_files`,
+1. **The typed `system/init` message**, and the remaining control requests upstream's client sends (`rewind_files`,
    `stop_task`, and others in `_internal/query.py`). `MCPStatus`, `ContextUsage`, `ReconnectMCPServer` and
    `ToggleMCPServer` are verified against the stub CLI only, whose bodies and request shapes (`mcp_reconnect`,
    `mcp_toggle`) are read from the Python SDK, not captured from a live CLI.
-3. **Store-backed session functions** (`fork_session_via_store` remains; subagent listing and reads shipped 2026-10-10; the info and message reads
+2. **Store-backed session functions** (`fork_session_via_store` remains; subagent listing and reads shipped 2026-10-10; the info and message reads
    shipped 2026-10-10 and rename, tag and delete the same day): a store can be listed, read, renamed, tagged and deleted
    from, but not forked. The subagent reads are tested on `MemorySessionStore` with entries shaped from upstream's source, never against a store a live CLI mirrored into (that needs 6b). `TagSessionViaStore` skips upstream's NFKC step (it needs `golang.org/x/text`, a first
    dependency); add it if a tag with compatibility characters matters. None of the three has run against a store but
    `MemorySessionStore`.
-4. **Sandbox settings, `TaskBudget`, typed hook inputs and outputs**, and `CanUseToolShadowedWarning`.
+3. **Sandbox settings, `TaskBudget`, typed hook inputs and outputs**, and `CanUseToolShadowedWarning`.
+
+**Done:** in-process SDK MCP servers (2026-10-11): `NewSDKMCPServer`, `MCPTool`, over `mcp_message`. Left from it:
+(a) the request and response shapes are from upstream's source and the stub CLI, never a live CLI: run a Go tool end to
+end against 2.1.296 and check the `mcp__<server>__<tool>` name, `tools/call` arguments, and image content;
+(b) only tools are served: `resources/*`, `prompts/*`, `logging/setLevel`, and server-initiated notifications
+(`tools/list_changed`) or requests (sampling, roots) are not, and `notifications/cancelled` does not cancel a running
+handler (its `ctx` ends only with the session); (c) a typed helper that builds `InputSchema` from a Go struct, so a
+caller does not hand-write JSON Schema.
 
 **Done:** permission results (`Options.ToolPermissionFunc`, 2026-10-10). Not yet seen against a live CLI: whether a
 live `can_use_tool` request carries the optional context fields, and whether `updatedPermissions` from a suggestion is
 accepted. A live run that makes a Bash call under `default` permission mode would show both.
 
-**Shape:** each of 1-3 is its own entry when it reaches the top; do not ship them as one.
+**Shape:** each of 1-2 is its own entry when it reaches the top; do not ship them as one.
 
 Left over from the CI wiring: the `Upstream surface` workflow (2026-10-10, weekly and on changes to the inventory) fails when upstream
 exports a name the inventory does not account for, but nothing makes a failed scheduled run reach a pass: the

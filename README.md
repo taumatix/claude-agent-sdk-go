@@ -345,6 +345,31 @@ opts.MCPServers = []agent.MCPServerConfig{
 
 HTTP/SSE servers are also supported (`Type: "http"` or `Type: "sse"` with a `URL`).
 
+#### In-process tools
+
+A Go function can be a tool with no subprocess and no port. The CLI sends the server's MCP traffic over the control
+channel and the SDK answers from your process:
+
+```go
+add := agent.MCPTool{
+    Name:        "add",
+    Description: "Adds two numbers",
+    InputSchema: json.RawMessage(`{"type":"object","properties":{"a":{"type":"number"},"b":{"type":"number"}}}`),
+    Handler: func(ctx context.Context, args json.RawMessage) (agent.MCPToolResult, error) {
+        var in struct{ A, B float64 }
+        if err := json.Unmarshal(args, &in); err != nil {
+            return agent.MCPToolResult{}, err
+        }
+        return agent.MCPToolResult{Content: []agent.MCPContent{agent.TextContent(fmt.Sprint(in.A + in.B))}}, nil
+    },
+}
+opts.MCPServers = append(opts.MCPServers, agent.SDKMCPServerConfig(agent.NewSDKMCPServer("calc", "1.0.0", add)))
+```
+
+The model sees the tool as `mcp__calc__add`. An error returned by the handler, or a panic in it, fails that one call
+(`isError` on the result) and nothing else. Only tools are served: not resources or prompts, and the server cannot
+send requests or notifications to the CLI. Verified against the stub CLI, not yet a live one.
+
 ### Session management
 
 ```go

@@ -303,6 +303,45 @@ func main() {
 					`{"type":"text","text":` + strconv.Quote(answer) + `}]}}`)
 				emit(result)
 				continue
+			case "old-cli-sdk-mcp":
+				// The CLI's MCP client talking to SDK servers over the control
+				// channel: a handshake, a notification, the tool list, calls that
+				// succeed and fail, and messages the SDK cannot deliver. Every
+				// answer read off the pipe is reported back, with the
+				// --mcp-config the SDK launched this process with.
+				calls := []struct{ server, message string }{
+					{"calc", `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"claude","version":"2"}}}`},
+					{"calc", `{"jsonrpc":"2.0","method":"notifications/initialized"}`},
+					{"calc", `{"jsonrpc":"2.0","id":2,"method":"tools/list"}`},
+					{"calc", `{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"add","arguments":{"a":2,"b":3}}}`},
+					{"calc", `{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"fail","arguments":{}}}`},
+					{"calc", `{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"explode","arguments":{}}}`},
+					{"calc", `{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"nope","arguments":{}}}`},
+					{"calc", `{"jsonrpc":"2.0","id":7,"method":"resources/list"}`},
+					{"missing", `{"jsonrpc":"2.0","id":8,"method":"ping"}`},
+				}
+				answers := []json.RawMessage{}
+				for i, c := range calls {
+					id := fmt.Sprintf("mcp-%d", i)
+					emit(fmt.Sprintf(`{"type":"control_request","request_id":%q,"request":{"subtype":"mcp_message","server_name":%q,"message":%s}}`,
+						id, c.server, c.message))
+					answer, ok := awaitResponseLine(scanner, id)
+					if !ok {
+						return
+					}
+					answers = append(answers, json.RawMessage(answer))
+				}
+				var cfg string
+				for i, a := range os.Args {
+					if a == "--mcp-config" && i+1 < len(os.Args) {
+						cfg = os.Args[i+1]
+					}
+				}
+				report, _ := json.Marshal(map[string]any{"answers": answers, "mcp_config": cfg})
+				emit(`{"type":"assistant","session_id":"e2e","message":{"role":"assistant","content":[` +
+					`{"type":"text","text":` + strconv.Quote(string(report)) + `}]}}`)
+				emit(result)
+				continue
 			case "old-cli-api-retry":
 				emit(`{"type":"system","subtype":"api_retry","attempt":1,"max_retries":2,"retry_delay_ms":595,` +
 					`"error_status":529,"error":"overloaded","session_id":"e2e","uuid":"u-ar"}`)

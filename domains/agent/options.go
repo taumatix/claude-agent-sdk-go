@@ -34,6 +34,9 @@ type MCPServerConfig struct {
 	Args    []string
 	Env     map[string]string
 	URL     string
+	// SDK, when set, is an MCP server hosted in this process. The CLI is told it
+	// exists (type "sdk") and sends its MCP traffic over the control channel.
+	SDK *SDKMCPServer
 }
 
 // Options configures a Query or Client session.
@@ -250,6 +253,13 @@ func BuildCLIArgs(opts Options) []string {
 		servers := make(map[string]interface{}, len(opts.MCPServers))
 		for _, s := range opts.MCPServers {
 			cfg := map[string]interface{}{}
+			if s.SDK != nil {
+				// The CLI is told the server exists and nothing else about it.
+				cfg["type"] = "sdk"
+				cfg["name"] = s.Name
+				servers[s.Name] = cfg
+				continue
+			}
 			if s.Type != "" {
 				cfg["type"] = s.Type
 			}

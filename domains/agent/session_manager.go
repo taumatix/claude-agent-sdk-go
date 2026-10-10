@@ -36,6 +36,7 @@ type sessionManager struct {
 	cancel      context.CancelFunc
 	wg          sync.WaitGroup
 	hookIDs     map[string]HookHandler
+	sdkMCP      map[string]*SDKMCPServer
 	// state is the CLI's reported session state, which decides when a Query
 	// is over (see run).
 	state *sessionState
@@ -43,6 +44,7 @@ type sessionManager struct {
 
 func newSessionManager(ctx context.Context, t transport.Transport, opts Options) *sessionManager {
 	ctx2, cancel := context.WithCancel(ctx)
+	servers, _ := sdkServers(opts) // duplicates are refused before a session starts
 	sm := &sessionManager{
 		transport: t,
 		opts:      opts,
@@ -51,6 +53,7 @@ func newSessionManager(ctx context.Context, t transport.Transport, opts Options)
 		ctx:       ctx2,
 		cancel:    cancel,
 		hookIDs:   make(map[string]HookHandler),
+		sdkMCP:    servers,
 		state:     newSessionState(),
 	}
 	sm.wg.Add(1)
@@ -329,6 +332,13 @@ func (sm *sessionManager) handleControlRequest(env *protocol.ControlRequestEnvel
 		}
 		_ = sm.transport.Send(sm.ctx, data)
 
+	case *protocol.MCPMessageRequest:
+		sm.wg.Add(1)
+		go func() {
+			defer sm.wg.Done()
+			sm.handleMCPMessage(env.RequestID, req)
+		}()
+
 	case *protocol.HookCallbackRequest:
 		handler, ok := sm.hookIDs[req.CallbackID]
 		if !ok {
@@ -423,4 +433,39 @@ func (sm *sessionManager) sendErr(err error) {
 	case sm.errCh <- err:
 	default:
 	}
+}
+
+// handleMCPMessage routes a JSON-RPC message to the SDK MCP server it names. It
+// runs off the read loop so that a slow tool does not hold up the stream.
+func (sm *sessionManager) handleMCPMessage(requestID string, req *protocol.MCPMessageRequest) {
+	var data []byte
+	var err error
+	if req.ServerName == "" || len(req.Message) == 0 {
+		data, err = protocol.BuildControlErrorResponse(requestID, "Missing server_name or message for MCP request")
+	} else {
+		resp := sm.mcpResponse(req)
+		data, err = protocol.BuildControlResponse(requestID, protocol.MCPMessageResponseBody{MCPResponse: resp})
+	}
+	if err != nil {
+		return
+	}
+	_ = sm.transport.Send(sm.ctx, data)
+}
+
+func (sm *sessionManager) mcpResponse(req *protocol.MCPMessageRequest) json.RawMessage {
+	server, ok := sm.sdkMCP[req.ServerName]
+	if !ok {
+		var m struct {
+			ID json.RawMessage `json:"id"`
+		}
+		_ = json.Unmarshal(req.Message, &m)
+		return rpcError(m.ID, jsonRPCMethodNotFound, "Server '"+req.ServerName+"' not found")
+	}
+	resp := server.handle(sm.ctx, req.Message)
+	if resp == nil {
+		// A notification gets no JSON-RPC reply, but the control request that
+		// carried it still wants an answer.
+		return json.RawMessage(`{"jsonrpc":"2.0","result":{}}`)
+	}
+	return resp
 }
