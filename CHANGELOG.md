@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`Options.TaskBudget`** (`agent.TaskBudget{Total}`): sends `--task-budget`, the API-side token budget the model is told
+  it has left so it can wrap up before the limit (ports upstream's `TaskBudget`). Not enforced by the CLI, unlike
+  `MaxBudgetUSD`. The flag is not in `claude --help` 2.1.283; it is sent as upstream sends it and not yet seen against a live CLI.
 - **In-process SDK MCP servers**: `agent.NewSDKMCPServer`, `agent.MCPTool` (name, description, JSON Schema, handler),
   `agent.MCPToolResult`, `agent.MCPContent`, `agent.MCPToolAnnotations` and `agent.SDKMCPServerConfig`, or the new
   `MCPServerConfig.SDK` field. The CLI is launched with `{"type":"sdk","name":...}` and its MCP client reaches the server

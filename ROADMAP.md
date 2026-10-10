@@ -235,7 +235,8 @@ by what limits a deployment:
    from, but not forked. The subagent reads are tested on `MemorySessionStore` with entries shaped from upstream's source, never against a store a live CLI mirrored into (that needs 6b). `TagSessionViaStore` skips upstream's NFKC step (it needs `golang.org/x/text`, a first
    dependency); add it if a tag with compatibility characters matters. None of the three has run against a store but
    `MemorySessionStore`.
-3. **Sandbox settings, `TaskBudget`, typed hook inputs and outputs**, and `CanUseToolShadowedWarning`.
+3. **Sandbox settings, typed hook inputs and outputs**, and `CanUseToolShadowedWarning`. (`TaskBudget` shipped 2026-10-11; the
+   live CLI's `--help` does not list `--task-budget`, so a live run should confirm it is accepted.)
 
 **Done:** in-process SDK MCP servers (2026-10-11): `NewSDKMCPServer`, `MCPTool`, over `mcp_message`. Left from it:
 (a) the request and response shapes are from upstream's source and the stub CLI, never a live CLI: run a Go tool end to

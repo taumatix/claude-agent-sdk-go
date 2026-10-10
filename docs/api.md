@@ -153,6 +153,7 @@ type Options struct {
     // Limits
     MaxTurns     *int     // nil = no limit
     MaxBudgetUSD *float64 // nil = no limit
+    TaskBudget   *TaskBudget // API-side token budget the model is told about (--task-budget)
 
     // System prompt (mutually exclusive: only one flag is emitted)
     SystemPrompt       string  // set a custom system prompt
