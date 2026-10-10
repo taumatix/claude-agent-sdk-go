@@ -219,13 +219,23 @@ what the oldest CLI this SDK really works with is.
 `Options.SkipVersionCheck` as the opt-out; first run the live test against the oldest CLI still on npm
 that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows.
 
-## Surface parity checked by a test, not by a pass
+## What the surface inventory found missing
 
-**Today:** whether this SDK has fallen behind is answered by a human reading two codebases, which
-is why the answer went six months out of date. `check-upstream-drift.py` now reports the commit
-gap, but a commit count says nothing about which *symbols* are missing.
+**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (2026-10-10): 56 ported, 50
+partial (a string or raw JSON where upstream has a type), 51 missing, 2 skipped. Missing is not evenly spread. Ordered
+by what limits a deployment:
 
-**Shape:** a generated inventory of the Python SDK's public surface, committed here, and a test
-that fails when the live upstream has a public symbol this inventory does not explain — either
-"ported" or "deliberately skipped, because". Deliberate omissions are fine; undiscovered ones
-are the problem.
+1. **In-process SDK MCP servers** (`create_sdk_mcp_server`, `tool`, `McpSdkServerConfig`, `SdkMcpTool`,
+   `ToolAnnotations`): a Go caller cannot expose a function as a tool without running a separate MCP process.
+2. **Permission results** (`PermissionResultAllow` with updated input and `PermissionUpdate`s, `ToolPermissionContext`
+   suggestions): the handler's `(allow, reason)` cannot rewrite a tool's input or persist a rule.
+3. **Introspection control requests** (`get_mcp_status`, `get_context_usage`, `McpStatusResponse`,
+   `ContextUsageResponse`) and the typed `system/init` message.
+4. **Store-backed session functions** (`get_session_info_from_store`, `get_session_messages_from_store`, the
+   `*_via_store` rename, tag, delete and fork, subagent listing): the store can be listed but not otherwise operated on.
+5. **Sandbox settings, `TaskBudget`, typed hook inputs and outputs**.
+
+**Shape:** each of 1-4 is its own entry when it reaches the top; do not ship them as one. Separately, nothing runs
+`TestUpstreamSurfaceMatchesUpstream` on a schedule: it needs `UPSTREAM_PYTHON_SDK` pointed at a checkout, so a new
+upstream export is caught only when someone runs it. Wire it into the maintenance pass (clone the pinned upstream
+HEAD, run the test) or a CI job; then a new export becomes a failing check instead of a surprise.

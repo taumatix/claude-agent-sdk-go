@@ -1,0 +1,162 @@
+# The public surface of claude-agent-sdk-python (its __init__.__all__), and what this SDK does with each name.
+# symbol|status|where. status: ported (the Go symbol exists), partial (a Go symbol covers part of it), missing, skipped.
+# Checked by TestUpstreamSurface*; edit it when upstream's __all__ or this SDK's surface changes.
+query|ported|domains/agent.Query
+__version__|skipped|a Go module's version is its tag; there is no runtime attribute to mirror
+Transport|ported|domains/transport.Transport
+ClaudeSDKClient|ported|domains/agent.Client
+PermissionMode|ported|domains/agent.PermissionMode
+EffortLevel|partial|domains/agent.Options: Effort is a plain string, not a typed enum
+McpServerConfig|ported|domains/agent.MCPServerConfig
+McpSdkServerConfig|missing|in-process SDK MCP servers (create_sdk_mcp_server) have no Go counterpart
+McpServerStatus|missing|no Client.GetMCPStatus control request
+McpServerStatusConfig|missing|part of the MCP status response
+McpServerConnectionStatus|missing|part of the MCP status response
+McpServerInfo|missing|part of the MCP status response
+McpStatusResponse|missing|no Client.GetMCPStatus control request
+McpToolAnnotations|missing|part of the MCP status response
+McpToolInfo|missing|part of the MCP status response
+UserMessage|ported|domains/messages.UserMessage
+AssistantMessage|ported|domains/messages.AssistantMessage
+SystemMessage|ported|domains/messages.SystemMessage
+SystemInitData|missing|the init system message is surfaced as SystemMessage with Raw, not typed
+SystemInitMcpServer|missing|part of SystemInitData
+SystemInitPlugin|missing|part of SystemInitData
+SystemInitPluginError|missing|part of SystemInitData
+FastModeState|missing|fast-mode state is not modelled
+FastModeDisabledReason|missing|fast-mode state is not modelled
+TaskStartedMessage|ported|domains/messages.TaskStartedMessage
+TaskProgressMessage|ported|domains/messages.TaskProgressMessage
+TaskUpdatedMessage|ported|domains/messages.TaskUpdatedMessage
+TaskNotificationMessage|ported|domains/messages.TaskNotificationMessage
+TaskNotificationStatus|ported|domains/messages.TaskStatus
+TaskUpdatedStatus|ported|domains/messages.TaskStatus
+TERMINAL_TASK_STATUSES|missing|no helper telling a terminal TaskStatus from a live one
+TaskUsage|ported|domains/messages.TaskUsage
+ResultMessage|ported|domains/messages.ResultMessage
+ModelUsage|partial|domains/messages.ResultMessage: ModelUsage is raw JSON, not a typed map
+DeferredToolUse|ported|domains/messages.DeferredToolUse
+RateLimitEvent|ported|domains/messages.RateLimitMessage
+RateLimitInfo|ported|domains/protocol.RateLimitInfo
+RateLimitStatus|partial|domains/protocol.RateLimitInfo: a string, not an enum
+RateLimitType|partial|domains/protocol.RateLimitInfo: a string, not an enum
+StreamEvent|ported|domains/messages.StreamEventMessage
+ConversationResetMessage|ported|domains/messages.ConversationResetMessage
+Message|ported|domains/messages.Message
+MessageOrigin|partial|domains/messages.UserMessage: Origin is the CLI's raw JSON
+MessageOriginKind|missing|origin kinds are not enumerated
+TaskNotificationOriginSubkind|missing|origin kinds are not enumerated
+ClaudeAgentOptions|ported|domains/agent.Options
+TaskBudget|missing|no Options field for the task budget (roadmap: --task-budget)
+TextBlock|ported|domains/messages.TextBlock
+ThinkingBlock|ported|domains/messages.ThinkingBlock
+ThinkingConfig|partial|domains/agent.Options: Thinking is a string
+ThinkingConfigAdaptive|partial|domains/agent.Options: Thinking is a string
+ThinkingConfigEnabled|partial|domains/agent.Options: MaxThinkingTokens
+ThinkingConfigDisabled|partial|domains/agent.Options: Thinking is a string
+ToolUseBlock|ported|domains/messages.ToolUseBlock
+ToolResultBlock|ported|domains/messages.ToolResultBlock
+ServerToolName|missing|server tool names are not enumerated
+ServerToolUseBlock|ported|domains/messages.ServerToolUseBlock
+ServerToolResultBlock|ported|domains/messages.ServerToolResultBlock
+ContentBlock|ported|domains/messages.ContentBlock
+ContextUsageCategory|missing|no Client.GetContextUsage control request
+ContextUsageResponse|missing|no Client.GetContextUsage control request
+CanUseTool|ported|domains/agent.ToolPermissionHandler
+CanUseToolShadowedWarning|missing|the warning for a handler shadowed by a permission rule is not emitted
+ToolPermissionContext|missing|the handler receives name, input and tool-use id only; no suggestions or blocked path
+PermissionResult|partial|domains/agent.ToolPermissionHandler: returns allow and a reason, not a result type
+PermissionResultAllow|partial|domains/agent.ToolPermissionHandler: no updated input or permission updates
+PermissionResultDeny|partial|domains/agent.ToolPermissionHandler: allow=false with a reason; no interrupt flag
+PermissionUpdate|missing|a handler cannot return permission updates
+HookCallback|ported|domains/agent.HookHandler
+HookContext|missing|a hook handler gets the callback id and raw input only
+HookInput|partial|domains/agent.HookHandler: the input is json.RawMessage
+BaseHookInput|partial|domains/agent.HookHandler: the input is json.RawMessage
+PreToolUseHookInput|partial|domains/agent.HookHandler: the input is json.RawMessage
+PostToolUseHookInput|partial|domains/agent.HookHandler: the input is json.RawMessage
+PostToolUseFailureHookInput|partial|domains/agent.HookHandler: the input is json.RawMessage
+PostToolUseFailureHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+UserPromptSubmitHookInput|partial|domains/agent.HookHandler: the input is json.RawMessage
+StopHookInput|partial|domains/agent.HookHandler: the input is json.RawMessage
+SubagentStopHookInput|partial|domains/agent.HookHandler: the input is json.RawMessage
+PreCompactHookInput|partial|domains/agent.HookHandler: the input is json.RawMessage
+NotificationHookInput|partial|domains/agent.HookHandler: the input is json.RawMessage
+SubagentStartHookInput|partial|domains/agent.HookHandler: the input is json.RawMessage
+PermissionRequestHookInput|partial|domains/agent.HookHandler: the input is json.RawMessage
+NotificationHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+SubagentStartHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+PermissionRequestHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+PreToolUseHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+PostToolUseHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+UserPromptSubmitHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+SessionStartHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+HookEffort|missing|hook effort levels are not modelled
+BackgroundTaskSummary|ported|domains/messages.BackgroundTask
+SessionCronSummary|missing|session cron summaries are not modelled
+UserPromptExpansionHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+PostToolBatchHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+StopHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+SubagentStopHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+PermissionDeniedHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+PreModelSwitchHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+PostModelSwitchHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+ElicitationHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+ElicitationResultHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+CwdChangedHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+FileChangedHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+WorktreeCreateHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+MessageDisplayHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+HookJSONOutput|partial|domains/agent.HookHandler: the output is a map
+HookMatcher|ported|domains/agent.HookMatcher
+HookEventMessage|ported|domains/messages.HookEventMessage
+AgentDefinition|partial|domains/agent.AgentDefinition: description and prompt only; no tools, model or skills
+SettingSource|partial|domains/agent.Options: SettingSources is []string
+SdkPluginConfig|partial|domains/agent.Options: PluginDirs and PluginURLs
+list_sessions|ported|domains/sessions.ListSessions
+get_session_info|missing|no single-session metadata lookup
+get_session_messages|ported|domains/sessions.GetSession
+list_subagents|missing|sub-transcripts are not listed by the SDK
+get_subagent_messages|missing|sub-transcripts are not read by the SDK
+SDKSessionInfo|ported|domains/sessions.SessionInfo
+SessionMessage|ported|domains/sessions.SessionMessage
+SessionKey|ported|domains/sessions.SessionKey
+SessionStore|ported|domains/sessions.SessionStore
+SessionStoreEntry|ported|domains/sessions.SessionStoreEntry
+SessionStoreFlushMode|missing|transcript mirroring is not implemented (roadmap 6b)
+SessionStoreListEntry|ported|domains/sessions.SessionListEntry
+SessionSummaryEntry|ported|domains/sessions.SessionSummaryEntry
+SessionListSubkeysKey|ported|domains/sessions.SubkeyLister
+InMemorySessionStore|ported|domains/sessions.MemorySessionStore
+fold_session_summary|ported|domains/sessions.FoldSessionSummary
+MirrorErrorMessage|missing|transcript mirroring is not implemented (roadmap 6b)
+project_key_for_directory|missing|the project key is computed inside FilesystemStore only
+import_session_to_store|missing|roadmap 6c
+list_sessions_from_store|ported|domains/sessions.ListSessionsFromStore
+get_session_info_from_store|missing|no single-session metadata lookup from a store
+get_session_messages_from_store|missing|no message read from a SessionStore
+list_subagents_from_store|missing|sub-transcripts are not listed by the SDK
+get_subagent_messages_from_store|missing|sub-transcripts are not read by the SDK
+rename_session|ported|domains/sessions.RenameSession
+tag_session|ported|domains/sessions.TagSession
+delete_session|ported|domains/sessions.DeleteSession
+fork_session|ported|domains/sessions.ForkSession
+ForkSessionResult|missing|ForkSession returns the new id only
+rename_session_via_store|missing|renaming works on the filesystem store, not on a SessionStore
+tag_session_via_store|missing|tagging works on the filesystem store, not on a SessionStore
+delete_session_via_store|missing|deleting through a SessionStore is only the SessionDeleter interface
+fork_session_via_store|missing|forking works on the filesystem store, not on a SessionStore
+SdkBeta|partial|domains/agent.Options: Betas is []string
+SandboxSettings|missing|no sandbox options
+SandboxNetworkConfig|missing|no sandbox options
+SandboxIgnoreViolations|missing|no sandbox options
+create_sdk_mcp_server|missing|in-process SDK MCP servers
+tool|missing|in-process SDK MCP servers
+SdkMcpTool|missing|in-process SDK MCP servers
+ToolAnnotations|missing|in-process SDK MCP servers
+ClaudeSDKError|skipped|Go has no base-class hierarchy; the error types in domains/errors are matched with errors.As
+CLIConnectionError|ported|domains/errors.CLIConnectionError
+CLINotFoundError|ported|domains/errors.CLINotFoundError
+ProcessError|ported|domains/errors.ProcessError
+ResultError|missing|a result with is_error is returned as a ResultMessage, not raised
+CLIJSONDecodeError|ported|domains/errors.CLIJSONDecodeError
