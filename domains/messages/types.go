@@ -55,6 +55,9 @@ type Message struct {
 	// CompactBoundary is set for the compact_boundary subtype: the conversation
 	// was compacted, by /compact or automatically.
 	CompactBoundary *CompactBoundaryMessage
+	// Informational is set for the informational subtype: a notice from the CLI
+	// meant for the user's eyes.
+	Informational *InformationalMessage
 }
 
 // UserMessage is a user-role message received from the CLI.

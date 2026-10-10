@@ -77,6 +77,8 @@ var lifecycle = []string{
 	`{"type":"system","subtype":"compact_boundary","content":"Conversation compacted",` +
 		`"compact_metadata":{"trigger":"manual","pre_tokens":33919,"post_tokens":3337,"duration_ms":12564},` +
 		`"session_id":"e2e","uuid":"u-cb"}`,
+	`{"type":"system","subtype":"informational","content":"Context is 90% full","level":"warning",` +
+		`"prevent_continuation":false,"session_id":"e2e","uuid":"u-info"}`,
 }
 
 // Like the real CLI, session_state_changed is sent only when the caller opted

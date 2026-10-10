@@ -410,3 +410,21 @@ func TestE2E_CompactionArrivesTyped(t *testing.T) {
 	assert.Equal(t, 3337, compacted[0].PostTokens)
 	assert.Equal(t, 12564*time.Millisecond, compacted[0].Duration)
 }
+
+// The stub plays an informational frame built from the 2.1.288 schema; no live
+// CLI has been seen to send one, so this proves the typing, not the wire.
+func TestE2E_InformationalArrivesTyped(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	var notes []*messages.InformationalMessage
+	for _, m := range collect(t, agent.Query(ctx, "hi", fakeOpts("old-cli", nil))) {
+		if m.Informational != nil {
+			require.NotNil(t, m.System, "a typed notice must still arrive as System")
+			notes = append(notes, m.Informational)
+		}
+	}
+	require.Len(t, notes, 1)
+	assert.Equal(t, "Context is 90% full", notes[0].Content)
+	assert.Equal(t, "warning", notes[0].Level)
+	assert.False(t, notes[0].PreventContinuation)
+}
