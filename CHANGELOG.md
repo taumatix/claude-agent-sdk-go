@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-
+- `messages.InformationalMessage` on `System`-bearing messages (`Informational`): the CLI's `informational` notice with
+  `Content`, `Level` and `PreventContinuation`. Built from the CLI's schema; not yet observed live.
 - **`docs/upstream-surface.txt`**: every name the Python SDK exports, with whether this SDK ports it, ports part
   of it, lacks it (51 names) or skips it, checked by `go test .` (symbols exist) and, given a checkout in
   `UPSTREAM_PYTHON_SDK`, against upstream's `__all__`. No API change.

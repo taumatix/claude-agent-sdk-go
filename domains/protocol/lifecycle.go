@@ -32,6 +32,7 @@ const (
 	SystemSubtypeAPIRetry         SystemSubtype = "api_retry"
 	SystemSubtypeThinkingTokens   SystemSubtype = "thinking_tokens"
 	SystemSubtypeCompactBoundary  SystemSubtype = "compact_boundary"
+	SystemSubtypeInformational    SystemSubtype = "informational"
 )
 
 // TaskUsage is the usage tally reported on task_progress and task_notification.
@@ -254,6 +255,16 @@ type CompactBoundaryPayload struct {
 	} `json:"compact_metadata"`
 	UUID      string `json:"uuid,omitempty"`
 	SessionID string `json:"session_id,omitempty"`
+}
+
+// InformationalPayload is the `system`/`informational` frame: a notice the CLI
+// wants shown to the user. Fields from the 2.1.288 schema; not yet seen live.
+type InformationalPayload struct {
+	Content             string `json:"content"`
+	Level               string `json:"level,omitempty"`
+	PreventContinuation bool   `json:"prevent_continuation,omitempty"`
+	UUID                string `json:"uuid,omitempty"`
+	SessionID           string `json:"session_id,omitempty"`
 }
 
 // BackgroundTask is one entry of a background_tasks_changed set.

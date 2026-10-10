@@ -61,8 +61,9 @@ both `@internal`, so their fields carry no promise, and a typed API over them wo
 SDK cannot keep. They arrive as `System`, with `Raw`. `compact_boundary` (0.11.0) is typed with
 only its public fields (`trigger`, token counts, duration); `/compact` after one turn produces a
 real frame for about $0.1. The one trigger value seen live is `manual`; an automatic compaction
-has not been captured, so its `trigger` value is unverified. The next candidate is
-`informational` (`content`, `level`, `prevent_continuation`). For anything about API failures, a
+has not been captured, so its `trigger` value is unverified. `informational` (`content`, `level`, `prevent_continuation`) is typed too, from the schema
+only: no live CLI has been seen to send one, so its `level` values are unknown and the next pass over this entry
+should try to provoke one. The next candidate is `status`. For anything about API failures, a
 local server answering 529 through `ANTHROPIC_BASE_URL` produces real frames without credentials.
 
 **Why it is not simply done:** that is 20+ subtypes and typing all of them in one change is the
