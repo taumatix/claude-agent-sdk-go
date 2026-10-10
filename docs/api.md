@@ -923,6 +923,14 @@ func NewFilesystemStore(baseDir string) (*FilesystemStore, error)
 
 Implements `Store` using JSONL files under `~/.claude/projects/`. Pass an empty string for `baseDir` to use the default location.
 
+### `FileSessionStore`
+
+```go
+store := sessions.NewFileSessionStore("/var/lib/myapp/transcripts")
+```
+
+A `SessionStore` (with `SessionLister`, `SessionDeleter`, `SubkeyLister` and `SessionSummaryLister`) that keeps each transcript as a JSON-lines file under one directory and survives the process. Names are hex-encoded, so a key cannot address a path outside the directory; keep project and session ids under 120 bytes. One process may write a directory; two are not coordinated. It passes `sessionstoretest.Run` and is the reference for an adapter over a real backend: the listed mtime is the file system's, and the summary sidecar is stamped from the same clock after the append lands.
+
 ### `SessionInfo`
 
 ```go

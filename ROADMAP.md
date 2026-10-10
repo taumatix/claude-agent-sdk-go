@@ -154,11 +154,11 @@ Also diff against upstream's `_build_command`, since upstream's list has been be
 
 **Left, in order** (each ships something usable):
 
-- **6a. Run a real adapter against the store contracts:** `ListSessionsFromStore` shipped (2026-10-10) with
-  `MemorySessionStore` and counting stores as its only tests; no adapter outside this repo (Postgres, S3, Redis) has
-  been run against contract 14 or this listing, so the freshness rule (summary mtime >= listed mtime) is unproven on a
-  store whose two clocks differ. Add a reference adapter over a real backend, or a conformance case that injects clock
-  skew.
+- **6a. Run an adapter over a network backend:** `FileSessionStore` (2026-10-11) runs the store contracts and the listing's
+  freshness rule against a real file system, where the summary and the listed mtime come from one clock. Still unproven:
+  a store whose two clocks can differ (a database `updated_at` against a client-stamped summary), and concurrent writers
+  from two processes, which `FileSessionStore` does not coordinate. Add Postgres or S3 as a separate module so the SDK keeps
+  no driver dependency, or a conformance case that injects skew between the two clocks.
 - **6b. Transcript mirroring:** `transcript_mirror` frames from the CLI appended to a configured
   `SessionStore` (`Options.SessionStore`), batched and eager flush modes, `mirror_error` surfaced when
   an `Append` fails. Needs an e2e against the fake CLI emitting those frames.
