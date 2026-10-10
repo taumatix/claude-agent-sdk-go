@@ -50,4 +50,8 @@ type SessionMessage struct {
 
 	// ParentToolUseID is nil for top-level messages.
 	ParentToolUseID interface{} `json:"parent_tool_use_id,omitempty"`
+
+	// ParentAgentID is the ID of the agent that spawned the subagent this message belongs to,
+	// when a subagent transcript says so; nil otherwise.
+	ParentAgentID interface{} `json:"parent_agent_id,omitempty"`
 }

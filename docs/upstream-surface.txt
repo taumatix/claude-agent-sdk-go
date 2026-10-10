@@ -135,8 +135,8 @@ import_session_to_store|missing|roadmap 6c
 list_sessions_from_store|ported|domains/sessions.ListSessionsFromStore
 get_session_info_from_store|ported|domains/sessions.GetSessionInfoFromStore
 get_session_messages_from_store|ported|domains/sessions.GetSessionMessagesFromStore
-list_subagents_from_store|missing|sub-transcripts are not listed by the SDK
-get_subagent_messages_from_store|missing|sub-transcripts are not read by the SDK
+list_subagents_from_store|ported|domains/sessions.ListSubagentsFromStore
+get_subagent_messages_from_store|ported|domains/sessions.GetSubagentMessagesFromStore
 rename_session|ported|domains/sessions.RenameSession
 tag_session|ported|domains/sessions.TagSession
 delete_session|ported|domains/sessions.DeleteSession

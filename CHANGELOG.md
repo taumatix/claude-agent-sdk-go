@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`sessions.ListSubagentsFromStore` and `GetSubagentMessagesFromStore`**: list the subagents a session ran and read one's
+  conversation from a `SessionStore`, flat (`subagents/agent-<id>`) or nested (`subagents/workflows/<run>/agent-<id>`). A store
+  that is not a `SubkeyLister` gets `ErrSubkeysUnsupported` from the listing and the direct path from the read. Each message
+  carries the subagent's parents in the new `SessionMessage.ParentAgentID` (and the existing `ParentToolUseID`), from the
+  store's `agent_metadata` entry.
 - **`sessions.RenameSessionViaStore`, `TagSessionViaStore` and `DeleteSessionViaStore`**: change a session held in a
   `SessionStore` the way upstream's `*_via_store` functions do. Rename and tag append a `custom-title` or `tag` entry (a nil
   tag clears it), so `ListSessionsFromStore` and `GetSessionInfoFromStore` show the change at once; delete calls the store's
