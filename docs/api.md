@@ -109,6 +109,22 @@ func (c *Client) SetModel(ctx context.Context, model string) error
 
 Swaps the active model for the current session at runtime. Waits for acknowledgement from the CLI.
 
+#### `MCPStatus`
+
+```go
+func (c *Client) MCPStatus(ctx context.Context) (*MCPStatusResponse, error)
+```
+
+State of each MCP server: `Name`, `Status` (`connected`, `failed`, `needs-auth`, `pending`, `disabled`), `ServerInfo`, `Error`, `Scope`, `Tools`, and the raw `Config`. Returns an error before `Connect`.
+
+#### `ContextUsage`
+
+```go
+func (c *Client) ContextUsage(ctx context.Context) (*ContextUsageResponse, error)
+```
+
+How the context window is used: `Categories`, `TotalTokens`, `MaxTokens`, `Percentage`, `Model`, `IsAutoCompactEnabled`. Breakdowns that vary by CLI release (`MemoryFiles`, `MCPTools`, `Agents`, `GridRows`, `MessageBreakdown`, `APIUsage`) are raw JSON.
+
 ---
 
 ### `Options`

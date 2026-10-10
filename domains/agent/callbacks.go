@@ -77,3 +77,13 @@ type HookMatcher struct {
 // It receives the callback ID and raw input payload.
 // The returned map is serialized and sent back to the CLI as the hook response.
 type HookHandler func(ctx context.Context, callbackID string, input json.RawMessage) (map[string]interface{}, error)
+
+// Introspection responses, re-exported from the protocol package.
+type (
+	MCPStatusResponse    = protocol.MCPStatusResponse
+	MCPServerStatus      = protocol.MCPServerStatus
+	MCPServerInfo        = protocol.MCPServerInfo
+	MCPToolInfo          = protocol.MCPToolInfo
+	ContextUsageResponse = protocol.ContextUsageResponse
+	ContextUsageCategory = protocol.ContextUsageCategory
+)

@@ -268,6 +268,9 @@ const (
 	SubtypeInterrupt    ControlRequestSubtype = "interrupt"
 	SubtypeSetPermMode  ControlRequestSubtype = "set_permission_mode"
 	SubtypeSetModel     ControlRequestSubtype = "set_model"
+
+	SubtypeMCPStatus       ControlRequestSubtype = "mcp_status"
+	SubtypeGetContextUsage ControlRequestSubtype = "get_context_usage"
 )
 
 // ControlRequestBase provides the subtype field common to all control request bodies.
@@ -362,4 +365,70 @@ type CanUseToolResultBody struct {
 // HookCallbackResponseBody is the SDK's response to a hook_callback request.
 type HookCallbackResponseBody struct {
 	Output string `json:"output,omitempty"`
+}
+
+// IntrospectRequestBody is a control request that carries no arguments:
+// mcp_status and get_context_usage.
+type IntrospectRequestBody struct {
+	Subtype ControlRequestSubtype `json:"subtype"`
+}
+
+// MCPServerInfo is the name and version an MCP server reported.
+type MCPServerInfo struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+// MCPToolInfo describes a tool an MCP server offers.
+type MCPToolInfo struct {
+	Name        string          `json:"name"`
+	Description string          `json:"description,omitempty"`
+	Annotations json.RawMessage `json:"annotations,omitempty"`
+}
+
+// MCPServerStatus is one server in an mcp_status response. Status is one of
+// "connected", "failed", "needs-auth", "pending" or "disabled"; it is left a
+// string so a value added later still decodes.
+type MCPServerStatus struct {
+	Name       string          `json:"name"`
+	Status     string          `json:"status"`
+	ServerInfo *MCPServerInfo  `json:"serverInfo,omitempty"`
+	Error      string          `json:"error,omitempty"`
+	Config     json.RawMessage `json:"config,omitempty"`
+	Scope      string          `json:"scope,omitempty"`
+	Tools      []MCPToolInfo   `json:"tools,omitempty"`
+}
+
+// MCPStatusResponse is the CLI's answer to an mcp_status request.
+type MCPStatusResponse struct {
+	MCPServers []MCPServerStatus `json:"mcpServers"`
+}
+
+// ContextUsageCategory is one slice of the context window.
+type ContextUsageCategory struct {
+	Name       string `json:"name"`
+	Tokens     int    `json:"tokens"`
+	Color      string `json:"color,omitempty"`
+	IsDeferred bool   `json:"isDeferred,omitempty"`
+}
+
+// ContextUsageResponse is the CLI's answer to a get_context_usage request.
+// The breakdowns whose shape changes between CLI releases (memory files, MCP
+// tools, agents, the grid, API usage) are kept raw, so a new field never makes
+// the call fail and a caller can still read it.
+type ContextUsageResponse struct {
+	Categories           []ContextUsageCategory `json:"categories"`
+	TotalTokens          int                    `json:"totalTokens"`
+	MaxTokens            int                    `json:"maxTokens"`
+	RawMaxTokens         int                    `json:"rawMaxTokens"`
+	Percentage           float64                `json:"percentage"`
+	Model                string                 `json:"model"`
+	IsAutoCompactEnabled bool                   `json:"isAutoCompactEnabled"`
+	AutoCompactThreshold int                    `json:"autoCompactThreshold,omitempty"`
+	MemoryFiles          json.RawMessage        `json:"memoryFiles,omitempty"`
+	MCPTools             json.RawMessage        `json:"mcpTools,omitempty"`
+	Agents               json.RawMessage        `json:"agents,omitempty"`
+	GridRows             json.RawMessage        `json:"gridRows,omitempty"`
+	MessageBreakdown     json.RawMessage        `json:"messageBreakdown,omitempty"`
+	APIUsage             json.RawMessage        `json:"apiUsage,omitempty"`
 }
