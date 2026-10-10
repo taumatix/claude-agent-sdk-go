@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **In-process SDK MCP servers**: `agent.NewSDKMCPServer`, `agent.MCPTool` (name, description, JSON Schema, handler),
+  `agent.MCPToolResult`, `agent.MCPContent`, `agent.MCPToolAnnotations` and `agent.SDKMCPServerConfig`, or the new
+  `MCPServerConfig.SDK` field. The CLI is launched with `{"type":"sdk","name":...}` and its MCP client reaches the server
+  through `mcp_message` control requests (`protocol.MCPMessageRequest`), answered for `initialize`, `ping`, `tools/list`
+  and `tools/call`; a handler error or panic becomes an `isError` result, an unknown server a JSON-RPC `-32601`. Two SDK
+  servers with one name are refused when the session starts. Resources, prompts and server-to-client requests are not
+  served.
 - **`sessions.ListSubagentsFromStore` and `GetSubagentMessagesFromStore`**: list the subagents a session ran and read one's
   conversation from a `SessionStore`, flat (`subagents/agent-<id>`) or nested (`subagents/workflows/<run>/agent-<id>`). A store
   that is not a `SubkeyLister` gets `ErrSubkeysUnsupported` from the listing and the direct path from the read. Each message

@@ -273,6 +273,7 @@ const (
 	SubtypeMCPReconnect    ControlRequestSubtype = "mcp_reconnect"
 	SubtypeMCPToggle       ControlRequestSubtype = "mcp_toggle"
 	SubtypeGetContextUsage ControlRequestSubtype = "get_context_usage"
+	SubtypeMCPMessage      ControlRequestSubtype = "mcp_message"
 )
 
 // ControlRequestBase provides the subtype field common to all control request bodies.
@@ -293,6 +294,19 @@ type CanUseToolRequest struct {
 	Title                 string                `json:"title,omitempty"`
 	DisplayName           string                `json:"display_name,omitempty"`
 	Description           string                `json:"description,omitempty"`
+}
+
+// MCPMessageRequest carries one JSON-RPC message from the CLI's MCP client to an
+// SDK MCP server, which the SDK hosts in-process.
+type MCPMessageRequest struct {
+	Subtype    ControlRequestSubtype `json:"subtype"`
+	ServerName string                `json:"server_name"`
+	Message    json.RawMessage       `json:"message"`
+}
+
+// MCPMessageResponseBody is the SDK's answer to an MCPMessageRequest.
+type MCPMessageResponseBody struct {
+	MCPResponse json.RawMessage `json:"mcp_response"`
 }
 
 // PermissionRuleValue names a tool, and optionally a rule such as a command prefix.

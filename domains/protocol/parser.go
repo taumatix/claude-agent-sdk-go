@@ -190,6 +190,13 @@ func ParseControlRequestBody(env *ControlRequestEnvelope) (interface{}, error) {
 		}
 		return &r, nil
 
+	case SubtypeMCPMessage:
+		var r MCPMessageRequest
+		if err := json.Unmarshal(env.Request, &r); err != nil {
+			return nil, fmt.Errorf("parse mcp_message request: %w", err)
+		}
+		return &r, nil
+
 	case SubtypeInterrupt:
 		var r InterruptRequestBody
 		if err := json.Unmarshal(env.Request, &r); err != nil {

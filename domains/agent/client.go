@@ -35,6 +35,9 @@ func (c *Client) Connect(ctx context.Context) error {
 	if c.sm != nil {
 		return fmt.Errorf("already connected")
 	}
+	if _, err := sdkServers(c.opts); err != nil {
+		return err
+	}
 	t := c.opts.Transport
 	if t == nil {
 		st, err := subprocess.New(ctx, subprocess.Config{
