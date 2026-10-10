@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -253,6 +254,25 @@ func main() {
 				emit(followupResult)
 				emit(hostIdle)
 				continue
+			case "old-cli-permission-request":
+				// A can_use_tool request as the CLI sends it, with the optional
+				// context fields and one suggestion. The SDK's answer is read off
+				// the pipe and reported back as the assistant's text, so a test
+				// sees exactly what reached the CLI.
+				emit(`{"type":"control_request","request_id":"perm-1","request":{"subtype":"can_use_tool",` +
+					`"tool_name":"Bash","input":{"command":"rm -rf build"},"tool_use_id":"toolu_perm",` +
+					`"permission_suggestions":[{"type":"addRules","rules":[{"toolName":"Bash","ruleContent":"rm -rf build:*"}],` +
+					`"behavior":"allow","destination":"session"}],` +
+					`"agent_id":"agent-7","blocked_path":"/work/build","decision_reason":"hook asked",` +
+					`"title":"Claude wants to run rm -rf build","display_name":"Run command","description":"Deletes build/"}}`)
+				answer, ok := awaitResponseLine(scanner, "perm-1")
+				if !ok {
+					return
+				}
+				emit(`{"type":"assistant","session_id":"e2e","message":{"role":"assistant","content":[` +
+					`{"type":"text","text":` + strconv.Quote(answer) + `}]}}`)
+				emit(result)
+				continue
 			case "old-cli-api-retry":
 				emit(`{"type":"system","subtype":"api_retry","attempt":1,"max_retries":2,"retry_delay_ms":595,` +
 					`"error_status":529,"error":"overloaded","session_id":"e2e","uuid":"u-ar"}`)
@@ -302,6 +322,25 @@ func main() {
 			}
 		}
 	}
+}
+
+// awaitResponseLine is awaitResponse that also returns the answer's "response"
+// object as JSON text.
+func awaitResponseLine(scanner *bufio.Scanner, requestID string) (string, bool) {
+	for scanner.Scan() {
+		var frame struct {
+			Type     string `json:"type"`
+			Response struct {
+				RequestID string          `json:"request_id"`
+				Response  json.RawMessage `json:"response"`
+			} `json:"response"`
+		}
+		if json.Unmarshal(scanner.Bytes(), &frame) == nil &&
+			frame.Type == "control_response" && frame.Response.RequestID == requestID {
+			return string(frame.Response.Response), true
+		}
+	}
+	return "", false
 }
 
 // awaitResponse reads stdin until the SDK answers requestID, answering any

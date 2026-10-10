@@ -282,6 +282,31 @@ type CanUseToolRequest struct {
 	Input                 json.RawMessage       `json:"input"`
 	ToolUseID             string                `json:"tool_use_id"`
 	PermissionSuggestions json.RawMessage       `json:"permission_suggestions,omitempty"`
+	AgentID               string                `json:"agent_id,omitempty"`
+	BlockedPath           string                `json:"blocked_path,omitempty"`
+	DecisionReason        string                `json:"decision_reason,omitempty"`
+	Title                 string                `json:"title,omitempty"`
+	DisplayName           string                `json:"display_name,omitempty"`
+	Description           string                `json:"description,omitempty"`
+}
+
+// PermissionRuleValue names a tool, and optionally a rule such as a command prefix.
+type PermissionRuleValue struct {
+	ToolName    string `json:"toolName"`
+	RuleContent string `json:"ruleContent,omitempty"`
+}
+
+// PermissionUpdate is a change to permissions the CLI applies when a tool use is
+// answered, in the control protocol's own spelling. Type is one of addRules,
+// replaceRules, removeRules, setMode, addDirectories or removeDirectories;
+// Destination one of userSettings, projectSettings, localSettings or session.
+type PermissionUpdate struct {
+	Type        string                `json:"type"`
+	Rules       []PermissionRuleValue `json:"rules,omitempty"`
+	Behavior    string                `json:"behavior,omitempty"`
+	Mode        string                `json:"mode,omitempty"`
+	Directories []string              `json:"directories,omitempty"`
+	Destination string                `json:"destination,omitempty"`
 }
 
 // HookCallbackRequest is sent by the CLI to invoke a registered hook.
@@ -318,8 +343,11 @@ type SetModelRequestBody struct {
 
 // CanUseToolResponseBody is the SDK's response to a can_use_tool request.
 type CanUseToolResponseBody struct {
-	Behavior string `json:"behavior"`
-	Message  string `json:"message,omitempty"`
+	Behavior           string             `json:"behavior"`
+	Message            string             `json:"message,omitempty"`
+	UpdatedInput       json.RawMessage    `json:"updatedInput,omitempty"`
+	UpdatedPermissions []PermissionUpdate `json:"updatedPermissions,omitempty"`
+	Interrupt          bool               `json:"interrupt,omitempty"`
 }
 
 // HookCallbackResponseBody is the SDK's response to a hook_callback request.

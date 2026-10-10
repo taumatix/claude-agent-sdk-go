@@ -244,6 +244,24 @@ The `input` argument is the tool's input as raw JSON; unmarshal it to inspect sp
 
 ---
 
+### `ToolPermissionFunc`
+
+```go
+type ToolPermissionFunc func(ctx context.Context, req ToolPermissionRequest) PermissionResult
+```
+
+The richer form of `ToolPermissionHandler`; when `Options.ToolPermissionFunc` is set it is used instead.
+`ToolPermissionRequest` carries `ToolName`, `Input`, `ToolUseID`, the CLI's `Suggestions` (`[]PermissionUpdate`) and, when
+the CLI sends them, `AgentID`, `BlockedPath`, `DecisionReason`, `Title`, `DisplayName` and `Description`.
+
+| `PermissionResult` | Effect |
+|---|---|
+| `{Allow: true}` | Allow with the original input |
+| `{Allow: true, UpdatedInput: raw}` | Allow, and the tool runs with `raw` instead |
+| `{Allow: true, UpdatedPermissions: req.Suggestions}` | Allow and accept the CLI's "always allow" suggestion |
+| `{Message: "why"}` | Deny; the model sees the message |
+| `{Message: "why", Interrupt: true}` | Deny and stop the turn |
+
 ### `HookMatcher`
 
 ```go

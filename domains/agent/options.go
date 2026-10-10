@@ -143,7 +143,11 @@ type Options struct {
 
 	// Callbacks
 	ToolPermissionHandler ToolPermissionHandler
-	HookHandlers          map[string][]HookMatcher // event name → matchers
+	// ToolPermissionFunc, when set, answers permission requests instead of
+	// ToolPermissionHandler and can rewrite the tool's input, apply permission
+	// updates and interrupt the turn.
+	ToolPermissionFunc ToolPermissionFunc
+	HookHandlers       map[string][]HookMatcher // event name → matchers
 
 	// Transport override (nil = spawn subprocess)
 	Transport transport.Transport

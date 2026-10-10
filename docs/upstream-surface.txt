@@ -64,11 +64,11 @@ ContextUsageCategory|missing|no Client.GetContextUsage control request
 ContextUsageResponse|missing|no Client.GetContextUsage control request
 CanUseTool|ported|domains/agent.ToolPermissionHandler
 CanUseToolShadowedWarning|missing|the warning for a handler shadowed by a permission rule is not emitted
-ToolPermissionContext|missing|the handler receives name, input and tool-use id only; no suggestions or blocked path
-PermissionResult|partial|domains/agent.ToolPermissionHandler: returns allow and a reason, not a result type
-PermissionResultAllow|partial|domains/agent.ToolPermissionHandler: no updated input or permission updates
-PermissionResultDeny|partial|domains/agent.ToolPermissionHandler: allow=false with a reason; no interrupt flag
-PermissionUpdate|missing|a handler cannot return permission updates
+ToolPermissionContext|ported|domains/agent.ToolPermissionRequest: suggestions, agent id, blocked path, decision reason, title, display name, description (via Options.ToolPermissionFunc)
+PermissionResult|ported|domains/agent.PermissionResult
+PermissionResultAllow|ported|domains/agent.PermissionResult: Allow=true with UpdatedInput and UpdatedPermissions
+PermissionResultDeny|ported|domains/agent.PermissionResult: Allow=false with Message and Interrupt
+PermissionUpdate|ported|domains/agent.PermissionUpdate
 HookCallback|ported|domains/agent.HookHandler
 HookContext|missing|a hook handler gets the callback id and raw input only
 HookInput|partial|domains/agent.HookHandler: the input is json.RawMessage

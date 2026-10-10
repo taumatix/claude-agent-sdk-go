@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`Options.ToolPermissionFunc`**: answers `can_use_tool` with a `PermissionResult` instead of a bool and a string. An allow can
+  carry `UpdatedInput` (rewrite what the tool will run) and `UpdatedPermissions` (accept the CLI's own `Suggestions`, or add
+  rules, directories or a mode); a deny can `Interrupt` the turn. The `ToolPermissionRequest` also carries the CLI's
+  `AgentID`, `BlockedPath`, `DecisionReason`, `Title`, `DisplayName` and `Description`. An allow always repeats the original input
+  as `updatedInput`, as upstream's SDK does. `ToolPermissionHandler` is unchanged and used when the new function is unset.
+  Field names and wire shapes are from upstream's source; a live CLI has not been asked.
 - **CI: `Upstream surface` workflow** compares `docs/upstream-surface.txt` with the Python SDK's `__all__` every Monday and on
   changes to the inventory, so a new upstream export fails a check instead of waiting for someone to run the test. No library change.
 - `messages.InformationalMessage` on `System`-bearing messages (`Informational`): the CLI's `informational` notice with
