@@ -93,3 +93,7 @@ func TestBrokenStoresAreCaught(t *testing.T) {
 		}
 	}
 }
+
+func TestFileSessionStoreConforms(t *testing.T) {
+	sessionstoretest.Run(t, func(t *testing.T) sessions.SessionStore { return sessions.NewFileSessionStore(t.TempDir()) })
+}

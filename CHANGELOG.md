@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`sessions.FileSessionStore`** (`NewFileSessionStore(dir)`): a `SessionStore` with listing, deletion, sub-transcripts and
+  summaries that keeps transcripts as JSON-lines files, so a mirrored session survives the process. It passes the whole
+  `sessionstoretest` suite and is the first adapter run against a real clock: a summary older than the transcript's
+  file mtime is refolded by `ListSessionsFromStore`, a missing one is gap-filled. Single-process; no adapter over a
+  network backend (Postgres, S3, Redis) has been run yet.
 - **`Options.Sandbox`** (`agent.SandboxSettings`, `SandboxNetworkConfig`, `SandboxIgnoreViolations`): bash sandbox settings, merged
   into the `--settings` value as its `sandbox` key on top of `Options.Settings` (a JSON object or the path of a JSON file),
   as upstream does. Optional fields are pointers or empty slices and are left out when unset, so an explicit `false` is
