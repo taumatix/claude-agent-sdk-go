@@ -142,9 +142,9 @@ tag_session|ported|domains/sessions.TagSession
 delete_session|ported|domains/sessions.DeleteSession
 fork_session|ported|domains/sessions.ForkSession
 ForkSessionResult|missing|ForkSession returns the new id only
-rename_session_via_store|missing|renaming works on the filesystem store, not on a SessionStore
-tag_session_via_store|missing|tagging works on the filesystem store, not on a SessionStore
-delete_session_via_store|missing|deleting through a SessionStore is only the SessionDeleter interface
+rename_session_via_store|ported|domains/sessions.RenameSessionViaStore
+tag_session_via_store|ported|domains/sessions.TagSessionViaStore
+delete_session_via_store|ported|domains/sessions.DeleteSessionViaStore
 fork_session_via_store|missing|forking works on the filesystem store, not on a SessionStore
 SdkBeta|partial|domains/agent.Options: Betas is []string
 SandboxSettings|missing|no sandbox options

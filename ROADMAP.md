@@ -232,8 +232,11 @@ by what limits a deployment:
    `stop_task`, and others in `_internal/query.py`). `MCPStatus`, `ContextUsage`, `ReconnectMCPServer` and
    `ToggleMCPServer` are verified against the stub CLI only, whose bodies and request shapes (`mcp_reconnect`,
    `mcp_toggle`) are read from the Python SDK, not captured from a live CLI.
-3. **Store-backed session functions** (the `*_via_store` rename, tag, delete and fork, subagent listing; the info
-   and message reads shipped 2026-10-10): the store can be listed but not otherwise operated on.
+3. **Store-backed session functions** (`fork_session_via_store` and subagent listing remain; the info and message reads
+   shipped 2026-10-10 and rename, tag and delete the same day): a store can be listed, read, renamed, tagged and deleted
+   from, but not forked. `TagSessionViaStore` skips upstream's NFKC step (it needs `golang.org/x/text`, a first
+   dependency); add it if a tag with compatibility characters matters. None of the three has run against a store but
+   `MemorySessionStore`.
 4. **Sandbox settings, `TaskBudget`, typed hook inputs and outputs**, and `CanUseToolShadowedWarning`.
 
 **Done:** permission results (`Options.ToolPermissionFunc`, 2026-10-10). Not yet seen against a live CLI: whether a
