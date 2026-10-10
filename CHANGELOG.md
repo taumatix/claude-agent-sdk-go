@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`Client.ReconnectMCPServer` and `Client.ToggleMCPServer`**: retry a failed or disconnected MCP server, or enable or disable one,
+  for the running session (the `mcp_reconnect` and `mcp_toggle` control requests). `MCPStatus` shows which servers need it; an
+  unknown server name returns the CLI's error.
 - **`Client.MCPStatus` and `Client.ContextUsage`**: ask a running session which MCP servers are connected, failed or need
   auth (`MCPStatusResponse`, with each server's tools, scope and error), and how the context window is used
   (`ContextUsageResponse`: categories, total and max tokens, percentage, auto-compact). Fields that vary between CLI releases

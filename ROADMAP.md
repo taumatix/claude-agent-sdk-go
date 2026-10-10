@@ -228,9 +228,10 @@ by what limits a deployment:
 
 1. **In-process SDK MCP servers** (`create_sdk_mcp_server`, `tool`, `McpSdkServerConfig`, `SdkMcpTool`,
    `ToolAnnotations`): a Go caller cannot expose a function as a tool without running a separate MCP process.
-2. **The typed `system/init` message**, and the other control requests upstream sends (`reconnect_mcp_server`,
-   `toggle_mcp_server`), which the new `Client.MCPStatus` makes worth having: a caller can now see a server `failed`
-   and has no way to retry it. `MCPStatus` and `ContextUsage` are verified against the stub CLI only, not a live one.
+2. **The typed `system/init` message**, and the remaining control requests upstream's client sends (`rewind_files`,
+   `stop_task`, and others in `_internal/query.py`). `MCPStatus`, `ContextUsage`, `ReconnectMCPServer` and
+   `ToggleMCPServer` are verified against the stub CLI only, whose bodies and request shapes (`mcp_reconnect`,
+   `mcp_toggle`) are read from the Python SDK, not captured from a live CLI.
 3. **Store-backed session functions** (`get_session_info_from_store`, `get_session_messages_from_store`, the
    `*_via_store` rename, tag, delete and fork, subagent listing): the store can be listed but not otherwise operated on.
 4. **Sandbox settings, `TaskBudget`, typed hook inputs and outputs**, and `CanUseToolShadowedWarning`.

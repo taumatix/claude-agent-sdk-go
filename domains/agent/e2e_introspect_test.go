@@ -66,10 +66,57 @@ func TestE2E_ContextUsageReportsTheWindow(t *testing.T) {
 	assert.JSONEq(t, `[{"path":"CLAUDE.md","type":"project","tokens":120}]`, string(u.MemoryFiles))
 }
 
+func statusOf(t *testing.T, client *agent.Client, ctx context.Context, name string) string {
+	t.Helper()
+	st, err := client.MCPStatus(ctx)
+	require.NoError(t, err)
+	for _, s := range st.MCPServers {
+		if s.Name == name {
+			return s.Status
+		}
+	}
+	t.Fatalf("no server %q in the status", name)
+	return ""
+}
+
+// Seeing a server "failed" is only useful if the caller can then retry it. The
+// stub keeps state, so the status read afterwards shows what the CLI was told.
+func TestE2E_AFailedMCPServerCanBeReconnected(t *testing.T) {
+	client, ctx := connectedClient(t)
+	require.Equal(t, "failed", statusOf(t, client, ctx, "search"))
+
+	require.NoError(t, client.ReconnectMCPServer(ctx, "search"))
+	assert.Equal(t, "connected", statusOf(t, client, ctx, "search"))
+}
+
+func TestE2E_AnMCPServerCanBeDisabledAndEnabled(t *testing.T) {
+	client, ctx := connectedClient(t)
+
+	require.NoError(t, client.ToggleMCPServer(ctx, "files", false))
+	assert.Equal(t, "disabled", statusOf(t, client, ctx, "files"))
+	assert.Equal(t, "failed", statusOf(t, client, ctx, "search"), "toggling one server touched another")
+
+	require.NoError(t, client.ToggleMCPServer(ctx, "files", true))
+	assert.Equal(t, "connected", statusOf(t, client, ctx, "files"))
+}
+
+func TestE2E_AnUnknownMCPServerIsTheCLIsError(t *testing.T) {
+	client, ctx := connectedClient(t)
+
+	err := client.ReconnectMCPServer(ctx, "nope")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no MCP server named nope")
+	err = client.ToggleMCPServer(ctx, "nope", false)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no MCP server named nope")
+}
+
 func TestE2E_IntrospectionNeedsAConnection(t *testing.T) {
 	client := agent.NewClient(fakeOpts("old-cli", nil))
 	_, err := client.MCPStatus(context.Background())
 	assert.Error(t, err)
 	_, err = client.ContextUsage(context.Background())
 	assert.Error(t, err)
+	assert.Error(t, client.ReconnectMCPServer(context.Background(), "files"))
+	assert.Error(t, client.ToggleMCPServer(context.Background(), "files", true))
 }

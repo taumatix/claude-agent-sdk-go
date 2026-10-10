@@ -172,6 +172,25 @@ func (sm *sessionManager) MCPStatus(ctx context.Context) (*protocol.MCPStatusRes
 	return &out, nil
 }
 
+// MCPReconnect asks the CLI to reconnect a disconnected or failed MCP server.
+func (sm *sessionManager) MCPReconnect(ctx context.Context, server string) error {
+	_, err := sm.sendControlRequest(ctx, protocol.MCPReconnectRequestBody{
+		Subtype:    protocol.SubtypeMCPReconnect,
+		ServerName: server,
+	})
+	return err
+}
+
+// MCPToggle asks the CLI to enable or disable an MCP server.
+func (sm *sessionManager) MCPToggle(ctx context.Context, server string, enabled bool) error {
+	_, err := sm.sendControlRequest(ctx, protocol.MCPToggleRequestBody{
+		Subtype:    protocol.SubtypeMCPToggle,
+		ServerName: server,
+		Enabled:    enabled,
+	})
+	return err
+}
+
 // ContextUsage asks the CLI how the context window is being used.
 func (sm *sessionManager) ContextUsage(ctx context.Context) (*protocol.ContextUsageResponse, error) {
 	raw, err := sm.sendControlRequest(ctx, protocol.IntrospectRequestBody{Subtype: protocol.SubtypeGetContextUsage})

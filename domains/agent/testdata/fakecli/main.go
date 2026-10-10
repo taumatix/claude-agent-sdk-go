@@ -127,6 +127,8 @@ func main() {
 		out.Flush()
 	}
 
+	mcpState := map[string]string{"files": "connected", "search": "failed"}
+
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
@@ -134,7 +136,9 @@ func main() {
 			Type      string `json:"type"`
 			RequestID string `json:"request_id"`
 			Request   struct {
-				Subtype string `json:"subtype"`
+				Subtype    string `json:"subtype"`
+				ServerName string `json:"serverName"`
+				Enabled    bool   `json:"enabled"`
 			} `json:"request"`
 		}
 		if err := json.Unmarshal(scanner.Bytes(), &frame); err != nil {
@@ -146,7 +150,23 @@ func main() {
 			body := `{}`
 			switch frame.Request.Subtype {
 			case "mcp_status":
-				body = mcpStatusBody
+				body = mcpStatus(mcpState)
+			case "mcp_reconnect", "mcp_toggle":
+				// The two servers mcp_status lists, with state the SDK can change.
+				if _, known := mcpState[frame.Request.ServerName]; !known {
+					emit(fmt.Sprintf(
+						`{"type":"control_response","response":{"subtype":"error","request_id":%q,"error":%q}}`,
+						frame.RequestID, "no MCP server named "+frame.Request.ServerName))
+					continue
+				}
+				switch {
+				case frame.Request.Subtype == "mcp_reconnect":
+					mcpState[frame.Request.ServerName] = "connected"
+				case frame.Request.Enabled:
+					mcpState[frame.Request.ServerName] = "connected"
+				default:
+					mcpState[frame.Request.ServerName] = "disabled"
+				}
 			case "get_context_usage":
 				body = contextUsageBody
 			}
@@ -407,14 +427,22 @@ func compact(s string) string {
 // Bodies as the CLI answers mcp_status and get_context_usage, with one field
 // this SDK does not model ("futureField") to prove it does not break decoding.
 const (
-	mcpStatusBody = `{"mcpServers":[` +
-		`{"name":"files","status":"connected","serverInfo":{"name":"files-srv","version":"1.2.0"},` +
-		`"scope":"project","config":{"type":"stdio","command":"files-srv"},` +
-		`"tools":[{"name":"read","description":"Read a file","annotations":{"readOnly":true}}],"futureField":1},` +
-		`{"name":"search","status":"failed","error":"spawn ENOENT"}]}`
 	contextUsageBody = `{"categories":[{"name":"System prompt","tokens":3200,"color":"gray"},` +
 		`{"name":"Messages","tokens":900,"color":"blue","isDeferred":false}],` +
 		`"totalTokens":4100,"maxTokens":200000,"rawMaxTokens":200000,"percentage":2.05,` +
 		`"model":"claude-test","isAutoCompactEnabled":true,"autoCompactThreshold":167000,` +
 		`"memoryFiles":[{"path":"CLAUDE.md","type":"project","tokens":120}],"futureField":{"x":1}}`
 )
+
+func mcpStatus(state map[string]string) string {
+	search := fmt.Sprintf(`{"name":"search","status":%q`, state["search"])
+	if state["search"] == "failed" {
+		search += `,"error":"spawn ENOENT"`
+	}
+	search += `}`
+	return `{"mcpServers":[` +
+		`{"name":"files","status":` + strconv.Quote(state["files"]) + `,"serverInfo":{"name":"files-srv","version":"1.2.0"},` +
+		`"scope":"project","config":{"type":"stdio","command":"files-srv"},` +
+		`"tools":[{"name":"read","description":"Read a file","annotations":{"readOnly":true}}],"futureField":1},` +
+		search + `]}`
+}

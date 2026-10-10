@@ -117,6 +117,15 @@ func (c *Client) MCPStatus(ctx context.Context) (*MCPStatusResponse, error)
 
 State of each MCP server: `Name`, `Status` (`connected`, `failed`, `needs-auth`, `pending`, `disabled`), `ServerInfo`, `Error`, `Scope`, `Tools`, and the raw `Config`. Returns an error before `Connect`.
 
+#### `ReconnectMCPServer` / `ToggleMCPServer`
+
+```go
+func (c *Client) ReconnectMCPServer(ctx context.Context, server string) error
+func (c *Client) ToggleMCPServer(ctx context.Context, server string, enabled bool) error
+```
+
+Retry a failed or disconnected MCP server, or enable or disable one, for the running session. An unknown server name returns the CLI's error.
+
 #### `ContextUsage`
 
 ```go
