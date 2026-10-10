@@ -112,3 +112,4 @@ job ever opened, which is how six months went by unnoticed.
 each, whether this SDK ports it, ports part of it, lacks it, or skips it on purpose. `go test .` checks that
 each Go symbol it points at exists; with `UPSTREAM_PYTHON_SDK=<checkout>` it also checks the list against
 upstream's `__all__`, so a new upstream export fails until someone accounts for it.
+The `Upstream surface` GitHub workflow runs that comparison against upstream's default branch every Monday.
