@@ -133,6 +133,9 @@ func main() {
 		var frame struct {
 			Type      string `json:"type"`
 			RequestID string `json:"request_id"`
+			Request   struct {
+				Subtype string `json:"subtype"`
+			} `json:"request"`
 		}
 		if err := json.Unmarshal(scanner.Bytes(), &frame); err != nil {
 			continue
@@ -140,9 +143,16 @@ func main() {
 
 		switch frame.Type {
 		case "control_request":
+			body := `{}`
+			switch frame.Request.Subtype {
+			case "mcp_status":
+				body = mcpStatusBody
+			case "get_context_usage":
+				body = contextUsageBody
+			}
 			emit(fmt.Sprintf(
-				`{"type":"control_response","response":{"subtype":"success","request_id":%q,"response":{}}}`,
-				frame.RequestID))
+				`{"type":"control_response","response":{"subtype":"success","request_id":%q,"response":%s}}`,
+				frame.RequestID, body))
 		case "user":
 			// CLAUDE_CODE_SDK_READS_SESSION_STATE is how the SDK asks for
 			// session state for itself. 2.1.288 answers it with frames marked
@@ -393,3 +403,18 @@ func compact(s string) string {
 	}
 	return buf.String()
 }
+
+// Bodies as the CLI answers mcp_status and get_context_usage, with one field
+// this SDK does not model ("futureField") to prove it does not break decoding.
+const (
+	mcpStatusBody = `{"mcpServers":[` +
+		`{"name":"files","status":"connected","serverInfo":{"name":"files-srv","version":"1.2.0"},` +
+		`"scope":"project","config":{"type":"stdio","command":"files-srv"},` +
+		`"tools":[{"name":"read","description":"Read a file","annotations":{"readOnly":true}}],"futureField":1},` +
+		`{"name":"search","status":"failed","error":"spawn ENOENT"}]}`
+	contextUsageBody = `{"categories":[{"name":"System prompt","tokens":3200,"color":"gray"},` +
+		`{"name":"Messages","tokens":900,"color":"blue","isDeferred":false}],` +
+		`"totalTokens":4100,"maxTokens":200000,"rawMaxTokens":200000,"percentage":2.05,` +
+		`"model":"claude-test","isAutoCompactEnabled":true,"autoCompactThreshold":167000,` +
+		`"memoryFiles":[{"path":"CLAUDE.md","type":"project","tokens":120}],"futureField":{"x":1}}`
+)

@@ -125,3 +125,25 @@ func (c *Client) SetModel(ctx context.Context, model string) error {
 	}
 	return sm.SetModel(ctx, model)
 }
+
+// MCPStatus reports the connection state of each MCP server the session uses.
+func (c *Client) MCPStatus(ctx context.Context) (*MCPStatusResponse, error) {
+	c.mu.Lock()
+	sm := c.sm
+	c.mu.Unlock()
+	if sm == nil {
+		return nil, fmt.Errorf("not connected")
+	}
+	return sm.MCPStatus(ctx)
+}
+
+// ContextUsage reports how the session's context window is being used.
+func (c *Client) ContextUsage(ctx context.Context) (*ContextUsageResponse, error) {
+	c.mu.Lock()
+	sm := c.sm
+	c.mu.Unlock()
+	if sm == nil {
+		return nil, fmt.Errorf("not connected")
+	}
+	return sm.ContextUsage(ctx)
+}

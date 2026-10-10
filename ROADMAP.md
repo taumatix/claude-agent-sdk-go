@@ -222,14 +222,15 @@ that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows.
 
 ## What the surface inventory found missing
 
-**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (2026-10-10): 61 ported, 47
-partial (a string or raw JSON where upstream has a type), 49 missing, 2 skipped. Missing is not evenly spread. Ordered
+**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (2026-10-10): 65 ported, 48
+partial (a string or raw JSON where upstream has a type), 44 missing, 2 skipped. Missing is not evenly spread. Ordered
 by what limits a deployment:
 
 1. **In-process SDK MCP servers** (`create_sdk_mcp_server`, `tool`, `McpSdkServerConfig`, `SdkMcpTool`,
    `ToolAnnotations`): a Go caller cannot expose a function as a tool without running a separate MCP process.
-2. **Introspection control requests** (`get_mcp_status`, `get_context_usage`, `McpStatusResponse`,
-   `ContextUsageResponse`) and the typed `system/init` message.
+2. **The typed `system/init` message**, and the other control requests upstream sends (`reconnect_mcp_server`,
+   `toggle_mcp_server`), which the new `Client.MCPStatus` makes worth having: a caller can now see a server `failed`
+   and has no way to retry it. `MCPStatus` and `ContextUsage` are verified against the stub CLI only, not a live one.
 3. **Store-backed session functions** (`get_session_info_from_store`, `get_session_messages_from_store`, the
    `*_via_store` rename, tag, delete and fork, subagent listing): the store can be listed but not otherwise operated on.
 4. **Sandbox settings, `TaskBudget`, typed hook inputs and outputs**, and `CanUseToolShadowedWarning`.

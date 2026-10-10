@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`Client.MCPStatus` and `Client.ContextUsage`**: ask a running session which MCP servers are connected, failed or need
+  auth (`MCPStatusResponse`, with each server's tools, scope and error), and how the context window is used
+  (`ContextUsageResponse`: categories, total and max tokens, percentage, auto-compact). Fields that vary between CLI releases
+  stay raw JSON so a new one never fails the call.
 - **`Options.ToolPermissionFunc`**: answers `can_use_tool` with a `PermissionResult` instead of a bool and a string. An allow can
   carry `UpdatedInput` (rewrite what the tool will run) and `UpdatedPermissions` (accept the CLI's own `Suggestions`, or add
   rules, directories or a mode); a deny can `Interrupt` the turn. The `ToolPermissionRequest` also carries the CLI's

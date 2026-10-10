@@ -159,6 +159,32 @@ func (sm *sessionManager) SetModel(ctx context.Context, model string) error {
 	return err
 }
 
+// MCPStatus asks the CLI for the state of each MCP server.
+func (sm *sessionManager) MCPStatus(ctx context.Context) (*protocol.MCPStatusResponse, error) {
+	raw, err := sm.sendControlRequest(ctx, protocol.IntrospectRequestBody{Subtype: protocol.SubtypeMCPStatus})
+	if err != nil {
+		return nil, err
+	}
+	var out protocol.MCPStatusResponse
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, fmt.Errorf("decode mcp_status response: %w", err)
+	}
+	return &out, nil
+}
+
+// ContextUsage asks the CLI how the context window is being used.
+func (sm *sessionManager) ContextUsage(ctx context.Context) (*protocol.ContextUsageResponse, error) {
+	raw, err := sm.sendControlRequest(ctx, protocol.IntrospectRequestBody{Subtype: protocol.SubtypeGetContextUsage})
+	if err != nil {
+		return nil, err
+	}
+	var out protocol.ContextUsageResponse
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil, fmt.Errorf("decode get_context_usage response: %w", err)
+	}
+	return &out, nil
+}
+
 // Close cancels the context, closes the transport, and waits for the read loop
 // to finish.
 //
