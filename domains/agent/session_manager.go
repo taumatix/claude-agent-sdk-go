@@ -264,15 +264,20 @@ func (sm *sessionManager) handleControlRequest(env *protocol.ControlRequestEnvel
 
 	switch req := body.(type) {
 	case *protocol.CanUseToolRequest:
-		allow, reason := true, ""
-		if sm.opts.ToolPermissionHandler != nil {
-			allow, reason = sm.opts.ToolPermissionHandler(sm.ctx, req.ToolName, req.Input, req.ToolUseID)
+		var respBody interface{}
+		if sm.opts.ToolPermissionFunc != nil {
+			respBody = sm.permissionFromFunc(req)
+		} else {
+			allow, reason := true, ""
+			if sm.opts.ToolPermissionHandler != nil {
+				allow, reason = sm.opts.ToolPermissionHandler(sm.ctx, req.ToolName, req.Input, req.ToolUseID)
+			}
+			behavior := "allow"
+			if !allow {
+				behavior = "deny"
+			}
+			respBody = protocol.CanUseToolResponseBody{Behavior: behavior, Message: reason}
 		}
-		behavior := "allow"
-		if !allow {
-			behavior = "deny"
-		}
-		respBody := protocol.CanUseToolResponseBody{Behavior: behavior, Message: reason}
 		data, marshalErr := protocol.BuildControlResponse(env.RequestID, respBody)
 		if marshalErr != nil {
 			return
@@ -302,6 +307,41 @@ func (sm *sessionManager) handleControlRequest(env *protocol.ControlRequestEnvel
 			return
 		}
 		_ = sm.transport.Send(sm.ctx, data)
+	}
+}
+
+// permissionFromFunc asks Options.ToolPermissionFunc. An allow always carries
+// updatedInput, the original input when the function gave none, as upstream's
+// SDK sends it.
+func (sm *sessionManager) permissionFromFunc(req *protocol.CanUseToolRequest) protocol.CanUseToolResultBody {
+	var suggestions []PermissionUpdate
+	if len(req.PermissionSuggestions) > 0 {
+		_ = json.Unmarshal(req.PermissionSuggestions, &suggestions)
+	}
+	res := sm.opts.ToolPermissionFunc(sm.ctx, ToolPermissionRequest{
+		ToolName:       req.ToolName,
+		Input:          req.Input,
+		ToolUseID:      req.ToolUseID,
+		Suggestions:    suggestions,
+		AgentID:        req.AgentID,
+		BlockedPath:    req.BlockedPath,
+		DecisionReason: req.DecisionReason,
+		Title:          req.Title,
+		DisplayName:    req.DisplayName,
+		Description:    req.Description,
+	})
+	if !res.Allow {
+		return protocol.CanUseToolResultBody{Behavior: "deny", Message: res.Message, Interrupt: res.Interrupt}
+	}
+	input := res.UpdatedInput
+	if len(input) == 0 {
+		input = req.Input
+	}
+	if len(input) == 0 {
+		input = json.RawMessage("{}")
+	}
+	return protocol.CanUseToolResultBody{
+		Behavior: "allow", UpdatedInput: input, UpdatedPermissions: res.UpdatedPermissions,
 	}
 }
 

@@ -222,21 +222,23 @@ that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows.
 
 ## What the surface inventory found missing
 
-**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (2026-10-10): 56 ported, 50
-partial (a string or raw JSON where upstream has a type), 51 missing, 2 skipped. Missing is not evenly spread. Ordered
+**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (2026-10-10): 61 ported, 47
+partial (a string or raw JSON where upstream has a type), 49 missing, 2 skipped. Missing is not evenly spread. Ordered
 by what limits a deployment:
 
 1. **In-process SDK MCP servers** (`create_sdk_mcp_server`, `tool`, `McpSdkServerConfig`, `SdkMcpTool`,
    `ToolAnnotations`): a Go caller cannot expose a function as a tool without running a separate MCP process.
-2. **Permission results** (`PermissionResultAllow` with updated input and `PermissionUpdate`s, `ToolPermissionContext`
-   suggestions): the handler's `(allow, reason)` cannot rewrite a tool's input or persist a rule.
-3. **Introspection control requests** (`get_mcp_status`, `get_context_usage`, `McpStatusResponse`,
+2. **Introspection control requests** (`get_mcp_status`, `get_context_usage`, `McpStatusResponse`,
    `ContextUsageResponse`) and the typed `system/init` message.
-4. **Store-backed session functions** (`get_session_info_from_store`, `get_session_messages_from_store`, the
+3. **Store-backed session functions** (`get_session_info_from_store`, `get_session_messages_from_store`, the
    `*_via_store` rename, tag, delete and fork, subagent listing): the store can be listed but not otherwise operated on.
-5. **Sandbox settings, `TaskBudget`, typed hook inputs and outputs**.
+4. **Sandbox settings, `TaskBudget`, typed hook inputs and outputs**, and `CanUseToolShadowedWarning`.
 
-**Shape:** each of 1-4 is its own entry when it reaches the top; do not ship them as one.
+**Done:** permission results (`Options.ToolPermissionFunc`, 2026-10-10). Not yet seen against a live CLI: whether a
+live `can_use_tool` request carries the optional context fields, and whether `updatedPermissions` from a suggestion is
+accepted. A live run that makes a Bash call under `default` permission mode would show both.
+
+**Shape:** each of 1-3 is its own entry when it reaches the top; do not ship them as one.
 
 Left over from the CI wiring: the `Upstream surface` workflow (2026-10-10, weekly and on changes to the inventory) fails when upstream
 exports a name the inventory does not account for, but nothing makes a failed scheduled run reach a pass: the
