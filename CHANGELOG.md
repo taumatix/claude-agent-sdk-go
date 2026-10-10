@@ -35,6 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `sessionstoretest` has the 14th contract (summaries round-trip, share `ListSessions`' clock, ignore sub-transcripts,
   vanish on delete). Purely additive; a store that does not implement it is unchanged. Timestamps are parsed as
   RFC 3339, which is stricter than Python's `fromisoformat`.
+- **`sessions.GetSessionInfoFromStore(ctx, store, projectKey, projectPath, sessionID)`**: one session's metadata from
+  any `SessionStore` with a single `Load`; `nil, nil` when it is absent, a sidechain, or has nothing to show. Its
+  `LastModified` is the last entry's timestamp (or now), since a bare `Load` has no mtime. Purely additive.
 - **`sessions.ListSessionsFromStore(ctx, store, projectKey, projectPath, limit, offset)`**: lists a project's sessions
   from any `SessionStore`, newest first. With `SessionSummaryLister` it is one summary call plus one `ListSessions`, and
   `Load` runs only for sessions whose summary is missing or older than the listed mtime, and only inside the requested

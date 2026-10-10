@@ -133,7 +133,7 @@ MirrorErrorMessage|missing|transcript mirroring is not implemented (roadmap 6b)
 project_key_for_directory|missing|the project key is computed inside FilesystemStore only
 import_session_to_store|missing|roadmap 6c
 list_sessions_from_store|ported|domains/sessions.ListSessionsFromStore
-get_session_info_from_store|missing|no single-session metadata lookup from a store
+get_session_info_from_store|ported|domains/sessions.GetSessionInfoFromStore
 get_session_messages_from_store|missing|no message read from a SessionStore
 list_subagents_from_store|missing|sub-transcripts are not listed by the SDK
 get_subagent_messages_from_store|missing|sub-transcripts are not read by the SDK
