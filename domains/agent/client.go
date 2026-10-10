@@ -147,3 +147,27 @@ func (c *Client) ContextUsage(ctx context.Context) (*ContextUsageResponse, error
 	}
 	return sm.ContextUsage(ctx)
 }
+
+// ReconnectMCPServer asks the CLI to reconnect a disconnected or failed MCP
+// server; MCPStatus shows which are. It returns the CLI's error if the server
+// is unknown or the reconnect fails.
+func (c *Client) ReconnectMCPServer(ctx context.Context, server string) error {
+	c.mu.Lock()
+	sm := c.sm
+	c.mu.Unlock()
+	if sm == nil {
+		return fmt.Errorf("not connected")
+	}
+	return sm.MCPReconnect(ctx, server)
+}
+
+// ToggleMCPServer enables or disables an MCP server for the rest of the session.
+func (c *Client) ToggleMCPServer(ctx context.Context, server string, enabled bool) error {
+	c.mu.Lock()
+	sm := c.sm
+	c.mu.Unlock()
+	if sm == nil {
+		return fmt.Errorf("not connected")
+	}
+	return sm.MCPToggle(ctx, server, enabled)
+}

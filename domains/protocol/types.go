@@ -270,6 +270,8 @@ const (
 	SubtypeSetModel     ControlRequestSubtype = "set_model"
 
 	SubtypeMCPStatus       ControlRequestSubtype = "mcp_status"
+	SubtypeMCPReconnect    ControlRequestSubtype = "mcp_reconnect"
+	SubtypeMCPToggle       ControlRequestSubtype = "mcp_toggle"
 	SubtypeGetContextUsage ControlRequestSubtype = "get_context_usage"
 )
 
@@ -431,4 +433,17 @@ type ContextUsageResponse struct {
 	GridRows             json.RawMessage        `json:"gridRows,omitempty"`
 	MessageBreakdown     json.RawMessage        `json:"messageBreakdown,omitempty"`
 	APIUsage             json.RawMessage        `json:"apiUsage,omitempty"`
+}
+
+// MCPReconnectRequestBody asks the CLI to reconnect a disconnected or failed MCP server.
+type MCPReconnectRequestBody struct {
+	Subtype    ControlRequestSubtype `json:"subtype"`
+	ServerName string                `json:"serverName"`
+}
+
+// MCPToggleRequestBody asks the CLI to enable or disable an MCP server.
+type MCPToggleRequestBody struct {
+	Subtype    ControlRequestSubtype `json:"subtype"`
+	ServerName string                `json:"serverName"`
+	Enabled    bool                  `json:"enabled"`
 }
