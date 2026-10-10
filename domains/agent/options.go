@@ -92,6 +92,10 @@ type Options struct {
 	// Settings
 	SettingSources []string
 	Settings       string
+	// Sandbox, when set, is merged into the --settings value as its "sandbox" key, on top of
+	// Settings (a JSON object or the path of a JSON file). A Settings value that cannot be read
+	// or parsed is then an error from Query and Client.Connect rather than being dropped.
+	Sandbox *SandboxSettings
 
 	// Beta features
 	Betas []string
@@ -254,8 +258,13 @@ func BuildCLIArgs(opts Options) []string {
 		args = append(args, "--session-id", opts.SessionID)
 	}
 
-	if opts.Settings != "" {
-		args = append(args, "--settings", opts.Settings)
+	if settings, err := mergedSettings(opts); err != nil {
+		// Refused before a session starts (validateOptions); this keeps the call total.
+		if opts.Settings != "" {
+			args = append(args, "--settings", opts.Settings)
+		}
+	} else if settings != "" {
+		args = append(args, "--settings", settings)
 	}
 
 	for _, dir := range opts.AddDirs {

@@ -34,7 +34,7 @@ import (
 // passes.
 func Query(ctx context.Context, prompt string, opts Options) iter.Seq2[messages.Message, error] {
 	return func(yield func(messages.Message, error) bool) {
-		if _, err := sdkServers(opts); err != nil {
+		if err := validateOptions(opts); err != nil {
 			yield(messages.Message{}, err)
 			return
 		}

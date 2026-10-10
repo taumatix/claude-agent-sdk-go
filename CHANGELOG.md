@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`Options.Sandbox`** (`agent.SandboxSettings`, `SandboxNetworkConfig`, `SandboxIgnoreViolations`): bash sandbox settings, merged
+  into the `--settings` value as its `sandbox` key on top of `Options.Settings` (a JSON object or the path of a JSON file),
+  as upstream does. Optional fields are pointers or empty slices and are left out when unset, so an explicit `false` is
+  sent. Unlike upstream, which logs a warning and drops them, a `Settings` value that cannot be read or parsed is an error
+  from `Query` and `Client.Connect` when `Sandbox` is set. Verified against the stub CLI's argv; not run against a live
+  sandbox.
 - **`Options.TaskBudget`** (`agent.TaskBudget{Total}`): sends `--task-budget`, the API-side token budget the model is told
   it has left so it can wrap up before the limit (ports upstream's `TaskBudget`). Not enforced by the CLI, unlike
   `MaxBudgetUSD`. The flag is not in `claude --help` 2.1.283; it is sent as upstream sends it and not yet seen against a live CLI.
