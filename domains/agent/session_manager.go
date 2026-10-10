@@ -264,7 +264,7 @@ func (sm *sessionManager) handleControlRequest(env *protocol.ControlRequestEnvel
 
 	switch req := body.(type) {
 	case *protocol.CanUseToolRequest:
-		var respBody protocol.CanUseToolResponseBody
+		var respBody interface{}
 		if sm.opts.ToolPermissionFunc != nil {
 			respBody = sm.permissionFromFunc(req)
 		} else {
@@ -313,7 +313,7 @@ func (sm *sessionManager) handleControlRequest(env *protocol.ControlRequestEnvel
 // permissionFromFunc asks Options.ToolPermissionFunc. An allow always carries
 // updatedInput, the original input when the function gave none, as upstream's
 // SDK sends it.
-func (sm *sessionManager) permissionFromFunc(req *protocol.CanUseToolRequest) protocol.CanUseToolResponseBody {
+func (sm *sessionManager) permissionFromFunc(req *protocol.CanUseToolRequest) protocol.CanUseToolResultBody {
 	var suggestions []PermissionUpdate
 	if len(req.PermissionSuggestions) > 0 {
 		_ = json.Unmarshal(req.PermissionSuggestions, &suggestions)
@@ -331,7 +331,7 @@ func (sm *sessionManager) permissionFromFunc(req *protocol.CanUseToolRequest) pr
 		Description:    req.Description,
 	})
 	if !res.Allow {
-		return protocol.CanUseToolResponseBody{Behavior: "deny", Message: res.Message, Interrupt: res.Interrupt}
+		return protocol.CanUseToolResultBody{Behavior: "deny", Message: res.Message, Interrupt: res.Interrupt}
 	}
 	input := res.UpdatedInput
 	if len(input) == 0 {
@@ -340,7 +340,7 @@ func (sm *sessionManager) permissionFromFunc(req *protocol.CanUseToolRequest) pr
 	if len(input) == 0 {
 		input = json.RawMessage("{}")
 	}
-	return protocol.CanUseToolResponseBody{
+	return protocol.CanUseToolResultBody{
 		Behavior: "allow", UpdatedInput: input, UpdatedPermissions: res.UpdatedPermissions,
 	}
 }

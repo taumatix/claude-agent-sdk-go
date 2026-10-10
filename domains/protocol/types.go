@@ -343,6 +343,15 @@ type SetModelRequestBody struct {
 
 // CanUseToolResponseBody is the SDK's response to a can_use_tool request.
 type CanUseToolResponseBody struct {
+	Behavior string `json:"behavior"`
+	Message  string `json:"message,omitempty"`
+}
+
+// CanUseToolResultBody is the richer answer to a can_use_tool request: an allow
+// that rewrites the input or changes permissions, or a deny that interrupts. It
+// is a separate type because CanUseToolResponseBody is comparable and adding
+// slices to it would stop existing callers compiling.
+type CanUseToolResultBody struct {
 	Behavior           string             `json:"behavior"`
 	Message            string             `json:"message,omitempty"`
 	UpdatedInput       json.RawMessage    `json:"updatedInput,omitempty"`
