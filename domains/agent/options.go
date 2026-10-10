@@ -39,6 +39,11 @@ type MCPServerConfig struct {
 	SDK *SDKMCPServer
 }
 
+// TaskBudget is the token budget of Options.TaskBudget; Total is the number of tokens.
+type TaskBudget struct {
+	Total int
+}
+
 // Options configures a Query or Client session.
 type Options struct {
 	// Session control
@@ -54,6 +59,10 @@ type Options struct {
 	// Conversation limits
 	MaxTurns     *int
 	MaxBudgetUSD *float64
+	// TaskBudget is an API-side token budget (--task-budget): the model is told how much of it
+	// remains so it can pace tool use and wrap up before the limit. Unlike MaxBudgetUSD it is not
+	// enforced by the CLI. Nil sends nothing.
+	TaskBudget *TaskBudget
 
 	// Prompting
 	SystemPrompt       string
@@ -207,6 +216,10 @@ func BuildCLIArgs(opts Options) []string {
 
 	if opts.MaxTurns != nil {
 		args = append(args, "--max-turns", strconv.Itoa(*opts.MaxTurns))
+	}
+
+	if opts.TaskBudget != nil {
+		args = append(args, "--task-budget", strconv.Itoa(opts.TaskBudget.Total))
 	}
 
 	if opts.MaxBudgetUSD != nil {

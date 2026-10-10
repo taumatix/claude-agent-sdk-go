@@ -195,6 +195,31 @@ func TestE2E_SessionAndPluginFlagsReachTheCLI(t *testing.T) {
 	assert.Equal(t, 2, strings.Count(string(raw), "--plugin-dir"))
 }
 
+func TestE2E_TaskBudgetReachesTheCLI(t *testing.T) {
+	argsFile := filepath.Join(t.TempDir(), "argv")
+	queryFakeCLIWith(t, agent.Options{
+		CLIPath:    fakeCLIPath,
+		Env:        map[string]string{"FAKECLI_ARGS_FILE": argsFile},
+		TaskBudget: &agent.TaskBudget{Total: 50000},
+	}, "hi")
+
+	raw, err := os.ReadFile(argsFile)
+	require.NoError(t, err)
+	argv := strings.Split(string(raw), "\n")
+	i := slices.Index(argv, "--task-budget")
+	require.GreaterOrEqual(t, i, 0, "argv: %v", argv)
+	assert.Equal(t, "50000", argv[i+1])
+
+	argsFile = filepath.Join(t.TempDir(), "argv")
+	queryFakeCLIWith(t, agent.Options{
+		CLIPath: fakeCLIPath,
+		Env:     map[string]string{"FAKECLI_ARGS_FILE": argsFile},
+	}, "hi")
+	raw, err = os.ReadFile(argsFile)
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), "--task-budget")
+}
+
 func TestE2E_AgentsAndPluginURLsReachTheCLI(t *testing.T) {
 	argsFile := filepath.Join(t.TempDir(), "argv")
 	queryFakeCLIWith(t, agent.Options{

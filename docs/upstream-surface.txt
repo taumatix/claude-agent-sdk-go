@@ -47,7 +47,7 @@ MessageOrigin|partial|domains/messages.UserMessage: Origin is the CLI's raw JSON
 MessageOriginKind|missing|origin kinds are not enumerated
 TaskNotificationOriginSubkind|missing|origin kinds are not enumerated
 ClaudeAgentOptions|ported|domains/agent.Options
-TaskBudget|missing|no Options field for the task budget (roadmap: --task-budget)
+TaskBudget|ported|domains/agent.TaskBudget
 TextBlock|ported|domains/messages.TextBlock
 ThinkingBlock|ported|domains/messages.ThinkingBlock
 ThinkingConfig|partial|domains/agent.Options: Thinking is a string
