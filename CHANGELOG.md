@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`docs/upstream-surface.txt`**: every name the Python SDK exports, with whether this SDK ports it, ports part
+  of it, lacks it (51 names) or skips it, checked by `go test .` (symbols exist) and, given a checkout in
+  `UPSTREAM_PYTHON_SDK`, against upstream's `__all__`. No API change.
 - **Session summaries for `SessionStore` adapters** (`domains/sessions`), ported from upstream's `fold_session_summary`:
   `FoldSessionSummary` keeps a per-session `SessionSummaryEntry` current inside `Append` (first prompt, custom and AI
   titles, last prompt, git branch, cwd, tag, creation time), the optional `SessionSummaryLister` interface returns them

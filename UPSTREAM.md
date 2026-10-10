@@ -105,3 +105,10 @@ date cannot be told apart from an unchecked one. Drift is reported by:
 The ` ```yaml ` block above is the single source of truth for these pins. Nothing else in the
 repo may hold a second copy; the previous pin lived in a dotfile that no reader and no scheduled
 job ever opened, which is how six months went by unnoticed.
+
+## Which upstream names exist here
+
+[docs/upstream-surface.txt](docs/upstream-surface.txt) lists every name the Python SDK exports and says, for
+each, whether this SDK ports it, ports part of it, lacks it, or skips it on purpose. `go test .` checks that
+each Go symbol it points at exists; with `UPSTREAM_PYTHON_SDK=<checkout>` it also checks the list against
+upstream's `__all__`, so a new upstream export fails until someone accounts for it.
