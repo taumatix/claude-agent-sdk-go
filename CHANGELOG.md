@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `sessionstoretest` has the 14th contract (summaries round-trip, share `ListSessions`' clock, ignore sub-transcripts,
   vanish on delete). Purely additive; a store that does not implement it is unchanged. Timestamps are parsed as
   RFC 3339, which is stricter than Python's `fromisoformat`.
+- **`sessions.ListSessionsFromStore(ctx, store, projectKey, projectPath, limit, offset)`**: lists a project's sessions
+  from any `SessionStore`, newest first. With `SessionSummaryLister` it is one summary call plus one `ListSessions`, and
+  `Load` runs only for sessions whose summary is missing or older than the listed mtime, and only inside the requested
+  page. Without summaries it loads each session (16 at a time). Sidechain and empty sessions are dropped before
+  pagination; a failed `Load` gives an empty-summary row. Purely additive.
 - **`Options.Thinking`** (`--thinking adaptive|disabled`), **`Options.ThinkingDisplay`** (`--thinking-display`) and
   **`Options.SystemPromptFile`** (`--system-prompt-file`), the three flags upstream's `_build_command` sends that this
   SDK did not. `Thinking` takes the place of `MaxThinkingTokens` when set; `SystemPromptFile` is sent instead of
