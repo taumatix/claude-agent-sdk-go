@@ -180,6 +180,7 @@ type Options struct {
     // Settings
     SettingSources []string  // nil = default; empty = disable all (--setting-sources "")
     Settings       string    // JSON string or path to a settings file
+    Sandbox *SandboxSettings // merged into the --settings value as its "sandbox" key
 
     // Beta features
     Betas []string  // e.g. ["context-1m-2025-08-07"]

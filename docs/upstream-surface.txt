@@ -147,9 +147,9 @@ tag_session_via_store|ported|domains/sessions.TagSessionViaStore
 delete_session_via_store|ported|domains/sessions.DeleteSessionViaStore
 fork_session_via_store|missing|forking works on the filesystem store, not on a SessionStore
 SdkBeta|partial|domains/agent.Options: Betas is []string
-SandboxSettings|missing|no sandbox options
-SandboxNetworkConfig|missing|no sandbox options
-SandboxIgnoreViolations|missing|no sandbox options
+SandboxSettings|ported|domains/agent.SandboxSettings
+SandboxNetworkConfig|ported|domains/agent.SandboxNetworkConfig
+SandboxIgnoreViolations|ported|domains/agent.SandboxIgnoreViolations
 create_sdk_mcp_server|ported|domains/agent.NewSDKMCPServer
 tool|ported|domains/agent.MCPTool
 SdkMcpTool|ported|domains/agent.MCPTool
