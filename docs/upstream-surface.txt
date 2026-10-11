@@ -130,7 +130,7 @@ SessionListSubkeysKey|ported|domains/sessions.SubkeyLister
 InMemorySessionStore|ported|domains/sessions.MemorySessionStore
 fold_session_summary|ported|domains/sessions.FoldSessionSummary
 MirrorErrorMessage|missing|transcript mirroring is not implemented (roadmap 6b)
-project_key_for_directory|missing|the project key is computed inside FilesystemStore only
+project_key_for_directory|ported|domains/sessions.ProjectKeyForDirectory
 import_session_to_store|missing|roadmap 6c
 list_sessions_from_store|ported|domains/sessions.ListSessionsFromStore
 get_session_info_from_store|ported|domains/sessions.GetSessionInfoFromStore

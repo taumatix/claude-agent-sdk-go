@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`FilesystemStore.ListSessions(projectPath)` found nothing for a project the CLI had filed.** It named the project directory
+  with separators turned into `-` and the leading `-` dropped (`Users-me-proj`); the CLI turns every non-alphanumeric into `-` and
+  keeps the leading one (`-Users-me-proj`, `-Users-me-my-repo-v2` for `my_repo.v2`), so a project-scoped listing was empty for any
+  real session. It now uses the CLI's name, still finds a directory named the old way, and finds a path over 200 characters whose
+  hash suffix differs from ours. Only the project-scoped listing was affected; `ListSessions("")` and reads by id scan every directory.
+  Checked against this machine's `~/.claude/projects` (19 sessions found where the old name found none).
+
 ### Added
+- **`sessions.ProjectKeyForDirectory(dir)`**: the project key the CLI files a directory under, for use as `SessionKey.ProjectKey`
+  (ports upstream's `project_key_for_directory`; no NFC normalisation, which would need `golang.org/x/text`).
 - **`sessions.FileSessionStore`** (`NewFileSessionStore(dir)`): a `SessionStore` with listing, deletion, sub-transcripts and
   summaries that keeps transcripts as JSON-lines files, so a mirrored session survives the process. It passes the whole
   `sessionstoretest` suite and is the first adapter run against a real clock: a summary older than the transcript's

@@ -252,6 +252,12 @@ caller does not hand-write JSON Schema.
 live `can_use_tool` request carries the optional context fields, and whether `updatedPermissions` from a suggestion is
 accepted. A live run that makes a Bash call under `default` permission mode would show both.
 
+**Found by the project-key work (2026-10-11):** `FilesystemStore` named project directories unlike the CLI, so a project-scoped
+listing was empty for real sessions; fixed. Left: `ProjectKeyForDirectory` and the lookup do not NFC-normalise as upstream does
+(needs `golang.org/x/text`, a first dependency; matters for a path with decomposed Unicode on macOS), and nothing yet checks the
+sanitizer against a CLI that actually filed a long (>200 character) path, whose hash the CLI computes with Bun rather than the
+JavaScript routine ported here.
+
 **Shape:** each of 1-2 is its own entry when it reaches the top; do not ship them as one.
 
 Left over from the CI wiring: the `Upstream surface` workflow (2026-10-10, weekly and on changes to the inventory) fails when upstream
