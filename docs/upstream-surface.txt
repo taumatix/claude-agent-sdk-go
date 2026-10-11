@@ -123,7 +123,7 @@ SessionMessage|ported|domains/sessions.SessionMessage
 SessionKey|ported|domains/sessions.SessionKey
 SessionStore|ported|domains/sessions.SessionStore
 SessionStoreEntry|ported|domains/sessions.SessionStoreEntry
-SessionStoreFlushMode|missing|transcript mirroring is not implemented (roadmap 6b)
+SessionStoreFlushMode|ported|domains/agent.SessionStoreFlush
 SessionStoreListEntry|ported|domains/sessions.SessionListEntry
 SessionSummaryEntry|ported|domains/sessions.SessionSummaryEntry
 SessionListSubkeysKey|ported|domains/sessions.SubkeyLister

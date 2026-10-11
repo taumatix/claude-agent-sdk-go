@@ -13,6 +13,7 @@ const (
 	TypeResult               MessageType = "result"
 	TypeStreamEvent          MessageType = "stream_event"
 	TypeRateLimitEvent       MessageType = "rate_limit_event"
+	TypeTranscriptMirror     MessageType = "transcript_mirror"
 	TypeConversationReset    MessageType = "conversation_reset"
 	TypeControlRequest       MessageType = "control_request"
 	TypeControlResponse      MessageType = "control_response"
@@ -460,4 +461,13 @@ type MCPToggleRequestBody struct {
 	Subtype    ControlRequestSubtype `json:"subtype"`
 	ServerName string                `json:"serverName"`
 	Enabled    bool                  `json:"enabled"`
+}
+
+// TranscriptMirror is a batch of transcript lines the CLI wrote to FilePath, sent
+// when the session was started with --session-mirror so a SessionStore can keep
+// a copy.
+type TranscriptMirror struct {
+	Type     MessageType      `json:"type"`
+	FilePath string           `json:"filePath"`
+	Entries  []map[string]any `json:"entries"`
 }

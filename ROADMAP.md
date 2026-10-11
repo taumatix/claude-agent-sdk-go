@@ -134,8 +134,7 @@ is the escape hatch, but it is a map, so a repeatable flag or an ordering needs 
 **Upstream diff** (2026-10-10, against `_build_command` on main): upstream's flags missing here were
 `--thinking`, `--thinking-display` and `--system-prompt-file` (typed since), `--task-budget` and `--session-mirror`.
 `--task-budget` is accepted by 2.1.283 but a small value (5000) ended a turn at once with no cost, so its
-semantics (a token budget for the task? a minimum?) need a look before it is typed; `--session-mirror` belongs to
-entry 6b.
+semantics (a token budget for the task? a minimum?) need a look before it is typed; `--session-mirror` shipped with `Options.SessionStore` (2026-10-11).
 
 **Left:** `claude --help` (2.1.283) lists more with no typed option: `--bare` (it changes how the CLI
 authenticates), `--replay-user-messages` (adds frames to the stream), `--tmux` (needs `--worktree`; interactive),
@@ -159,13 +158,15 @@ Also diff against upstream's `_build_command`, since upstream's list has been be
   a store whose two clocks can differ (a database `updated_at` against a client-stamped summary), and concurrent writers
   from two processes, which `FileSessionStore` does not coordinate. Add Postgres or S3 as a separate module so the SDK keeps
   no driver dependency, or a conformance case that injects skew between the two clocks.
-- **6b. Transcript mirroring:** `transcript_mirror` frames from the CLI appended to a configured
-  `SessionStore` (`Options.SessionStore`), batched and eager flush modes, `mirror_error` surfaced when
-  an `Append` fails. Needs an e2e against the fake CLI emitting those frames.
+- **6b. Transcript mirroring, live check** (the SDK side shipped 2026-10-11: `Options.SessionStore`, `SessionStoreFlush`,
+  `mirror_error`): run a real `claude --session-mirror` against `FileSessionStore` and compare the keys and entries with the
+  CLI's own `~/.claude/projects` files. Open questions it settles: whether the flag is accepted (it is not in `--help` of 2.1.283),
+  whether `filePath` is always under `CLAUDE_CONFIG_DIR/projects`, and the real frame sizes. Also unbuilt: upstream's 60 s append
+  timeout is fixed here, not an option, and a typed `MirrorError` on `messages.Message` instead of reading `System.Raw`.
 - **6c. Store-backed resume:** `Resume` materialising a session from the store when the local
   transcript is absent (`session_resume`), and `session_import`.
 
-The frame names and flush semantics are from upstream's source, not a live CLI; verify 6b against one.
+The frame names and flush semantics are from upstream's source and a stub CLI, not a live one; 6b above is the check.
 
 ## Check the SDK's wire vocabulary against the CLI binary, mechanically
 

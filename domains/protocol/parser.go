@@ -11,18 +11,19 @@ import (
 // Exactly one field will be non-nil for known message types.
 // Unknown types produce a zero-value WireMessage (all nil) for forward compatibility.
 type WireMessage struct {
-	User            *InboundRoleMessage
-	Assistant       *InboundRoleMessage
-	System          *SystemMessage
-	Result          *ResultMessage
-	StreamEvent     *StreamEvent
-	RateLimitEvent  *RateLimitEvent
-	ConvReset       *ConversationResetMessage
-	ControlRequest  *ControlRequestEnvelope
-	ControlResponse *ControlResponseEnvelope
-	ControlCancel   *ControlCancelRequest
-	End             *EndMessage
-	Error           *ErrorMessage
+	User             *InboundRoleMessage
+	Assistant        *InboundRoleMessage
+	System           *SystemMessage
+	Result           *ResultMessage
+	StreamEvent      *StreamEvent
+	RateLimitEvent   *RateLimitEvent
+	TranscriptMirror *TranscriptMirror
+	ConvReset        *ConversationResetMessage
+	ControlRequest   *ControlRequestEnvelope
+	ControlResponse  *ControlResponseEnvelope
+	ControlCancel    *ControlCancelRequest
+	End              *EndMessage
+	Error            *ErrorMessage
 }
 
 // ParseLine parses a single newline-delimited JSON message from the CLI.
@@ -95,6 +96,15 @@ func ParseLine(data []byte) (*WireMessage, error) {
 			}
 		}
 		msg.RateLimitEvent = &m
+
+	case TypeTranscriptMirror:
+		var m TranscriptMirror
+		if err := json.Unmarshal(data, &m); err != nil {
+			return nil, &sdkerrors.CLIJSONDecodeError{
+				Msg: "failed to decode transcript_mirror message", Line: data, OriginalError: err,
+			}
+		}
+		msg.TranscriptMirror = &m
 
 	case TypeConversationReset:
 		var m ConversationResetMessage

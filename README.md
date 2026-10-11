@@ -412,6 +412,24 @@ newID, _ := sessions.ForkSession(store, sessionID, 5)
 sessions.DeleteSession(store, sessionID)
 ```
 
+#### Mirroring the transcript to your own store
+
+```go
+opts := agent.Options{
+    SessionStore: sessions.NewFileSessionStore("/var/lib/myapp/transcripts"),
+    // SessionStoreFlush: agent.SessionStoreFlushEager, // append every frame, not per result
+}
+for msg, err := range agent.Query(ctx, "hello", opts) {
+    if msg.System != nil && msg.System.Subtype == "mirror_error" {
+        log.Printf("transcript not stored: %s", msg.System.Raw) // the session carries on
+    }
+}
+```
+
+Any `sessions.SessionStore` works. The CLI still writes its own transcript; the store gets a copy. Make `Append` skip an
+entry whose `uuid` it already holds, since a retried batch can overlap one that partly landed. `Append` runs on the
+message-reading goroutine, so a slow store slows reading.
+
 ### Error handling
 
 ```go
