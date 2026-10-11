@@ -134,3 +134,49 @@ func TestE2E_TwoSDKMCPServersWithOneNameAreRefused(t *testing.T) {
 	}
 	t.Fatal("Query yielded nothing")
 }
+
+// A typed tool is served like any other: the stub CLI lists it, sees the derived schema, and a
+// call decodes into the Go struct. Not covered: a live CLI.
+func TestE2E_ATypedMCPToolIsListedWithItsSchemaAndCalled(t *testing.T) {
+	type addArgs struct {
+		A float64 `json:"a" description:"first addend"`
+		B float64 `json:"b"`
+	}
+	var got addArgs
+	srv := agent.NewSDKMCPServer("calc", "1.2.3",
+		agent.NewTypedMCPTool("add", "Adds two numbers", func(_ context.Context, in addArgs) (agent.MCPToolResult, error) {
+			got = in
+			return agent.MCPToolResult{Content: []agent.MCPContent{agent.TextContent("5")}}, nil
+		}),
+		agent.MCPTool{Name: "fail", Handler: func(context.Context, json.RawMessage) (agent.MCPToolResult, error) {
+			return agent.MCPToolResult{}, errors.New("disk full")
+		}},
+		agent.MCPTool{Name: "explode", Handler: func(context.Context, json.RawMessage) (agent.MCPToolResult, error) {
+			panic("boom")
+		}},
+	)
+	opts := fakeOpts("old-cli-sdk-mcp", nil)
+	opts.MCPServers = []agent.MCPServerConfig{agent.SDKMCPServerConfig(srv)}
+
+	var report struct {
+		Answers []json.RawMessage `json:"answers"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(reportedAnswer(t, opts)), &report))
+	require.Len(t, report.Answers, 9)
+
+	var list struct {
+		MCPResponse struct {
+			Result struct {
+				Tools []struct {
+					Name        string          `json:"name"`
+					InputSchema json.RawMessage `json:"inputSchema"`
+				} `json:"tools"`
+			} `json:"result"`
+		} `json:"mcp_response"`
+	}
+	require.NoError(t, json.Unmarshal(report.Answers[2], &list))
+	require.Equal(t, "add", list.MCPResponse.Result.Tools[0].Name)
+	assert.JSONEq(t, `{"type":"object","required":["a","b"],"properties":{"a":{"type":"number","description":"first addend"},"b":{"type":"number"}}}`,
+		string(list.MCPResponse.Result.Tools[0].InputSchema))
+	assert.Equal(t, addArgs{A: 2, B: 3}, got, "the call reached the typed handler decoded")
+}

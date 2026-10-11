@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Checked against this machine's `~/.claude/projects` (19 sessions found where the old name found none).
 
 ### Added
+- **`agent.NewTypedMCPTool[T]`**: an in-process MCP tool whose JSON Schema is derived from a Go struct and whose handler receives the
+  decoded struct. Field names follow `json` tags; `description` and `enum` tags fill those keywords; pointers and `omitempty` fields are
+  optional. Additive; `MCPTool` with a hand-written schema is unchanged.
 - **`sessions.ProjectKeyForDirectory(dir)`**: the project key the CLI files a directory under, for use as `SessionKey.ProjectKey`
   (ports upstream's `project_key_for_directory`; no NFC normalisation, which would need `golang.org/x/text`).
 - **`sessions.FileSessionStore`** (`NewFileSessionStore(dir)`): a `SessionStore` with listing, deletion, sub-transcripts and
