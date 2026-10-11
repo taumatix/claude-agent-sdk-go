@@ -245,8 +245,8 @@ by what limits a deployment:
 end against 2.1.296 and check the `mcp__<server>__<tool>` name, `tools/call` arguments, and image content;
 (b) only tools are served: `resources/*`, `prompts/*`, `logging/setLevel`, and server-initiated notifications
 (`tools/list_changed`) or requests (sampling, roots) are not, and `notifications/cancelled` does not cancel a running
-handler (its `ctx` ends only with the session); (c) a typed helper that builds `InputSchema` from a Go struct, so a
-caller does not hand-write JSON Schema.
+handler (its `ctx` ends only with the session); (c) is done (2026-10-11, `NewTypedMCPTool`): its schema generator covers scalars, slices, maps, structs and pointers; a recursive struct is refused at build time. A `$defs`/`$ref` pass would
+allow one if a caller needs it, and `json.Number` and types with their own `MarshalJSON` are described by their Go kind, not their wire form.
 
 **Done:** permission results (`Options.ToolPermissionFunc`, 2026-10-10). Not yet seen against a live CLI: whether a
 live `can_use_tool` request carries the optional context fields, and whether `updatedPermissions` from a suggestion is

@@ -366,6 +366,24 @@ add := agent.MCPTool{
 opts.MCPServers = append(opts.MCPServers, agent.SDKMCPServerConfig(agent.NewSDKMCPServer("calc", "1.0.0", add)))
 ```
 
+To skip the hand-written schema, `agent.NewTypedMCPTool` derives it from a Go struct and decodes the arguments for you:
+
+```go
+type addArgs struct {
+    A float64 `json:"a" description:"first addend"`
+    B float64 `json:"b"`
+    Mode string `json:"mode,omitempty" enum:"fast,exact"`
+}
+
+add := agent.NewTypedMCPTool("add", "Adds two numbers",
+    func(ctx context.Context, in addArgs) (agent.MCPToolResult, error) {
+        return agent.MCPToolResult{Content: []agent.MCPContent{agent.TextContent(fmt.Sprint(in.A + in.B))}}, nil
+    })
+```
+
+A field is required unless it is a pointer or tagged `omitempty`/`omitzero`; `description` and `enum` tags fill those schema keywords.
+A type it cannot describe (a func, a channel, a recursive struct) panics when the tool is built.
+
 The model sees the tool as `mcp__calc__add`. An error returned by the handler, or a panic in it, fails that one call
 (`isError` on the result) and nothing else. Only tools are served: not resources or prompts, and the server cannot
 send requests or notifications to the CLI. Verified against the stub CLI, not yet a live one.
