@@ -20,10 +20,11 @@ type typedAddArgs struct {
 	Limit *int              `json:"limit"`
 	Meta  map[string]string `json:"meta,omitempty"`
 	Skip  string            `json:"-"`
-	note  string
+	quiet string
 }
 
 func TestNewTypedMCPToolDerivesTheSchemaFromTheStruct(t *testing.T) {
+	_ = typedAddArgs{quiet: "unexported fields stay out of the schema"}
 	tool := agent.NewTypedMCPTool("add", "Adds", func(context.Context, typedAddArgs) (agent.MCPToolResult, error) {
 		return agent.MCPToolResult{}, nil
 	})
