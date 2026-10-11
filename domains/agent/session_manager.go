@@ -11,6 +11,7 @@ import (
 	sdkerrors "github.com/taumatix/claude-agent-sdk-go/domains/errors"
 	"github.com/taumatix/claude-agent-sdk-go/domains/messages"
 	"github.com/taumatix/claude-agent-sdk-go/domains/protocol"
+	"github.com/taumatix/claude-agent-sdk-go/domains/sessions"
 	"github.com/taumatix/claude-agent-sdk-go/domains/transport"
 	"github.com/taumatix/claude-agent-sdk-go/shared/reqid"
 )
@@ -230,6 +231,14 @@ func (sm *sessionManager) readLoop() {
 	defer sm.wg.Done()
 	defer close(sm.msgCh)
 
+	var mirror *transcriptMirror
+	if sm.opts.SessionStore != nil {
+		mirror = newTranscriptMirror(sm.opts, sm.deliverMirrorError)
+		// Registered after close(msgCh), so it runs first and a final error can
+		// still be delivered.
+		defer func() { mirror.flush(context.WithoutCancel(sm.ctx)) }()
+	}
+
 	for {
 		data, err := sm.transport.Receive(sm.ctx)
 		if err != nil {
@@ -254,6 +263,10 @@ func (sm *sessionManager) readLoop() {
 		}
 
 		switch {
+		case wire.TranscriptMirror != nil:
+			if mirror != nil {
+				mirror.enqueue(sm.ctx, wire.TranscriptMirror.FilePath, wire.TranscriptMirror.Entries)
+			}
 		case wire.ControlResponse != nil:
 			sm.handleControlResponse(wire.ControlResponse)
 		case wire.ControlRequest != nil:
@@ -275,12 +288,32 @@ func (sm *sessionManager) readLoop() {
 			if convertErr != nil || msg == nil {
 				continue
 			}
+			if mirror != nil && msg.Result != nil {
+				mirror.flush(sm.ctx)
+			}
 			select {
 			case sm.msgCh <- *msg:
 			case <-sm.ctx.Done():
 				return
 			}
 		}
+	}
+}
+
+// deliverMirrorError surfaces a failed mirror append as a system message. It runs
+// on the read loop; a full buffer drops the report rather than stall the loop.
+func (sm *sessionManager) deliverMirrorError(key *sessions.SessionKey, errText string) {
+	wire, err := protocol.ParseLine(mirrorErrorLine(key, errText))
+	if err != nil {
+		return
+	}
+	msg, err := messages.FromWire(wire)
+	if err != nil || msg == nil {
+		return
+	}
+	select {
+	case sm.msgCh <- *msg:
+	default:
 	}
 }
 

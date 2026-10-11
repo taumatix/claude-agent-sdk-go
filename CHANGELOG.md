@@ -16,6 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Checked against this machine's `~/.claude/projects` (19 sessions found where the old name found none).
 
 ### Added
+- **Transcript mirroring: `Options.SessionStore` and `Options.SessionStoreFlush`.** Set a `sessions.SessionStore` and the CLI is
+  started with `--session-mirror`; the `transcript_mirror` frames it sends are appended to the store under the key its file path
+  implies (`<project>/<session>.jsonl`, or `<session>/subagents/agent-<id>.jsonl` as a subpath). The default `SessionStoreFlushBatched`
+  appends once per file when a result arrives, past 500 entries or 1 MiB, and when the session ends; `SessionStoreFlushEager`
+  appends every frame. A failed append is retried twice (0.2 s, 0.8 s; a timeout is not retried) and then dropped and reported as a
+  `system` message with subtype `mirror_error` (read `Raw`: `error`, and `key` when the path was understood). The session carries on;
+  the local transcript is unaffected. The store's `Append` runs on the read loop, so a slow store slows reading. Additive; zero
+  values change nothing. Shapes and flush rules are from upstream's source and a stub CLI, not a live one.
 - **`agent.NewTypedMCPTool[T]`**: an in-process MCP tool whose JSON Schema is derived from a Go struct and whose handler receives the
   decoded struct. Field names follow `json` tags; `description` and `enum` tags fill those keywords; pointers and `omitempty` fields are
   optional. Additive; `MCPTool` with a hand-written schema is unchanged.

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/taumatix/claude-agent-sdk-go/domains/sessions"
 	"github.com/taumatix/claude-agent-sdk-go/domains/transport"
 )
 
@@ -116,6 +117,20 @@ type Options struct {
 	// NoSessionPersistence keeps the session off disk, so it cannot be resumed
 	// (--no-session-persistence).
 	NoSessionPersistence bool
+
+	// SessionStore, when set, receives a copy of the transcript as the CLI writes
+	// it (--session-mirror). The local transcript is still written; a failing
+	// store never ends the session, it is reported as a "mirror_error" system
+	// message. Appends are retried twice, and an adapter should skip an entry
+	// whose "uuid" it already holds, since a retried batch may overlap one that
+	// partly landed.
+	SessionStore sessions.SessionStore
+
+	// SessionStoreFlush chooses when mirrored entries reach SessionStore: batched
+	// (the default) holds them until a result arrives or the buffer passes 500
+	// entries or 1 MiB; eager appends every frame as it arrives. Ignored without
+	// a SessionStore.
+	SessionStoreFlush SessionStoreFlush
 
 	// StrictMCPConfig ignores every MCP configuration except MCPServers (--strict-mcp-config).
 	StrictMCPConfig bool
@@ -337,6 +352,9 @@ func BuildCLIArgs(opts Options) []string {
 
 	if opts.JSONSchema != "" {
 		args = append(args, "--json-schema", opts.JSONSchema)
+	}
+	if opts.SessionStore != nil {
+		args = append(args, "--session-mirror")
 	}
 	if opts.NoSessionPersistence {
 		args = append(args, "--no-session-persistence")

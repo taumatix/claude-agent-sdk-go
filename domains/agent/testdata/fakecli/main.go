@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -199,6 +200,25 @@ func main() {
 					continue
 				}
 				emit(line)
+			}
+			if strings.HasPrefix(scenario, "mirror") {
+				// transcript_mirror frames, as sent when --session-mirror is on:
+				// two for the main transcript around one for a subagent's.
+				proj := filepath.Join(os.Getenv("CLAUDE_CONFIG_DIR"), "projects", "-work-app")
+				if scenario == "mirror-outside" {
+					proj = filepath.Join(os.TempDir(), "elsewhere")
+				}
+				frame := func(path string, entries ...string) {
+					emit(`{"type":"transcript_mirror","filePath":` + strconv.Quote(path) +
+						`,"entries":[` + strings.Join(entries, ",") + `]}`)
+				}
+				frame(filepath.Join(proj, "sess-1.jsonl"),
+					`{"type":"user","uuid":"m1","message":{"role":"user","content":"hi"}}`,
+					`{"type":"assistant","uuid":"m2","message":{"role":"assistant","content":"hello"}}`)
+				frame(filepath.Join(proj, "sess-1", "subagents", "agent-7.jsonl"),
+					`{"type":"user","uuid":"s1","message":{"role":"user","content":"sub"}}`)
+				frame(filepath.Join(proj, "sess-1.jsonl"),
+					`{"type":"result","uuid":"m3"}`)
 			}
 			emit(compact(turn))
 			if sessionState && !both {
