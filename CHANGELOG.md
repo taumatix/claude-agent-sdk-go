@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Checked against this machine's `~/.claude/projects` (19 sessions found where the old name found none).
 
 ### Added
+- **`sessions.ForkSessionViaStore`**, the counterpart of upstream's `fork_session_via_store`: copies a session in a `SessionStore`
+  into a new one with fresh uuids, `parentUuid` chains kept (progress entries skipped), `sessionId` rewritten, `forkedFrom`
+  stamped, sidechains left out and a custom-title entry naming the fork. `ForkOptions{UpToMessageID, Title}`; new
+  `ErrSessionNotFound`. Run against `MemorySessionStore` and `FileSessionStore` and read back through the listing and message readers.
 - **Transcript mirroring: `Options.SessionStore` and `Options.SessionStoreFlush`.** Set a `sessions.SessionStore` and the CLI is
   started with `--session-mirror`; the `transcript_mirror` frames it sends are appended to the store under the key its file path
   implies (`<project>/<session>.jsonl`, or `<session>/subagents/agent-<id>.jsonl` as a subpath). The default `SessionStoreFlushBatched`

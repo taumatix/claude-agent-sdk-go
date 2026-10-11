@@ -145,7 +145,7 @@ ForkSessionResult|missing|ForkSession returns the new id only
 rename_session_via_store|ported|domains/sessions.RenameSessionViaStore
 tag_session_via_store|ported|domains/sessions.TagSessionViaStore
 delete_session_via_store|ported|domains/sessions.DeleteSessionViaStore
-fork_session_via_store|missing|forking works on the filesystem store, not on a SessionStore
+fork_session_via_store|ported|domains/sessions.ForkSessionViaStore
 SdkBeta|partial|domains/agent.Options: Betas is []string
 SandboxSettings|ported|domains/agent.SandboxSettings
 SandboxNetworkConfig|ported|domains/agent.SandboxNetworkConfig
