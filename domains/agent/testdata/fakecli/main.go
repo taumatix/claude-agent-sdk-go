@@ -129,6 +129,7 @@ func main() {
 	}
 
 	mcpState := map[string]string{"files": "connected", "search": "failed"}
+	runningTasks := map[string]bool{"task-1": true}
 
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
@@ -140,6 +141,8 @@ func main() {
 				Subtype    string `json:"subtype"`
 				ServerName string `json:"serverName"`
 				Enabled    bool   `json:"enabled"`
+				TaskID     string `json:"task_id"`
+				MessageID  string `json:"user_message_id"`
 			} `json:"request"`
 		}
 		if err := json.Unmarshal(scanner.Bytes(), &frame); err != nil {
@@ -167,6 +170,21 @@ func main() {
 					mcpState[frame.Request.ServerName] = "connected"
 				default:
 					mcpState[frame.Request.ServerName] = "disabled"
+				}
+			case "stop_task":
+				if !runningTasks[frame.Request.TaskID] {
+					emit(fmt.Sprintf(
+						`{"type":"control_response","response":{"subtype":"error","request_id":%q,"error":%q}}`,
+						frame.RequestID, "no running task "+frame.Request.TaskID))
+					continue
+				}
+				delete(runningTasks, frame.Request.TaskID)
+			case "rewind_files":
+				if frame.Request.MessageID != "msg-checkpointed" {
+					emit(fmt.Sprintf(
+						`{"type":"control_response","response":{"subtype":"error","request_id":%q,"error":%q}}`,
+						frame.RequestID, "no file checkpoint for message "+frame.Request.MessageID))
+					continue
 				}
 			case "get_context_usage":
 				body = contextUsageBody

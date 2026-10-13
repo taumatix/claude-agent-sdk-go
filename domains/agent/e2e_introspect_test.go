@@ -111,6 +111,27 @@ func TestE2E_AnUnknownMCPServerIsTheCLIsError(t *testing.T) {
 	assert.Contains(t, err.Error(), "no MCP server named nope")
 }
 
+func TestE2E_ARunningTaskCanBeStoppedOnce(t *testing.T) {
+	client, ctx := connectedClient(t)
+
+	require.NoError(t, client.StopTask(ctx, "task-1"))
+	err := client.StopTask(ctx, "task-1")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no running task task-1")
+	err = client.StopTask(ctx, "nope")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no running task nope")
+}
+
+func TestE2E_FilesRewindToACheckpointedMessage(t *testing.T) {
+	client, ctx := connectedClient(t)
+
+	require.NoError(t, client.RewindFiles(ctx, "msg-checkpointed"))
+	err := client.RewindFiles(ctx, "msg-other")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no file checkpoint for message msg-other")
+}
+
 func TestE2E_IntrospectionNeedsAConnection(t *testing.T) {
 	client := agent.NewClient(fakeOpts("old-cli", nil))
 	_, err := client.MCPStatus(context.Background())
@@ -119,4 +140,6 @@ func TestE2E_IntrospectionNeedsAConnection(t *testing.T) {
 	assert.Error(t, err)
 	assert.Error(t, client.ReconnectMCPServer(context.Background(), "files"))
 	assert.Error(t, client.ToggleMCPServer(context.Background(), "files", true))
+	assert.Error(t, client.StopTask(context.Background(), "task-1"))
+	assert.Error(t, client.RewindFiles(context.Background(), "msg-checkpointed"))
 }
