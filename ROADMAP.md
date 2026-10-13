@@ -227,10 +227,11 @@ that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows.
 partial (a string or raw JSON where upstream has a type), 32 missing, 2 skipped. Missing is not evenly spread. Ordered
 by what limits a deployment:
 
-1. **The typed `system/init` message**, and the remaining control requests upstream's client sends (`rewind_files`,
-   `stop_task`, and others in `_internal/query.py`). `MCPStatus`, `ContextUsage`, `ReconnectMCPServer` and
-   `ToggleMCPServer` are verified against the stub CLI only, whose bodies and request shapes (`mcp_reconnect`,
-   `mcp_toggle`) are read from the Python SDK, not captured from a live CLI.
+1. **The typed `system/init` message**, and the remaining control requests upstream's client sends (others in
+   `_internal/query.py`; `stop_task` and `rewind_files` shipped 2026-10-13). `MCPStatus`, `ContextUsage`, `ReconnectMCPServer`,
+   `ToggleMCPServer`, `StopTask` and `RewindFiles` are verified against the stub CLI only, whose bodies and request shapes
+   (`mcp_reconnect`, `mcp_toggle`, `stop_task`, `rewind_files`) are read from the Python SDK, not captured from a live CLI.
+   `RewindFiles` has no option yet to turn file checkpointing on; a user sets the environment variable themselves.
 2. **Store-backed session functions** (`fork_session_via_store` shipped 2026-10-11, tested on `MemorySessionStore` and `FileSessionStore` with entries shaped from upstream's source, never a store a live CLI mirrored into; subagent listing and reads shipped 2026-10-10; the info and message reads
    shipped 2026-10-10 and rename, tag and delete the same day): a store can be listed, read, renamed, tagged, deleted
    from and forked. The subagent reads are tested on `MemorySessionStore` with entries shaped from upstream's source, never against a store a live CLI mirrored into (that needs 6b). `TagSessionViaStore` skips upstream's NFKC step (it needs `golang.org/x/text`, a first

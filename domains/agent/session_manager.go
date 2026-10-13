@@ -195,6 +195,18 @@ func (sm *sessionManager) MCPToggle(ctx context.Context, server string, enabled 
 	return err
 }
 
+// StopTask asks the CLI to stop a running background task.
+func (sm *sessionManager) StopTask(ctx context.Context, taskID string) error {
+	_, err := sm.sendControlRequest(ctx, protocol.StopTaskRequestBody{Subtype: protocol.SubtypeStopTask, TaskID: taskID})
+	return err
+}
+
+// RewindFiles asks the CLI to restore files to their state at a user message.
+func (sm *sessionManager) RewindFiles(ctx context.Context, userMessageID string) error {
+	_, err := sm.sendControlRequest(ctx, protocol.RewindFilesRequestBody{Subtype: protocol.SubtypeRewindFiles, UserMessageID: userMessageID})
+	return err
+}
+
 // ContextUsage asks the CLI how the context window is being used.
 func (sm *sessionManager) ContextUsage(ctx context.Context) (*protocol.ContextUsageResponse, error) {
 	raw, err := sm.sendControlRequest(ctx, protocol.IntrospectRequestBody{Subtype: protocol.SubtypeGetContextUsage})

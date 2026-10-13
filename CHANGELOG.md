@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **`Client.StopTask` and `Client.RewindFiles`**: stop a running background task by its task id, and restore the files a session
+  edited to their state at a user message (needs file checkpointing on for the session). The CLI's refusal is returned as the error.
+
 ## [0.12.0] - 2026-10-13
 
 ### Fixed

@@ -275,6 +275,8 @@ const (
 	SubtypeMCPToggle       ControlRequestSubtype = "mcp_toggle"
 	SubtypeGetContextUsage ControlRequestSubtype = "get_context_usage"
 	SubtypeMCPMessage      ControlRequestSubtype = "mcp_message"
+	SubtypeStopTask        ControlRequestSubtype = "stop_task"
+	SubtypeRewindFiles     ControlRequestSubtype = "rewind_files"
 )
 
 // ControlRequestBase provides the subtype field common to all control request bodies.
@@ -461,6 +463,18 @@ type MCPToggleRequestBody struct {
 	Subtype    ControlRequestSubtype `json:"subtype"`
 	ServerName string                `json:"serverName"`
 	Enabled    bool                  `json:"enabled"`
+}
+
+// StopTaskRequestBody asks the CLI to stop a running background task.
+type StopTaskRequestBody struct {
+	Subtype ControlRequestSubtype `json:"subtype"`
+	TaskID  string                `json:"task_id"`
+}
+
+// RewindFilesRequestBody asks the CLI to restore files to their state at a user message.
+type RewindFilesRequestBody struct {
+	Subtype       ControlRequestSubtype `json:"subtype"`
+	UserMessageID string                `json:"user_message_id"`
 }
 
 // TranscriptMirror is a batch of transcript lines the CLI wrote to FilePath, sent

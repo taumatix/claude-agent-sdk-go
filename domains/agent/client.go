@@ -174,3 +174,30 @@ func (c *Client) ToggleMCPServer(ctx context.Context, server string, enabled boo
 	}
 	return sm.MCPToggle(ctx, server, enabled)
 }
+
+// StopTask stops a running background task (a subagent or background command) by the
+// task id its task_started message carried. The CLI's refusal, such as an unknown or
+// finished task, is returned as the error.
+func (c *Client) StopTask(ctx context.Context, taskID string) error {
+	c.mu.Lock()
+	sm := c.sm
+	c.mu.Unlock()
+	if sm == nil {
+		return fmt.Errorf("not connected")
+	}
+	return sm.StopTask(ctx, taskID)
+}
+
+// RewindFiles restores the files the session edited to their state at the user message
+// with this uuid. The CLI refuses unless file checkpointing is on for the session (the
+// CLAUDE_CODE_ENABLE_SDK_FILE_CHECKPOINTING environment variable) and the message has a
+// checkpoint; its reason is returned as the error.
+func (c *Client) RewindFiles(ctx context.Context, userMessageID string) error {
+	c.mu.Lock()
+	sm := c.sm
+	c.mu.Unlock()
+	if sm == nil {
+		return fmt.Errorf("not connected")
+	}
+	return sm.RewindFiles(ctx, userMessageID)
+}
