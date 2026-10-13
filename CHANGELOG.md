@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-13
+
 ### Fixed
 - **`FilesystemStore.ListSessions(projectPath)` found nothing for a project the CLI had filed.** It named the project directory
   with separators turned into `-` and the leading `-` dropped (`Users-me-proj`); the CLI turns every non-alphanumeric into `-` and
@@ -442,7 +444,8 @@ shapes grow with the CLI, and a raw field stays forward-compatible where a struc
 
 - CI now gates every pull request on build, `go test -race` (Go 1.23 and stable), `gofmt`, `go vet`, `staticcheck`, and an `apidiff` check that fails on incompatible public API changes.
 
-[Unreleased]: https://github.com/taumatix/claude-agent-sdk-go/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/taumatix/claude-agent-sdk-go/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/taumatix/claude-agent-sdk-go/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.11.0
 [0.10.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.10.0
 [0.9.0]: https://github.com/taumatix/claude-agent-sdk-go/releases/tag/v0.9.0
