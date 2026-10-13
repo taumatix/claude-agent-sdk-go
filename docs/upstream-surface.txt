@@ -31,7 +31,7 @@ TaskUpdatedMessage|ported|domains/messages.TaskUpdatedMessage
 TaskNotificationMessage|ported|domains/messages.TaskNotificationMessage
 TaskNotificationStatus|ported|domains/messages.TaskStatus
 TaskUpdatedStatus|ported|domains/messages.TaskStatus
-TERMINAL_TASK_STATUSES|missing|no helper telling a terminal TaskStatus from a live one
+TERMINAL_TASK_STATUSES|ported|domains/messages.TaskStatus.IsTerminal
 TaskUsage|ported|domains/messages.TaskUsage
 ResultMessage|ported|domains/messages.ResultMessage
 ModelUsage|partial|domains/messages.ResultMessage: ModelUsage is raw JSON, not a typed map
@@ -114,10 +114,10 @@ AgentDefinition|partial|domains/agent.AgentDefinition: description and prompt on
 SettingSource|partial|domains/agent.Options: SettingSources is []string
 SdkPluginConfig|partial|domains/agent.Options: PluginDirs and PluginURLs
 list_sessions|ported|domains/sessions.ListSessions
-get_session_info|missing|no single-session metadata lookup
+get_session_info|partial|domains/sessions.GetSession returns the info with the messages; no info-only read from disk
 get_session_messages|ported|domains/sessions.GetSession
-list_subagents|missing|sub-transcripts are not listed by the SDK
-get_subagent_messages|missing|sub-transcripts are not read by the SDK
+list_subagents|partial|domains/sessions.ListSubagentsFromStore; no read from the CLI's files on disk
+get_subagent_messages|partial|domains/sessions.GetSubagentMessagesFromStore; no read from the CLI's files on disk
 SDKSessionInfo|ported|domains/sessions.SessionInfo
 SessionMessage|ported|domains/sessions.SessionMessage
 SessionKey|ported|domains/sessions.SessionKey
@@ -129,7 +129,7 @@ SessionSummaryEntry|ported|domains/sessions.SessionSummaryEntry
 SessionListSubkeysKey|ported|domains/sessions.SubkeyLister
 InMemorySessionStore|ported|domains/sessions.MemorySessionStore
 fold_session_summary|ported|domains/sessions.FoldSessionSummary
-MirrorErrorMessage|missing|transcript mirroring is not implemented (roadmap 6b)
+MirrorErrorMessage|partial|a failed mirror append is a SystemMessage with subtype mirror_error, not a typed message
 project_key_for_directory|ported|domains/sessions.ProjectKeyForDirectory
 import_session_to_store|missing|roadmap 6c
 list_sessions_from_store|ported|domains/sessions.ListSessionsFromStore

@@ -223,8 +223,8 @@ that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows.
 
 ## What the surface inventory found missing
 
-**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (2026-10-10): 77 ported, 48
-partial (a string or raw JSON where upstream has a type), 32 missing, 2 skipped. Missing is not evenly spread. Ordered
+**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (rechecked against the code 2026-10-13): 85 ported, 52
+partial (a string or raw JSON where upstream has a type), 20 missing, 2 skipped. Missing is not evenly spread. Ordered
 by what limits a deployment:
 
 1. **The typed `system/init` message**, and the remaining control requests upstream's client sends (others in
