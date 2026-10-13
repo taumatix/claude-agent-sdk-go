@@ -43,9 +43,9 @@ RateLimitType|partial|domains/protocol.RateLimitInfo: a string, not an enum
 StreamEvent|ported|domains/messages.StreamEventMessage
 ConversationResetMessage|ported|domains/messages.ConversationResetMessage
 Message|ported|domains/messages.Message
-MessageOrigin|partial|domains/messages.UserMessage: Origin is the CLI's raw JSON
-MessageOriginKind|missing|origin kinds are not enumerated
-TaskNotificationOriginSubkind|missing|origin kinds are not enumerated
+MessageOrigin|ported|domains/messages.MessageOrigin
+MessageOriginKind|ported|domains/messages.OriginKind
+TaskNotificationOriginSubkind|ported|domains/messages.TaskNotificationSubkind
 ClaudeAgentOptions|ported|domains/agent.Options
 TaskBudget|ported|domains/agent.TaskBudget
 TextBlock|ported|domains/messages.TextBlock

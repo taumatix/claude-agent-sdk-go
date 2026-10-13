@@ -100,6 +100,10 @@ func main() {
 		result = strings.TrimSuffix(result, "}") +
 			`,"deferred_tool_use":{"id":"toolu_01","name":"Bash","input":{"command":"ls -la"}}}`
 	}
+	// A turn the session started on its own: the result names the origin of the message that triggered it.
+	if os.Getenv("FAKECLI_SCENARIO") == "origin" {
+		result = strings.TrimSuffix(result, "}") + `,"origin":{"kind":"task-notification","subkind":"scheduled-trigger"}}`
+	}
 	// The CLI spells the per-model usage key "modelUsage" (captured from 2.1.283).
 	if os.Getenv("FAKECLI_SCENARIO") == "modelusage" {
 		result = strings.TrimSuffix(result, "}") +
@@ -400,6 +404,10 @@ func main() {
 				emit(bgShellStarted)
 				emit(result)
 				continue
+			}
+			if scenario == "origin" {
+				emit(`{"type":"user","session_id":"e2e","uuid":"u-peer","message":{"role":"user","content":"hello"},` +
+					`"origin":{"kind":"peer","from":"unix:/s","name":"Ana","body":"hello","verifiedPeerPid":4242}}`)
 			}
 			emit(result)
 

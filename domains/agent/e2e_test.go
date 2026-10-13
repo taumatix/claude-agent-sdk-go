@@ -297,6 +297,51 @@ func TestE2E_ATurnWithNothingDeferredHasNoDeferredToolUse(t *testing.T) {
 	}
 }
 
+// An application tells a turn the session started on its own from one it submitted by the origin the
+// CLI attaches to a user message and to the result of the turn it triggered.
+func TestE2E_MessageOriginReachesTheCallerTyped(t *testing.T) {
+	t.Setenv("FAKECLI_SCENARIO", "origin")
+	var user *messages.UserMessage
+	var res *messages.ResultMessage
+	for _, m := range queryFakeCLI(t, "hi") {
+		if m.User != nil && m.User.Origin != nil {
+			user = m.User
+		}
+		if m.Result != nil {
+			res = m.Result
+		}
+	}
+	require.NotNil(t, user, "the injected user message never reached the caller")
+	uo, err := user.ParsedOrigin()
+	require.NoError(t, err)
+	require.NotNil(t, uo)
+	assert.Equal(t, messages.OriginPeer, uo.Kind)
+	assert.Equal(t, "Ana", uo.Name)
+	assert.Equal(t, "hello", uo.Body)
+	require.NotNil(t, uo.VerifiedPeerPID)
+	assert.Equal(t, 4242, *uo.VerifiedPeerPID)
+	assert.False(t, uo.IsHuman())
+
+	require.NotNil(t, res)
+	ro, err := res.ParsedOrigin()
+	require.NoError(t, err)
+	require.NotNil(t, ro)
+	assert.Equal(t, messages.OriginTaskNotification, ro.Kind)
+	assert.Equal(t, messages.SubkindScheduledTrigger, ro.Subkind)
+	assert.False(t, ro.IsHuman(), "a scheduled task's turn is not one this application submitted")
+}
+
+// A turn the application submitted carries no origin, which reads as not injected.
+func TestE2E_AnUnattributedTurnHasNoOrigin(t *testing.T) {
+	for _, m := range queryFakeCLI(t, "hi") {
+		if m.Result != nil {
+			o, err := m.Result.ParsedOrigin()
+			require.NoError(t, err)
+			assert.Nil(t, o)
+		}
+	}
+}
+
 // The CLI sends the per-model usage as "modelUsage"; the SDK read "model_usage", so ModelUsage was always empty.
 // The frame is the shape a live 2.1.283 result carries.
 func TestE2E_ModelUsageReachesTheCaller(t *testing.T) {
