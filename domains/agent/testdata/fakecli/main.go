@@ -268,7 +268,13 @@ func main() {
 				emit(bgAgentStarted)
 				emit(result)
 				emit(`{"type":"control_request","request_id":"hook-after-result",` +
-					`"request":{"subtype":"hook_callback","callback_id":"hook_0","input":{"hook_event_name":"SubagentStop"}}}`)
+					`"request":{"subtype":"hook_callback","callback_id":"hook_0","input":{"hook_event_name":"SubagentStop",` +
+					`"session_id":"e2e","transcript_path":"/t/e2e.jsonl","cwd":"/work","permission_mode":"default",` +
+					`"effort":{"level":"high"},"stop_hook_active":false,"agent_id":"agent-7",` +
+					`"agent_transcript_path":"/t/agent-7.jsonl","agent_type":"general-purpose",` +
+					`"last_assistant_message":"done","background_tasks":[{"id":"b1","type":"shell","status":"running",` +
+					`"description":"tail","command":"tail -f log"}],` +
+					`"session_crons":[{"id":"c1","schedule":"0 9 * * 1-5","recurring":true,"prompt":"standup"}]}}}`)
 				if !awaitResponse(scanner, "hook-after-result") {
 					return
 				}

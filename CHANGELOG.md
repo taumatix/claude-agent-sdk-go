@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Typed hook inputs**: `agent.ParseHookInput(raw)` decodes what a `HookHandler` receives into `*PreToolUseHookInput`,
+  `*PostToolUseHookInput`, `*PostToolUseFailureHookInput`, `*UserPromptSubmitHookInput`, `*StopHookInput`, `*SubagentStopHookInput`,
+  `*PreCompactHookInput`, `*NotificationHookInput`, `*SubagentStartHookInput` or `*PermissionRequestHookInput` (with `HookEffort`,
+  `HookBackgroundTask`, `SessionCronSummary`); an unmodelled event yields `*UnknownHookInput`. The handler signature is unchanged.
+  Fields checked against upstream source, not a live CLI.
 - **Typed MCP status values**: `MCPServerStatus.ConnectionStatus()` with `MCPStatusConnected`/`Failed`/`NeedsAuth`/`Pending`/`Disabled`
   constants, and `MCPToolInfo.ParsedAnnotations()` returning `MCPToolStatusAnnotations` (`ReadOnly`, `Destructive`, `OpenWorld`).
   The raw `Status` string and `Annotations` JSON are unchanged. Names checked against upstream source, not a live CLI.
