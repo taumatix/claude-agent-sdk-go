@@ -391,6 +391,13 @@ func systemPayloadFromWire(msg *Message, m *protocol.SystemMessage) {
 			SessionID:  p.SessionID,
 		}
 
+	case protocol.SystemSubtypeInit:
+		var p protocol.InitPayload
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return
+		}
+		msg.Init = initFromWire(p)
+
 	case protocol.SystemSubtypeInformational:
 		var p protocol.InformationalPayload
 		if err := json.Unmarshal(raw, &p); err != nil {

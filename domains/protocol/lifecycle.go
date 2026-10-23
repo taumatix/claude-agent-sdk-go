@@ -33,6 +33,7 @@ const (
 	SystemSubtypeThinkingTokens   SystemSubtype = "thinking_tokens"
 	SystemSubtypeCompactBoundary  SystemSubtype = "compact_boundary"
 	SystemSubtypeInformational    SystemSubtype = "informational"
+	SystemSubtypeInit             SystemSubtype = "init"
 )
 
 // TaskUsage is the usage tally reported on task_progress and task_notification.
@@ -274,4 +275,52 @@ type BackgroundTask struct {
 	Description string `json:"description"`
 	// Ambient marks a task hosts should exclude from activity indicators.
 	Ambient bool `json:"ambient,omitempty"`
+}
+
+// InitMCPServer is one MCP server listed on a system/init frame.
+type InitMCPServer struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	Source string `json:"source,omitempty"`
+}
+
+// InitPlugin is one loaded plugin listed on a system/init frame.
+type InitPlugin struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Version string `json:"version,omitempty"`
+}
+
+// InitPluginError is one plugin load failure listed on a system/init frame.
+type InitPluginError struct {
+	Plugin  string `json:"plugin"`
+	Type    string `json:"type"`
+	Message string `json:"message"`
+	Path    string `json:"path,omitempty"`
+}
+
+// InitPayload is the `system`/`init` frame: the session metadata the CLI sends at
+// the start of a turn. Key names are from upstream's SystemInitData
+// (claude-agent-sdk-python types.py), which mirrors the wire.
+type InitPayload struct {
+	UUID                   string            `json:"uuid,omitempty"`
+	SessionID              string            `json:"session_id,omitempty"`
+	Agents                 []string          `json:"agents,omitempty"`
+	APIKeySource           string            `json:"apiKeySource,omitempty"`
+	Betas                  []string          `json:"betas,omitempty"`
+	ClaudeCodeVersion      string            `json:"claude_code_version,omitempty"`
+	Cwd                    string            `json:"cwd,omitempty"`
+	Tools                  []string          `json:"tools,omitempty"`
+	MCPServers             []InitMCPServer   `json:"mcp_servers,omitempty"`
+	Model                  string            `json:"model,omitempty"`
+	PermissionMode         string            `json:"permissionMode,omitempty"`
+	SlashCommands          []string          `json:"slash_commands,omitempty"`
+	TerminalSlashCommands  []string          `json:"terminal_slash_commands,omitempty"`
+	OutputStyle            string            `json:"output_style,omitempty"`
+	Skills                 []string          `json:"skills,omitempty"`
+	Plugins                []InitPlugin      `json:"plugins,omitempty"`
+	PluginErrors           []InitPluginError `json:"plugin_errors,omitempty"`
+	FastModeState          string            `json:"fast_mode_state,omitempty"`
+	FastModeDisabledReason string            `json:"fast_mode_disabled_reason,omitempty"`
+	Capabilities           []string          `json:"capabilities,omitempty"`
 }
