@@ -56,7 +56,7 @@ ThinkingConfigEnabled|partial|domains/agent.Options: MaxThinkingTokens
 ThinkingConfigDisabled|partial|domains/agent.Options: Thinking is a string
 ToolUseBlock|ported|domains/messages.ToolUseBlock
 ToolResultBlock|ported|domains/messages.ToolResultBlock
-ServerToolName|missing|server tool names are not enumerated
+ServerToolName|ported|domains/messages.ServerToolName
 ServerToolUseBlock|ported|domains/messages.ServerToolUseBlock
 ServerToolResultBlock|ported|domains/messages.ServerToolResultBlock
 ContentBlock|ported|domains/messages.ContentBlock
@@ -70,7 +70,7 @@ PermissionResultAllow|ported|domains/agent.PermissionResult: Allow=true with Upd
 PermissionResultDeny|ported|domains/agent.PermissionResult: Allow=false with Message and Interrupt
 PermissionUpdate|ported|domains/agent.PermissionUpdate
 HookCallback|ported|domains/agent.HookHandler
-HookContext|missing|a hook handler gets the callback id and raw input only
+HookContext|skipped|upstream's HookContext holds only a reserved abort signal that is always None; a HookHandler's context.Context is the abort signal here
 HookInput|partial|domains/agent.HookInput: ParseHookInput decodes it, but a HookHandler still receives json.RawMessage
 BaseHookInput|ported|domains/agent.BaseHookInput
 PreToolUseHookInput|ported|domains/agent.PreToolUseHookInput
@@ -141,7 +141,7 @@ rename_session|ported|domains/sessions.RenameSession
 tag_session|ported|domains/sessions.TagSession
 delete_session|ported|domains/sessions.DeleteSession
 fork_session|ported|domains/sessions.ForkSession
-ForkSessionResult|missing|ForkSession returns the new id only
+ForkSessionResult|partial|domains/sessions.ForkSession: returns the new session id as a string, which is all upstream's ForkSessionResult carries
 rename_session_via_store|ported|domains/sessions.RenameSessionViaStore
 tag_session_via_store|ported|domains/sessions.TagSessionViaStore
 delete_session_via_store|ported|domains/sessions.DeleteSessionViaStore

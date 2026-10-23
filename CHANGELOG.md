@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`messages.ServerToolName`** with constants for the eight server tools upstream lists (`ServerToolWebSearch`, ...) and
+  `ServerToolUseBlock.ToolName()`. `Name` stays a string so a tool a newer CLI adds still decodes.
 - **`agent.CanUseToolShadowedWarning(opts)`**: the advisory text upstream warns with when a permission callback is set next to
   `PermissionModeBypass` or an `AllowedTools` entry that allows a whole tool (`Read`, `Read()`, `Read(*)`), which are approved before
   the callback runs. A session start now logs it (`log.Printf`, once per distinct message per process). Derived from upstream
