@@ -63,7 +63,7 @@ ContentBlock|ported|domains/messages.ContentBlock
 ContextUsageCategory|ported|domains/agent.ContextUsageCategory
 ContextUsageResponse|ported|domains/agent.ContextUsageResponse
 CanUseTool|ported|domains/agent.ToolPermissionHandler
-CanUseToolShadowedWarning|missing|the warning for a handler shadowed by a permission rule is not emitted
+CanUseToolShadowedWarning|ported|domains/agent.CanUseToolShadowedWarning
 ToolPermissionContext|ported|domains/agent.ToolPermissionRequest: suggestions, agent id, blocked path, decision reason, title, display name, description (via Options.ToolPermissionFunc)
 PermissionResult|ported|domains/agent.PermissionResult
 PermissionResultAllow|ported|domains/agent.PermissionResult: Allow=true with UpdatedInput and UpdatedPermissions

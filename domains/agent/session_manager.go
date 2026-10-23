@@ -46,6 +46,7 @@ type sessionManager struct {
 func newSessionManager(ctx context.Context, t transport.Transport, opts Options) *sessionManager {
 	ctx2, cancel := context.WithCancel(ctx)
 	servers, _ := sdkServers(opts) // duplicates are refused before a session starts
+	warnIfToolPermissionShadowed(opts)
 	sm := &sessionManager{
 		transport: t,
 		opts:      opts,
