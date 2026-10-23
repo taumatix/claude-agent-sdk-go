@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`agent.CanUseToolShadowedWarning(opts)`**: the advisory text upstream warns with when a permission callback is set next to
+  `PermissionModeBypass` or an `AllowedTools` entry that allows a whole tool (`Read`, `Read()`, `Read(*)`), which are approved before
+  the callback runs. A session start now logs it (`log.Printf`, once per distinct message per process). Derived from upstream
+  source; settings-file allow rules cannot be seen here.
 - **Typed hook outputs**: `SyncHookJSONOutput` / `AsyncHookJSONOutput` with `Map()`, and the 21 `*HookSpecificOutput` types
   (`PreToolUseHookSpecificOutput`, `SessionStartHookSpecificOutput`, ...), each sending its own `hookEventName`. A `HookHandler`
   still returns a map; `output.Map()` builds it. Key names checked against upstream source, not a live CLI.
