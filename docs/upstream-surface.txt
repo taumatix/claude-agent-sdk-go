@@ -11,11 +11,11 @@ McpServerConfig|ported|domains/agent.MCPServerConfig
 McpSdkServerConfig|ported|domains/agent.SDKMCPServerConfig
 McpServerStatus|ported|domains/agent.MCPServerStatus
 McpServerStatusConfig|partial|domains/agent.MCPServerStatus: Config is raw JSON, not a typed union
-McpServerConnectionStatus|missing|part of the MCP status response
-McpServerInfo|missing|part of the MCP status response
+McpServerConnectionStatus|ported|domains/agent.MCPConnectionStatus
+McpServerInfo|ported|domains/agent.MCPServerInfo
 McpStatusResponse|ported|domains/agent.MCPStatusResponse
-McpToolAnnotations|missing|part of the MCP status response
-McpToolInfo|missing|part of the MCP status response
+McpToolAnnotations|ported|domains/agent.MCPToolStatusAnnotations
+McpToolInfo|ported|domains/agent.MCPToolInfo
 UserMessage|ported|domains/messages.UserMessage
 AssistantMessage|ported|domains/messages.AssistantMessage
 SystemMessage|ported|domains/messages.SystemMessage

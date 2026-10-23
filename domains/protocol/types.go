@@ -405,6 +405,44 @@ type MCPToolInfo struct {
 	Annotations json.RawMessage `json:"annotations,omitempty"`
 }
 
+// MCPToolStatusAnnotations is the decoded form of MCPToolInfo.Annotations as an
+// mcp_status response carries it (upstream's McpToolAnnotations): camelCase keys,
+// not the readOnlyHint family the MCP spec itself uses.
+type MCPToolStatusAnnotations struct {
+	ReadOnly    bool `json:"readOnly,omitempty"`
+	Destructive bool `json:"destructive,omitempty"`
+	OpenWorld   bool `json:"openWorld,omitempty"`
+}
+
+// ParsedAnnotations decodes Annotations. It returns nil when the tool carries
+// none or they do not decode as an object.
+func (t MCPToolInfo) ParsedAnnotations() *MCPToolStatusAnnotations {
+	if len(t.Annotations) == 0 {
+		return nil
+	}
+	var a MCPToolStatusAnnotations
+	if err := json.Unmarshal(t.Annotations, &a); err != nil {
+		return nil
+	}
+	return &a
+}
+
+// MCPConnectionStatus is the connection state of an MCP server (upstream's
+// McpServerConnectionStatus). MCPServerStatus.Status stays a string so a value
+// added later still decodes; compare it with these through ConnectionStatus.
+type MCPConnectionStatus string
+
+const (
+	MCPStatusConnected MCPConnectionStatus = "connected"
+	MCPStatusFailed    MCPConnectionStatus = "failed"
+	MCPStatusNeedsAuth MCPConnectionStatus = "needs-auth"
+	MCPStatusPending   MCPConnectionStatus = "pending"
+	MCPStatusDisabled  MCPConnectionStatus = "disabled"
+)
+
+// ConnectionStatus returns Status as an MCPConnectionStatus.
+func (s MCPServerStatus) ConnectionStatus() MCPConnectionStatus { return MCPConnectionStatus(s.Status) }
+
 // MCPServerStatus is one server in an mcp_status response. Status is one of
 // "connected", "failed", "needs-auth", "pending" or "disabled"; it is left a
 // string so a value added later still decodes.

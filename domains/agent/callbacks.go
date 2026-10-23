@@ -78,12 +78,24 @@ type HookMatcher struct {
 // The returned map is serialized and sent back to the CLI as the hook response.
 type HookHandler func(ctx context.Context, callbackID string, input json.RawMessage) (map[string]interface{}, error)
 
+// Connection states of an MCP server in an mcp_status response.
+const (
+	MCPStatusConnected = protocol.MCPStatusConnected
+	MCPStatusFailed    = protocol.MCPStatusFailed
+	MCPStatusNeedsAuth = protocol.MCPStatusNeedsAuth
+	MCPStatusPending   = protocol.MCPStatusPending
+	MCPStatusDisabled  = protocol.MCPStatusDisabled
+)
+
 // Introspection responses, re-exported from the protocol package.
 type (
-	MCPStatusResponse    = protocol.MCPStatusResponse
-	MCPServerStatus      = protocol.MCPServerStatus
-	MCPServerInfo        = protocol.MCPServerInfo
-	MCPToolInfo          = protocol.MCPToolInfo
-	ContextUsageResponse = protocol.ContextUsageResponse
-	ContextUsageCategory = protocol.ContextUsageCategory
+	MCPStatusResponse = protocol.MCPStatusResponse
+	MCPServerStatus   = protocol.MCPServerStatus
+	MCPServerInfo     = protocol.MCPServerInfo
+	MCPToolInfo       = protocol.MCPToolInfo
+	// MCPToolStatusAnnotations is what MCPToolInfo.ParsedAnnotations returns.
+	MCPToolStatusAnnotations = protocol.MCPToolStatusAnnotations
+	MCPConnectionStatus      = protocol.MCPConnectionStatus
+	ContextUsageResponse     = protocol.ContextUsageResponse
+	ContextUsageCategory     = protocol.ContextUsageCategory
 )
