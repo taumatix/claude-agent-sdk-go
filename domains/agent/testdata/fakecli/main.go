@@ -275,8 +275,13 @@ func main() {
 					`"last_assistant_message":"done","background_tasks":[{"id":"b1","type":"shell","status":"running",` +
 					`"description":"tail","command":"tail -f log"}],` +
 					`"session_crons":[{"id":"c1","schedule":"0 9 * * 1-5","recurring":true,"prompt":"standup"}]}}}`)
-				if !awaitResponse(scanner, "hook-after-result") {
+				resp, ok := awaitResponseLine(scanner, "hook-after-result")
+				if !ok {
 					return
+				}
+				// What the hook answered, so a test can see the exact bytes the CLI got.
+				if f := os.Getenv("FAKECLI_HOOK_RESPONSE_FILE"); f != "" {
+					_ = os.WriteFile(f, []byte(resp), 0o600)
 				}
 				emit(levelEmpty)
 				emit(bgAgentDone)

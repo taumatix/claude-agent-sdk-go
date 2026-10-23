@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Typed hook outputs**: `SyncHookJSONOutput` / `AsyncHookJSONOutput` with `Map()`, and the 21 `*HookSpecificOutput` types
+  (`PreToolUseHookSpecificOutput`, `SessionStartHookSpecificOutput`, ...), each sending its own `hookEventName`. A `HookHandler`
+  still returns a map; `output.Map()` builds it. Key names checked against upstream source, not a live CLI.
 - **Typed hook inputs**: `agent.ParseHookInput(raw)` decodes what a `HookHandler` receives into `*PreToolUseHookInput`,
   `*PostToolUseHookInput`, `*PostToolUseFailureHookInput`, `*UserPromptSubmitHookInput`, `*StopHookInput`, `*SubagentStopHookInput`,
   `*PreCompactHookInput`, `*NotificationHookInput`, `*SubagentStartHookInput` or `*PermissionRequestHookInput` (with `HookEffort`,
