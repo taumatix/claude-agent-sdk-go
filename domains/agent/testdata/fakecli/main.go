@@ -79,6 +79,14 @@ var lifecycle = []string{
 	`{"type":"system","subtype":"compact_boundary","content":"Conversation compacted",` +
 		`"compact_metadata":{"trigger":"manual","pre_tokens":33919,"post_tokens":3337,"duration_ms":12564},` +
 		`"session_id":"e2e","uuid":"u-cb"}`,
+	`{"type":"system","subtype":"init","apiKeySource":"none","claude_code_version":"2.1.296","cwd":"/work",` +
+		`"tools":["Bash","Read"],"mcp_servers":[{"name":"calc","status":"connected","source":"sdk"}],` +
+		`"model":"claude-sonnet-4-5","permissionMode":"default","slash_commands":["compact","exit"],` +
+		`"terminal_slash_commands":["exit"],"output_style":"default","skills":["pdf"],` +
+		`"plugins":[{"name":"p1","path":"/p1","version":"1.2.0"}],` +
+		`"plugin_errors":[{"plugin":"inline[0]","type":"path-not-found","message":"gone","path":"/nope"}],` +
+		`"fast_mode_state":"cooldown","fast_mode_disabled_reason":"pending","capabilities":["interrupt_receipt_v1"],` +
+		`"session_id":"e2e","uuid":"u-init"}`,
 	`{"type":"system","subtype":"informational","content":"Context is 90% full","level":"warning",` +
 		`"prevent_continuation":false,"session_id":"e2e","uuid":"u-info"}`,
 }

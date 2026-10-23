@@ -55,6 +55,9 @@ type Message struct {
 	// CompactBoundary is set for the compact_boundary subtype: the conversation
 	// was compacted, by /compact or automatically.
 	CompactBoundary *CompactBoundaryMessage
+	// Init is set for the init subtype: the session metadata (model, tools, MCP
+	// servers, plugins, capabilities) the CLI sends at the start of a turn.
+	Init *SystemInitMessage
 	// Informational is set for the informational subtype: a notice from the CLI
 	// meant for the user's eyes.
 	Informational *InformationalMessage

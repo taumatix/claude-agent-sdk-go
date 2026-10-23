@@ -223,12 +223,12 @@ that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows.
 
 ## What the surface inventory found missing
 
-**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (rechecked against the code 2026-10-13): 88 ported, 51
-partial (a string or raw JSON where upstream has a type), 18 missing, 2 skipped. Missing is not evenly spread. Ordered
+**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (rechecked against the code 2026-10-13): 92 ported, 53
+partial (a string or raw JSON where upstream has a type), 12 missing, 2 skipped. Missing is not evenly spread. Ordered
 by what limits a deployment:
 
-1. **The typed `system/init` message**, and the remaining control requests upstream's client sends (others in
-   `_internal/query.py`; `stop_task` and `rewind_files` shipped 2026-10-13). `MCPStatus`, `ContextUsage`, `ReconnectMCPServer`,
+1. **The remaining control requests upstream's client sends (others in
+   `_internal/query.py`; the typed `system/init` message shipped 2026-10-23 from upstream's `SystemInitData` source, never compared with a live init frame; `stop_task` and `rewind_files` shipped 2026-10-13). `MCPStatus`, `ContextUsage`, `ReconnectMCPServer`,
    `ToggleMCPServer`, `StopTask` and `RewindFiles` are verified against the stub CLI only, whose bodies and request shapes
    (`mcp_reconnect`, `mcp_toggle`, `stop_task`, `rewind_files`) are read from the Python SDK, not captured from a live CLI.
    `RewindFiles` has no option yet to turn file checkpointing on; a user sets the environment variable themselves.

@@ -428,3 +428,30 @@ func TestE2E_InformationalArrivesTyped(t *testing.T) {
 	assert.Equal(t, "warning", notes[0].Level)
 	assert.False(t, notes[0].PreventContinuation)
 }
+
+// The stub plays an init frame whose keys are taken from upstream's
+// SystemInitData; no live CLI was run, so this proves the typing, not the wire.
+func TestE2E_InitArrivesTyped(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	var inits []*messages.SystemInitMessage
+	for _, m := range collect(t, agent.Query(ctx, "hi", fakeOpts("old-cli", nil))) {
+		if m.Init != nil {
+			require.NotNil(t, m.System, "a typed init must still arrive as System")
+			inits = append(inits, m.Init)
+		}
+	}
+	require.Len(t, inits, 1)
+	i := inits[0]
+	assert.Equal(t, "2.1.296", i.ClaudeCodeVersion)
+	assert.Equal(t, "none", i.APIKeySource)
+	assert.Equal(t, "default", i.PermissionMode)
+	assert.Equal(t, []string{"Bash", "Read"}, i.Tools)
+	assert.Equal(t, []messages.SystemInitMCPServer{{Name: "calc", Status: "connected", Source: "sdk"}}, i.MCPServers)
+	assert.Equal(t, []messages.SystemInitPlugin{{Name: "p1", Path: "/p1", Version: "1.2.0"}}, i.Plugins)
+	assert.Equal(t, []messages.SystemInitPluginError{{Plugin: "inline[0]", Type: "path-not-found", Message: "gone", Path: "/nope"}}, i.PluginErrors)
+	assert.Equal(t, "cooldown", i.FastModeState)
+	assert.Equal(t, "pending", i.FastModeDisabledReason)
+	assert.Equal(t, []string{"interrupt_receipt_v1"}, i.Capabilities)
+	assert.Equal(t, []string{"exit"}, i.TerminalSlashCommands)
+}

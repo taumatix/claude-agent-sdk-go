@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Typed `system/init` message**: `Message.Init` (`messages.SystemInitMessage`) carries the session metadata the CLI sends at
+  the start of a turn (model, cwd, tools, MCP servers with source, plugins and plugin errors, slash commands, fast-mode state,
+  capabilities). `System` is still populated. Keys checked against upstream's `SystemInitData` source, not a live CLI.
 - **`Client.StopTask` and `Client.RewindFiles`**: stop a running background task by its task id, and restore the files a session
   edited to their state at a user message (needs file checkpointing on for the session). The CLI's refusal is returned as the error.
 - **Typed message origin**: `messages.ParseOrigin`, `UserMessage.ParsedOrigin()` and `ResultMessage.ParsedOrigin()` decode the CLI's `origin`

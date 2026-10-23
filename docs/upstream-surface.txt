@@ -19,12 +19,12 @@ McpToolInfo|missing|part of the MCP status response
 UserMessage|ported|domains/messages.UserMessage
 AssistantMessage|ported|domains/messages.AssistantMessage
 SystemMessage|ported|domains/messages.SystemMessage
-SystemInitData|missing|the init system message is surfaced as SystemMessage with Raw, not typed
-SystemInitMcpServer|missing|part of SystemInitData
-SystemInitPlugin|missing|part of SystemInitData
-SystemInitPluginError|missing|part of SystemInitData
-FastModeState|missing|fast-mode state is not modelled
-FastModeDisabledReason|missing|fast-mode state is not modelled
+SystemInitData|ported|domains/messages.SystemInitMessage
+SystemInitMcpServer|ported|domains/messages.SystemInitMCPServer
+SystemInitPlugin|ported|domains/messages.SystemInitPlugin
+SystemInitPluginError|ported|domains/messages.SystemInitPluginError
+FastModeState|partial|domains/messages.SystemInitMessage: FastModeState is a string, not an enum
+FastModeDisabledReason|partial|domains/messages.SystemInitMessage: FastModeDisabledReason is a string, not an enum
 TaskStartedMessage|ported|domains/messages.TaskStartedMessage
 TaskProgressMessage|ported|domains/messages.TaskProgressMessage
 TaskUpdatedMessage|ported|domains/messages.TaskUpdatedMessage
