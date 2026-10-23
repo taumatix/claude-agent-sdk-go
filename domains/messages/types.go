@@ -228,6 +228,25 @@ type ServerToolUseBlock struct {
 	Input json.RawMessage
 }
 
+// ServerToolName names a server-side tool (upstream's ServerToolName). The set
+// is open: a newer CLI may send a name not listed here, which ServerToolUseBlock.Name
+// still carries as a plain string.
+type ServerToolName string
+
+const (
+	ServerToolAdvisor             ServerToolName = "advisor"
+	ServerToolWebSearch           ServerToolName = "web_search"
+	ServerToolWebFetch            ServerToolName = "web_fetch"
+	ServerToolCodeExecution       ServerToolName = "code_execution"
+	ServerToolBashCodeExecution   ServerToolName = "bash_code_execution"
+	ServerToolTextEditorCodeExec  ServerToolName = "text_editor_code_execution"
+	ServerToolToolSearchToolRegex ServerToolName = "tool_search_tool_regex"
+	ServerToolToolSearchToolBM25  ServerToolName = "tool_search_tool_bm25"
+)
+
+// ToolName returns Name as a ServerToolName, for comparing with the constants.
+func (b ServerToolUseBlock) ToolName() ServerToolName { return ServerToolName(b.Name) }
+
 // ServerToolResultBlock is the result of a server-side tool call. Content is
 // the raw payload from the API, opaque at this layer — inspect its "type" field
 // to decode a specific server tool's result schema.

@@ -223,8 +223,8 @@ that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows.
 
 ## What the surface inventory found missing
 
-**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (rechecked against the code 2026-10-13): 131 ported, 21
-partial (a string or raw JSON where upstream has a type), 5 missing, 2 skipped. Missing is not evenly spread. Ordered
+**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (rechecked against the code 2026-10-13): 132 ported, 22
+partial (a string or raw JSON where upstream has a type), 2 missing, 3 skipped. Two are missing: `import_session_to_store` (entry 6c) and `ResultError`, which is a decision rather than a gap: upstream raises it when the CLI exits non-zero after an `is_error` result, whereas this SDK returns the `ResultMessage` and ends the stream cleanly, and raising now would change what existing callers see. Ordered
 by what limits a deployment:
 
 1. **The remaining control requests upstream's client sends (others in

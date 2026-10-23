@@ -98,6 +98,7 @@ func TestE2E_ServerToolResultReachesTheCaller(t *testing.T) {
 
 	require.NotNil(t, assistant.Content[0].ServerToolUse)
 	assert.Equal(t, "web_search", assistant.Content[0].ServerToolUse.Name)
+	assert.Equal(t, messages.ServerToolWebSearch, assistant.Content[0].ServerToolUse.ToolName())
 
 	result := assistant.Content[1].ServerToolResult
 	require.NotNil(t, result, "the server tool result was dropped")
