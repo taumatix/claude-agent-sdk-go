@@ -42,9 +42,14 @@ func TestE2E_MCPStatusReportsEachServer(t *testing.T) {
 	require.Len(t, files.Tools, 1)
 	assert.Equal(t, "read", files.Tools[0].Name)
 	assert.JSONEq(t, `{"type":"stdio","command":"files-srv"}`, string(files.Config))
+	assert.Equal(t, agent.MCPStatusConnected, files.ConnectionStatus())
+	ann := files.Tools[0].ParsedAnnotations()
+	require.NotNil(t, ann)
+	assert.Equal(t, agent.MCPToolStatusAnnotations{ReadOnly: true}, *ann)
 
 	failed := st.MCPServers[1]
 	assert.Equal(t, "failed", failed.Status)
+	assert.Equal(t, agent.MCPStatusFailed, failed.ConnectionStatus())
 	assert.Equal(t, "spawn ENOENT", failed.Error)
 	assert.Nil(t, failed.ServerInfo)
 }

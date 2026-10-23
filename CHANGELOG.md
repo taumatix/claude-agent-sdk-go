@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Typed MCP status values**: `MCPServerStatus.ConnectionStatus()` with `MCPStatusConnected`/`Failed`/`NeedsAuth`/`Pending`/`Disabled`
+  constants, and `MCPToolInfo.ParsedAnnotations()` returning `MCPToolStatusAnnotations` (`ReadOnly`, `Destructive`, `OpenWorld`).
+  The raw `Status` string and `Annotations` JSON are unchanged. Names checked against upstream source, not a live CLI.
 - **Typed `system/init` message**: `Message.Init` (`messages.SystemInitMessage`) carries the session metadata the CLI sends at
   the start of a turn (model, cwd, tools, MCP servers with source, plugins and plugin errors, slash commands, fast-mode state,
   capabilities). `System` is still populated. Keys checked against upstream's `SystemInitData` source, not a live CLI.
