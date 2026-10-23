@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`sessions.ImportSessionToStore`**: replays a session the CLI wrote under `~/.claude/projects` (plus subagent transcripts and their
+  `.meta.json` sidecars as `agent_metadata` entries) into a `SessionStore`, keyed under the on-disk project directory name like a
+  live mirror. For migrating local sessions to a remote store or catching one up after a `mirror_error`. Written from upstream source.
 - **`messages.ServerToolName`** with constants for the eight server tools upstream lists (`ServerToolWebSearch`, ...) and
   `ServerToolUseBlock.ToolName()`. `Name` stays a string so a tool a newer CLI adds still decodes.
 - **`agent.CanUseToolShadowedWarning(opts)`**: the advisory text upstream warns with when a permission callback is set next to

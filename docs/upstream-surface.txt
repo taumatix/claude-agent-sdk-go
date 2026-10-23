@@ -131,7 +131,7 @@ InMemorySessionStore|ported|domains/sessions.MemorySessionStore
 fold_session_summary|ported|domains/sessions.FoldSessionSummary
 MirrorErrorMessage|partial|domains/messages.SystemMessage: a failed mirror append is a system message with subtype mirror_error, not a typed one
 project_key_for_directory|ported|domains/sessions.ProjectKeyForDirectory
-import_session_to_store|missing|roadmap 6c
+import_session_to_store|ported|domains/sessions.ImportSessionToStore
 list_sessions_from_store|ported|domains/sessions.ListSessionsFromStore
 get_session_info_from_store|ported|domains/sessions.GetSessionInfoFromStore
 get_session_messages_from_store|ported|domains/sessions.GetSessionMessagesFromStore
