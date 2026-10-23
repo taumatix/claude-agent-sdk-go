@@ -3,6 +3,7 @@ package agent_test
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"sync/atomic"
 	"testing"
@@ -486,4 +487,33 @@ func TestE2E_HookInputArrivesTyped(t *testing.T) {
 	assert.Equal(t, "done", stop.LastAssistantMessage)
 	assert.Equal(t, []agent.HookBackgroundTask{{ID: "b1", Type: "shell", Status: "running", Description: "tail", Command: "tail -f log"}}, stop.BackgroundTasks)
 	assert.Equal(t, []agent.SessionCronSummary{{ID: "c1", Schedule: "0 9 * * 1-5", Recurring: true, Prompt: "standup"}}, stop.SessionCrons)
+}
+
+// A handler builds its answer with the typed output; the stub CLI records the
+// exact bytes it received, so this checks the keys on the wire, not just Map().
+func TestE2E_TypedHookOutputReachesTheCLI(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "hook-response.json")
+	opts := fakeOpts("old-cli-agent", map[string]string{"FAKECLI_HOOK_RESPONSE_FILE": file})
+	stop := false
+	opts.HookHandlers = map[string][]agent.HookMatcher{
+		"SubagentStop": {{Handler: func(context.Context, string, json.RawMessage) (map[string]interface{}, error) {
+			return agent.SyncHookJSONOutput{
+				Continue:      &stop,
+				StopReason:    "enough",
+				SystemMessage: "heads up",
+				HookSpecificOutput: agent.SubagentStopHookSpecificOutput{
+					AdditionalContext: "keep going on the tests",
+				},
+			}.Map(), nil
+		}}},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	collect(t, agent.Query(ctx, "count the files", opts))
+
+	raw, err := os.ReadFile(file)
+	require.NoError(t, err, "the stub never saw the hook's answer")
+	assert.JSONEq(t, `{"continue":false,"stopReason":"enough","systemMessage":"heads up",`+
+		`"hookSpecificOutput":{"hookEventName":"SubagentStop","additionalContext":"keep going on the tests"}}`,
+		string(raw))
 }

@@ -223,7 +223,7 @@ that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows.
 
 ## What the surface inventory found missing
 
-**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (rechecked against the code 2026-10-13): 109 ported, 42
+**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (rechecked against the code 2026-10-13): 130 ported, 21
 partial (a string or raw JSON where upstream has a type), 6 missing, 2 skipped. Missing is not evenly spread. Ordered
 by what limits a deployment:
 
@@ -237,7 +237,7 @@ by what limits a deployment:
    from and forked. The subagent reads are tested on `MemorySessionStore` with entries shaped from upstream's source, never against a store a live CLI mirrored into (that needs 6b). `TagSessionViaStore` skips upstream's NFKC step (it needs `golang.org/x/text`, a first
    dependency); add it if a tag with compatibility characters matters. None of the three has run against a store but
    `MemorySessionStore`.
-3. **Typed hook outputs** (inputs shipped 2026-10-23: `ParseHookInput` and the ten input types, shaped from upstream's source, never compared with a live CLI's hook payloads; a `HookHandler` still receives raw JSON, so a typed handler signature is left), and `CanUseToolShadowedWarning`. (Sandbox settings shipped 2026-10-11, checked against
+3. **A typed `HookHandler` signature** (inputs and outputs both shipped 2026-10-23: `ParseHookInput`, `SyncHookJSONOutput.Map()` and the 21 `*HookSpecificOutput` types, shaped from upstream's source and never compared with a live CLI's hook traffic; the handler still takes raw JSON and returns a map, and typed hooks beyond the ten input types, e.g. SessionStart, have no input type), and `CanUseToolShadowedWarning`. (Sandbox settings shipped 2026-10-11, checked against
    the stub CLI's argv only: a live run with `Enabled` should confirm the CLI honours the merged `--settings`, and whether it
    accepts keys beyond upstream's list.) (`TaskBudget` shipped 2026-10-11; the
    live CLI's `--help` does not list `--task-budget`, so a live run should confirm it is accepted.)

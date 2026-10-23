@@ -76,7 +76,7 @@ BaseHookInput|ported|domains/agent.BaseHookInput
 PreToolUseHookInput|ported|domains/agent.PreToolUseHookInput
 PostToolUseHookInput|ported|domains/agent.PostToolUseHookInput
 PostToolUseFailureHookInput|ported|domains/agent.PostToolUseFailureHookInput
-PostToolUseFailureHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+PostToolUseFailureHookSpecificOutput|ported|domains/agent.PostToolUseFailureHookSpecificOutput
 UserPromptSubmitHookInput|ported|domains/agent.UserPromptSubmitHookInput
 StopHookInput|ported|domains/agent.StopHookInput
 SubagentStopHookInput|ported|domains/agent.SubagentStopHookInput
@@ -84,30 +84,30 @@ PreCompactHookInput|ported|domains/agent.PreCompactHookInput
 NotificationHookInput|ported|domains/agent.NotificationHookInput
 SubagentStartHookInput|ported|domains/agent.SubagentStartHookInput
 PermissionRequestHookInput|ported|domains/agent.PermissionRequestHookInput
-NotificationHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-SubagentStartHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-PermissionRequestHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-PreToolUseHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-PostToolUseHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-UserPromptSubmitHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-SessionStartHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
+NotificationHookSpecificOutput|ported|domains/agent.NotificationHookSpecificOutput
+SubagentStartHookSpecificOutput|ported|domains/agent.SubagentStartHookSpecificOutput
+PermissionRequestHookSpecificOutput|ported|domains/agent.PermissionRequestHookSpecificOutput
+PreToolUseHookSpecificOutput|ported|domains/agent.PreToolUseHookSpecificOutput
+PostToolUseHookSpecificOutput|ported|domains/agent.PostToolUseHookSpecificOutput
+UserPromptSubmitHookSpecificOutput|ported|domains/agent.UserPromptSubmitHookSpecificOutput
+SessionStartHookSpecificOutput|ported|domains/agent.SessionStartHookSpecificOutput
 HookEffort|ported|domains/agent.HookEffort
 BackgroundTaskSummary|ported|domains/agent.HookBackgroundTask
 SessionCronSummary|ported|domains/agent.SessionCronSummary
-UserPromptExpansionHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-PostToolBatchHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-StopHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-SubagentStopHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-PermissionDeniedHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-PreModelSwitchHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-PostModelSwitchHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-ElicitationHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-ElicitationResultHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-CwdChangedHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-FileChangedHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-WorktreeCreateHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-MessageDisplayHookSpecificOutput|partial|domains/agent.HookHandler: the output is a map
-HookJSONOutput|partial|domains/agent.HookHandler: the output is a map
+UserPromptExpansionHookSpecificOutput|ported|domains/agent.UserPromptExpansionHookSpecificOutput
+PostToolBatchHookSpecificOutput|ported|domains/agent.PostToolBatchHookSpecificOutput
+StopHookSpecificOutput|ported|domains/agent.StopHookSpecificOutput
+SubagentStopHookSpecificOutput|ported|domains/agent.SubagentStopHookSpecificOutput
+PermissionDeniedHookSpecificOutput|ported|domains/agent.PermissionDeniedHookSpecificOutput
+PreModelSwitchHookSpecificOutput|ported|domains/agent.PreModelSwitchHookSpecificOutput
+PostModelSwitchHookSpecificOutput|ported|domains/agent.PostModelSwitchHookSpecificOutput
+ElicitationHookSpecificOutput|ported|domains/agent.ElicitationHookSpecificOutput
+ElicitationResultHookSpecificOutput|ported|domains/agent.ElicitationResultHookSpecificOutput
+CwdChangedHookSpecificOutput|ported|domains/agent.CwdChangedHookSpecificOutput
+FileChangedHookSpecificOutput|ported|domains/agent.FileChangedHookSpecificOutput
+WorktreeCreateHookSpecificOutput|ported|domains/agent.WorktreeCreateHookSpecificOutput
+MessageDisplayHookSpecificOutput|ported|domains/agent.MessageDisplayHookSpecificOutput
+HookJSONOutput|partial|domains/agent.HookJSONOutput: SyncHookJSONOutput.Map() builds it, but a HookHandler still returns a map
 HookMatcher|ported|domains/agent.HookMatcher
 HookEventMessage|ported|domains/messages.HookEventMessage
 AgentDefinition|partial|domains/agent.AgentDefinition: description and prompt only; no tools, model or skills
