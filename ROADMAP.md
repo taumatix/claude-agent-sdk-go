@@ -164,7 +164,9 @@ Also diff against upstream's `_build_command`, since upstream's list has been be
   whether `filePath` is always under `CLAUDE_CONFIG_DIR/projects`, and the real frame sizes. Also unbuilt: upstream's 60 s append
   timeout is fixed here, not an option, and a typed `MirrorError` on `messages.Message` instead of reading `System.Raw`.
 - **6c. Store-backed resume:** `Resume` materialising a session from the store when the local
-  transcript is absent (`session_resume`), and `session_import`.
+  transcript is absent (`session_resume`). `ImportSessionToStore` (`session_import`) shipped 2026-10-23, tested on hand-laid
+  directories with `MemorySessionStore` and `FileSessionStore`, never on a projects directory a live CLI filled; it does not try
+  git worktrees of `Directory` as upstream does, and neither store dedupes by uuid on re-import (that is an adapter's job).
 
 The frame names and flush semantics are from upstream's source and a stub CLI, not a live one; 6b above is the check.
 
@@ -223,8 +225,8 @@ that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows.
 
 ## What the surface inventory found missing
 
-**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (rechecked against the code 2026-10-13): 132 ported, 22
-partial (a string or raw JSON where upstream has a type), 2 missing, 3 skipped. Two are missing: `import_session_to_store` (entry 6c) and `ResultError`, which is a decision rather than a gap: upstream raises it when the CLI exits non-zero after an `is_error` result, whereas this SDK returns the `ResultMessage` and ends the stream cleanly, and raising now would change what existing callers see. Ordered
+**Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (rechecked against the code 2026-10-13): 133 ported, 22
+partial (a string or raw JSON where upstream has a type), 1 missing, 3 skipped. One is missing, `ResultError`, which is a decision rather than a gap: upstream raises it when the CLI exits non-zero after an `is_error` result, whereas this SDK returns the `ResultMessage` and ends the stream cleanly, and raising now would change what existing callers see. Ordered
 by what limits a deployment:
 
 1. **The remaining control requests upstream's client sends (others in
