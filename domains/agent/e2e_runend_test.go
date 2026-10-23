@@ -455,3 +455,35 @@ func TestE2E_InitArrivesTyped(t *testing.T) {
 	assert.Equal(t, []string{"interrupt_receipt_v1"}, i.Capabilities)
 	assert.Equal(t, []string{"exit"}, i.TerminalSlashCommands)
 }
+
+// The stub sends a SubagentStop input shaped from upstream's SubagentStopHookInput;
+// the handler decodes it with ParseHookInput. The frame is the stub's, so this
+// proves the typing and the path to the handler, not what a live CLI sends.
+func TestE2E_HookInputArrivesTyped(t *testing.T) {
+	got := make(chan agent.HookInput, 1)
+	opts := fakeOpts("old-cli-agent", nil)
+	opts.HookHandlers = map[string][]agent.HookMatcher{
+		"SubagentStop": {{Handler: func(_ context.Context, _ string, in json.RawMessage) (map[string]interface{}, error) {
+			typed, err := agent.ParseHookInput(in)
+			require.NoError(t, err)
+			got <- typed
+			return map[string]interface{}{}, nil
+		}}},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	collect(t, agent.Query(ctx, "count the files", opts))
+
+	stop, ok := (<-got).(*agent.SubagentStopHookInput)
+	require.True(t, ok, "SubagentStop must decode to *SubagentStopHookInput")
+	assert.Equal(t, "SubagentStop", stop.EventName())
+	assert.Equal(t, "e2e", stop.SessionID)
+	assert.Equal(t, "/work", stop.Cwd)
+	require.NotNil(t, stop.Effort)
+	assert.Equal(t, "high", stop.Effort.Level)
+	assert.Equal(t, "agent-7", stop.AgentID)
+	assert.Equal(t, "general-purpose", stop.AgentType)
+	assert.Equal(t, "done", stop.LastAssistantMessage)
+	assert.Equal(t, []agent.HookBackgroundTask{{ID: "b1", Type: "shell", Status: "running", Description: "tail", Command: "tail -f log"}}, stop.BackgroundTasks)
+	assert.Equal(t, []agent.SessionCronSummary{{ID: "c1", Schedule: "0 9 * * 1-5", Recurring: true, Prompt: "standup"}}, stop.SessionCrons)
+}
