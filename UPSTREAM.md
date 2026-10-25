@@ -9,10 +9,10 @@ how current it is before depending on it.
   kind: github-commit
   repo: anthropics/claude-agent-sdk-python
   sha: 566e41f7a59377885693082d0e8436d8964a0491
-  checked: 2026-10-03
+  checked: 2026-10-26
   note: >-
     the Python SDK this library is ported from; the port mirrors its public
-    surface. 476 commits behind as of 2026-10-03. The pin stays at the original
+    surface. 528 commits behind as of 2026-10-26. The pin stays at the original
     sha: four areas have since been brought level with upstream HEAD and verified
     against the CLI (content blocks on 2026-09-20, `system` lifecycle and hook
     messages on 2026-09-25, session state and background tasks on 2026-09-27,
@@ -23,7 +23,7 @@ how current it is before depending on it.
   kind: npm
   package: "@anthropic-ai/claude-code"
   version: 2.1.288
-  checked: 2026-10-03
+  checked: 2026-10-26
   hold: >-
     the CLI is spawned, not bundled, so the user's installed version is the one that
     runs; the gap is measured, not an alarm. Floor is MinimumCLIVersion = 2.0.0
