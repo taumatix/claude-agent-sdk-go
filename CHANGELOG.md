@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **License is now detected.** `LICENSE` is the unmodified MIT text; the Anthropic attribution that sat above it moved to `NOTICE`.
+  The extra paragraph made GitHub report the license as unrecognised, and pkg.go.dev withholds documentation for packages whose license it cannot identify.
+
 ### Added
 - **`sessions.ImportSessionToStore`**: replays a session the CLI wrote under `~/.claude/projects` (plus subagent transcripts and their
   `.meta.json` sidecars as `agent_metadata` entries) into a `SessionStore`, keyed under the on-disk project directory name like a
