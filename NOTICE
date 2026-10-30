@@ -1,0 +1,5 @@
+This project is a Go port of the official Claude Agent SDK for Python,
+originally authored by Anthropic, PBC
+(https://github.com/anthropics/claude-agent-sdk-python).
+
+The pinned upstream revision is recorded in UPSTREAM.md.
