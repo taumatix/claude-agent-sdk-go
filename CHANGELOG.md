@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Relicensed from MIT to Apache-2.0, matching the other Taumatix libraries. Anthropic's MIT notice for the upstream Python SDK is retained in `NOTICE`. Versions already released stay under MIT.
+
 ### Fixed
 - **License is now detected.** `LICENSE` is the unmodified MIT text; the Anthropic attribution that sat above it moved to `NOTICE`.
   The extra paragraph made GitHub report the license as unrecognised, and pkg.go.dev withholds documentation for packages whose license it cannot identify.

@@ -540,6 +540,6 @@ Pin a version in your `go.mod` and read the changelog before upgrading.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Apache-2.0 — see [LICENSE](LICENSE). The upstream Python SDK is MIT; its notice is retained in [NOTICE](NOTICE).
 
 This project is a Go port of the official [Claude Agent SDK for Python](https://github.com/anthropics/claude-agent-sdk) by Anthropic, PBC.
