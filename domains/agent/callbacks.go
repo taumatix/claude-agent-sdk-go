@@ -70,7 +70,13 @@ type HookMatcher struct {
 	Matcher string
 
 	// Handler is the function called when the hook fires.
+	//
+	// Handler is the raw form, kept through v1. Prefer TypedHandler.
 	Handler HookHandler
+
+	// TypedHandler receives the decoded input (see ParseHookInput) and returns a
+	// SyncHookJSONOutput or AsyncHookJSONOutput. It is used only when Handler is nil.
+	TypedHandler TypedHookHandler
 
 	// Timeout is the maximum time allowed for the hook to respond. Zero means use default.
 	Timeout time.Duration
@@ -79,7 +85,37 @@ type HookMatcher struct {
 // HookHandler is called when the CLI fires a registered hook event.
 // It receives the callback ID and raw input payload.
 // The returned map is serialized and sent back to the CLI as the hook response.
+//
+// This is the raw form, kept through v1. New code uses TypedHookHandler.
 type HookHandler func(ctx context.Context, callbackID string, input json.RawMessage) (map[string]interface{}, error)
+
+// TypedHookHandler is HookHandler with the input decoded. A nil HookJSONOutput
+// answers with an empty object, which the CLI treats as "no opinion". An event
+// this SDK has no type for arrives as *UnknownHookInput.
+type TypedHookHandler func(ctx context.Context, input HookInput) (HookJSONOutput, error)
+
+// handler returns the raw handler to register: Handler if set, else TypedHandler
+// wrapped, else nil.
+func (m HookMatcher) handler() HookHandler {
+	if m.Handler != nil {
+		return m.Handler
+	}
+	if m.TypedHandler == nil {
+		return nil
+	}
+	typed := m.TypedHandler
+	return func(ctx context.Context, _ string, raw json.RawMessage) (map[string]interface{}, error) {
+		in, err := ParseHookInput(raw)
+		if err != nil {
+			return nil, err
+		}
+		out, err := typed(ctx, in)
+		if err != nil || out == nil {
+			return map[string]interface{}{}, err
+		}
+		return out.Map(), nil
+	}
+}
 
 // Connection states of an MCP server in an mcp_status response.
 const (

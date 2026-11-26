@@ -517,3 +517,30 @@ func TestE2E_TypedHookOutputReachesTheCLI(t *testing.T) {
 		`"hookSpecificOutput":{"hookEventName":"SubagentStop","additionalContext":"keep going on the tests"}}`,
 		string(raw))
 }
+
+// TypedHandler gets the decoded input and its typed output reaches the CLI as
+// the same bytes a raw Handler's Map() would send.
+func TestE2E_TypedHookHandlerRoundTrip(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "hook-response.json")
+	opts := fakeOpts("old-cli-agent", map[string]string{"FAKECLI_HOOK_RESPONSE_FILE": file})
+	got := make(chan agent.HookInput, 1)
+	opts.HookHandlers = map[string][]agent.HookMatcher{
+		"SubagentStop": {{TypedHandler: func(_ context.Context, in agent.HookInput) (agent.HookJSONOutput, error) {
+			got <- in
+			return agent.SyncHookJSONOutput{
+				SystemMessage:      "heads up",
+				HookSpecificOutput: agent.SubagentStopHookSpecificOutput{AdditionalContext: "more"},
+			}, nil
+		}}},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	collect(t, agent.Query(ctx, "count the files", opts))
+
+	stop, ok := (<-got).(*agent.SubagentStopHookInput)
+	require.True(t, ok)
+	assert.Equal(t, "agent-7", stop.AgentID)
+	raw, err := os.ReadFile(file)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"systemMessage":"heads up","hookSpecificOutput":{"hookEventName":"SubagentStop","additionalContext":"more"}}`, string(raw))
+}

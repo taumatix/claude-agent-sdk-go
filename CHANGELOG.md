@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (typed hooks)
+- **`agent.TypedHookHandler` and `HookMatcher.TypedHandler`**: the handler receives the decoded `HookInput` and returns a
+  `SyncHookJSONOutput` / `AsyncHookJSONOutput`. `HookMatcher.Handler` (raw) still works and wins when both are set.
+  A matcher with neither handler is now ignored instead of panicking.
+
 ### Deprecated
 - `agent.ToolPermissionHandler` / `Options.ToolPermissionHandler` (use `ToolPermissionFunc`), and `sessions.Store` with its
   free functions `ListSessions`, `GetSession`, `RenameSession`, `TagSession`, `DeleteSession`, `ForkSession` (use `SessionStore`
