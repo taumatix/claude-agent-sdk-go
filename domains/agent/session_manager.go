@@ -72,7 +72,7 @@ func (sm *sessionManager) initialize() error {
 		for _, m := range matchers {
 			callbackID := fmt.Sprintf("hook_%d", hookCounter)
 			hookCounter++
-			sm.hookIDs[callbackID] = m.Handler
+			sm.hookIDs[callbackID] = m.handler()
 			entry := map[string]interface{}{
 				"hookCallbackIds": []string{callbackID},
 			}
@@ -387,7 +387,7 @@ func (sm *sessionManager) handleControlRequest(env *protocol.ControlRequestEnvel
 
 	case *protocol.HookCallbackRequest:
 		handler, ok := sm.hookIDs[req.CallbackID]
-		if !ok {
+		if !ok || handler == nil {
 			return
 		}
 		output, _ := handler(sm.ctx, req.CallbackID, req.Input)
