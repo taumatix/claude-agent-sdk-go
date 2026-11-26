@@ -27,7 +27,7 @@ how current it is before depending on it.
   hold: >-
     the CLI is spawned, not bundled, so the user's installed version is the one that
     runs; the gap is measured, not an alarm. Floor is MinimumCLIVersion = 2.0.0
-    (warning only); unmodelled content blocks degrade to messages.UnknownBlock and
+    (enforced: a CLI below it is refused with *CLIVersionError; Options.SkipVersionCheck opts out; the value itself is unmeasured against old CLIs); unmodelled content blocks degrade to messages.UnknownBlock and
     unmodelled `system` subtypes to messages.SystemMessage with Raw intact.
   note: >-
     spawned as a subprocess by domains/transport/subprocess. `version` is the
@@ -89,11 +89,11 @@ Treat the feature surface as "the Python SDK as of 2026-03-30, plus the content-
 2026-09-25, plus typed session state and background tasks (`v0.5.0`, 2026-09-27)". Closing the rest is tracked in [ROADMAP.md](ROADMAP.md), split into slices ordered
 live-breaks-first.
 
-**The CLI version floor is soft.** This library spawns `@anthropic-ai/claude-code` and speaks its
-stdio protocol. It reads `claude -v` at construction and logs a warning below
-`subprocess.MinimumCLIVersion` (2.0.0), then carries on — so an old CLI still fails later with a
-protocol or JSON decode error that points at this library rather than at the real cause. Turning
-that warning into a refusal with a clear message is on the roadmap.
+**The CLI version floor is enforced, and unmeasured.** This library spawns `@anthropic-ai/claude-code` and
+speaks its stdio protocol. It reads `claude -v` at construction and refuses a CLI below
+`subprocess.MinimumCLIVersion` (2.0.0) with a `*CLIVersionError`; `Options.SkipVersionCheck` skips the check.
+The 2.0.0 value comes from the original port and has not been tested against old CLIs. The live suite
+(`CLAUDE_SDK_LIVE_E2E=1 go test ./domains/agent -run TestLive`) passed in full against CLI 2.1.283 on 2026-11-27.
 
 ## How this file is kept honest
 
