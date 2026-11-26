@@ -527,18 +527,14 @@ cmd/
 
 ## Versioning and stability
 
-This module follows [Semantic Versioning](https://semver.org/). While the major version is `0`,
-the public API is still settling, but breaking changes will not be made casually:
+As of v1.0.0 this module follows [Semantic Versioning](https://semver.org/) and Go's compatibility promise:
+code that compiles against v1.x keeps compiling against every later v1.y.
 
-- Additive changes (new functions, new option fields) land in minor releases.
-- Any incompatible change to an exported symbol requires a minor bump while `0.x`, and is
-  called out in [CHANGELOG.md](CHANGELOG.md) with the migration path.
-- Every pull request runs `apidiff` against its base and fails on incompatible public API
-  changes, so a break is always a deliberate decision rather than an accident.
-
-What exactly is promised, and what can still grow, is in [API.md](API.md).
-
-Pin a version in your `go.mod` and read the changelog before upgrading.
+- New functions, option fields, constants and optional interfaces land in minor releases.
+- Deprecated symbols keep working for the whole of v1.
+- Every pull request runs `apidiff` against its base and fails on an incompatible public API change.
+- What exactly is promised, and what can still grow (struct fields, open string sets, new message kinds), is in
+  [API.md](API.md). What this module was checked against, including the Claude CLI, is in [UPSTREAM.md](UPSTREAM.md).
 
 ## License
 

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-27
+
+First stable release. From here the public API follows Go's compatibility promise; see [API.md](API.md).
+Everything below was added or deprecated on the road to 1.0; nothing was removed.
+
 ### Added (result errors)
 - **`messages.ResultError` and `(*ResultMessage).Err()`**: a failed result (`IsError`) as an error, opt-in. The SDK still
   delivers it as a `ResultMessage` and ends the stream cleanly; that is now a stated v1 guarantee, so upstream's
