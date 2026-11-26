@@ -19,9 +19,10 @@ can write code that keeps working.
 - **Open string sets.** Values for `Effort`, `Thinking`, rate-limit status, fast-mode
   state, hook `Source`/`Reason` and similar come from the CLI and can grow. The
   exported constants are the values known today; handle an unknown value.
-- **Sum types.** `Message`, `ContentBlock` and `HookInput` are interfaces implemented by
-  types in this module. A new concrete type can appear in a minor release, so a type
-  switch needs a `default` case. Unrecognised hook events arrive as `*UnknownHookInput`.
+- **Discriminators.** `messages.Message` and `messages.ContentBlock` are structs keyed by a
+  type/subtype string; new kinds can appear in a minor release, so switch with a `default`
+  case. `HookInput` is an interface: a new concrete type can appear, and unrecognised hook
+  events arrive as `*UnknownHookInput`.
 - **Deprecated is not removed.** A deprecated symbol keeps working for all of v1.
 
 ## What is not covered
@@ -29,5 +30,5 @@ can write code that keeps working.
 - Wire behaviour of the Claude CLI itself. The CLI floor and the upstream surface this
   module was checked against are in [UPSTREAM.md](UPSTREAM.md); claims not verified
   against a live CLI are marked unverified in doc comments.
-- Internal packages and anything under `shared/` that is not re-exported.
+- Packages under `shared/`, which are support code rather than the public surface.
 - Error message text. Match with `errors.Is` / `errors.As`.
