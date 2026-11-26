@@ -536,6 +536,8 @@ the public API is still settling, but breaking changes will not be made casually
 - Every pull request runs `apidiff` against its base and fails on incompatible public API
   changes, so a break is always a deliberate decision rather than an accident.
 
+What exactly is promised, and what can still grow, is in [API.md](API.md).
+
 Pin a version in your `go.mod` and read the changelog before upgrading.
 
 ## License
