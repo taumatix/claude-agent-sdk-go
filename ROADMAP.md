@@ -3,6 +3,43 @@
 Ordered by how much each entry limits real deployments, not by how interesting it is to build.
 Each entry says what breaks today, so it can be judged on its own.
 
+## Road to v1.0.0 (my human, 2026-11-26: "feature complete, forward compatible, avoid v2, then release")
+
+v1.0.0 ships when every entry below is done and the rest of this file is either done or explicitly
+marked as additive-after-1.0. The test for an entry is: *could finishing it later force a breaking
+change?* If yes it is a gate; if it is only new surface, it can follow 1.0 in a minor. Source: the
+v2-risk audit of v0.12.0 (2026-11-26). Release goes on the next fortnightly train after the last gate closes.
+
+Gates, in order (each ships on its own as a PR, `[Unreleased]` until the train):
+
+1. **Typed hook handler.** `HookHandler` is `func(ctx, id, json.RawMessage) (map[string]interface{}, error)`
+   (`domains/agent/callbacks.go:79`), baked into `HookMatcher.Handler` and `Options.HookHandlers`. Add
+   `TypedHookHandler func(ctx, HookInput) (HookJSONOutput, error)` and `HookMatcher.TypedHandler`; `Handler` wins if
+   both are set. Mark `HookHandler` legacy. Add typed input structs for the hook events that lack one (SessionStart, ...).
+2. **Deprecate what must never grow.** `ToolPermissionHandler` (cannot express `UpdatedInput`/`Interrupt`) → `ToolPermissionFunc`;
+   the old `sessions.Store` and its six free functions → `SessionStore` and the `*ViaStore` functions. `// Deprecated:` plus a CHANGELOG
+   line saying both stay through v1, frozen. Decide whether `FilesystemStore` gets a `SessionStore` adapter.
+3. **CLI version floor: do the flip before 1.0.** Measure the oldest CLI that works (see "Make the `claude` CLI version
+   floor the default"), add `SkipVersionCheck`, make the check default-on in a 0.x minor. After 1.0 this is a behaviour break.
+4. **Settle `ResultError`.** Document that an `is_error` result is returned, never raised, and add `(*ResultMessage).Err() error`
+   as the opt-in. Never make `Query` yield an error for it after 1.0.
+5. **Closed string types.** `Options.Effort`, `Thinking`/`ThinkingDisplay`, `SettingSources`, `Betas`, `SystemInitMessage.FastModeState`,
+   `RateLimitInfo.Status`/`RateLimitType`, `MCPServerStatus.Status` (the `MCPConnectionStatus` type already exists), `MCPServerStatus.Config`.
+   Retyping a `string` field breaks assignment from a `string` variable. Per field, either type it now (0.x) or keep `string`
+   permanently with documented constants and a typed accessor. Same for `ResultMessage.Usage`/`ModelUsage`: keep raw, add
+   `UsageTyped()`/`ModelUsageByModel()`.
+6. **Write the promises down.** Doc comments saying: `Message` and `ContentBlock` populate one typed field plus (for `system`) `System`;
+   enum-like string types are open sets, callers need a `default`; structs are built with keyed fields; new `Transport` and store
+   capabilities arrive as optional interfaces. Add an `API.md` stating the v1 compatibility contract, and
+   `docs/` apidiff baseline for 1.0.
+7. **Live verification of what 1.0 will promise.** Roadmap 0b, 3, 4 and 6b: nothing marked "never seen live" in the exported
+   surface should reach 1.0 without either a live run or a doc line saying it is unverified. Entry 3's golden-file replay in CI is
+   the part that needs no credential.
+8. **Feature completeness.** Remaining items in "What the surface inventory found missing" and entries 1, 5 and 6 are additive;
+   for each, decide: ship before 1.0, or confirm it adds no field/signature change and defer. Record the decision here.
+9. **Release v1.0.0.** Verify from scratch (`go get github.com/taumatix/claude-agent-sdk-go@v1.0.0` in an empty module, run the
+   example), README "Versioning and stability" rewritten for v1, UPSTREAM.md refreshed.
+
 ## Closing the gap to `claude-agent-sdk-python`
 
 The port is pinned to `566e41f` (2026-03-30); upstream is **476 commits ahead** as of 2026-10-03
