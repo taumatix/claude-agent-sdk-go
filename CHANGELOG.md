@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Untyped string constants for the values `Options.Effort`, `Thinking`, `ThinkingDisplay`, `SettingSources` and `Betas` take (`EffortHigh`, `ThinkingAdaptive`, `SettingSourceProject`, `Beta1MContext`, ...). The fields stay `string` for good, so a newer CLI's value never needs a release.
 
+
+### Added (status values)
+
+- Untyped constants for `RateLimitInfo.Status`/`RateLimitType` and `FastModeState` (open sets, fields stay `string`; unverified against a live CLI).
+
 ### Added (typed hooks)
 - **`agent.TypedHookHandler` and `HookMatcher.TypedHandler`**: the handler receives the decoded `HookInput` and returns a
   `SyncHookJSONOutput` / `AsyncHookJSONOutput`. `HookMatcher.Handler` (raw) still works and wins when both are set.
