@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Deprecated
+- `agent.ToolPermissionHandler` / `Options.ToolPermissionHandler` (use `ToolPermissionFunc`), and `sessions.Store` with its
+  free functions `ListSessions`, `GetSession`, `RenameSession`, `TagSession`, `DeleteSession`, `ForkSession` (use `SessionStore`
+  and the `*ViaStore` / `*FromStore` functions). Nothing is removed: all stay through v1, frozen, so none can force a v2.
+
 ### Changed
 - Relicensed from MIT to Apache-2.0, matching the other Taumatix libraries. Anthropic's MIT notice for the upstream Python SDK is retained in `NOTICE`. Versions already released stay under MIT.
 

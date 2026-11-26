@@ -1,3 +1,5 @@
+//lint:file-ignore SA1019 these tests exist to keep the deprecated Store API working through v1
+
 package sessions_test
 
 import (
