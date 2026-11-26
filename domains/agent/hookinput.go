@@ -164,6 +164,22 @@ type PermissionRequestHookInput struct {
 	Suggestions json.RawMessage `json:"permission_suggestions,omitempty"`
 }
 
+// SessionStartHookInput is the input of a SessionStart hook.
+type SessionStartHookInput struct {
+	BaseHookInput
+	// Source is e.g. "startup", "resume", "clear" or "compact"; an open set.
+	Source    string `json:"source"`
+	AgentType string `json:"agent_type,omitempty"`
+	Model     string `json:"model,omitempty"`
+}
+
+// SessionEndHookInput is the input of a SessionEnd hook.
+type SessionEndHookInput struct {
+	BaseHookInput
+	// Reason is e.g. "clear", "logout" or "other"; an open set.
+	Reason string `json:"reason"`
+}
+
 // UnknownHookInput is what ParseHookInput returns for an event this SDK has no
 // type for, so a newer CLI's hook still reaches the handler.
 type UnknownHookInput struct {
@@ -206,6 +222,10 @@ func ParseHookInput(raw json.RawMessage) (HookInput, error) {
 		out = &SubagentStartHookInput{}
 	case "PermissionRequest":
 		out = &PermissionRequestHookInput{}
+	case "SessionStart":
+		out = &SessionStartHookInput{}
+	case "SessionEnd":
+		out = &SessionEndHookInput{}
 	default:
 		return &UnknownHookInput{BaseHookInput: base, Raw: append(json.RawMessage(nil), raw...)}, nil
 	}

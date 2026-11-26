@@ -94,3 +94,16 @@ func TestParseHookInput_UnknownAndBad(t *testing.T) {
 	_, err = agent.ParseHookInput(json.RawMessage(`{"hook_event_name":"Stop","stop_hook_active":"yes"}`))
 	assert.Error(t, err, "wrong field type")
 }
+
+func TestParseHookInput_SessionEvents(t *testing.T) {
+	in, err := agent.ParseHookInput([]byte(`{"hook_event_name":"SessionStart","session_id":"s","source":"resume","model":"m"}`))
+	assert.NoError(t, err)
+	ss, ok := in.(*agent.SessionStartHookInput)
+	assert.True(t, ok)
+	assert.Equal(t, "resume", ss.Source)
+	in, err = agent.ParseHookInput([]byte(`{"hook_event_name":"SessionEnd","reason":"clear"}`))
+	assert.NoError(t, err)
+	se, ok := in.(*agent.SessionEndHookInput)
+	assert.True(t, ok)
+	assert.Equal(t, "clear", se.Reason)
+}
