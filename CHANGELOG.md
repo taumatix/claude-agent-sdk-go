@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   delivers it as a `ResultMessage` and ends the stream cleanly; that is now a stated v1 guarantee, so upstream's
   raise-on-error behaviour is available to callers without changing what existing ones see.
 
+### Added (option values)
+
+- Untyped string constants for the values `Options.Effort`, `Thinking`, `ThinkingDisplay`, `SettingSources` and `Betas` take (`EffortHigh`, `ThinkingAdaptive`, `SettingSourceProject`, `Beta1MContext`, ...). The fields stay `string` for good, so a newer CLI's value never needs a release.
+
 ### Added (typed hooks)
 - **`agent.TypedHookHandler` and `HookMatcher.TypedHandler`**: the handler receives the decoded `HookInput` and returns a
   `SyncHookJSONOutput` / `AsyncHookJSONOutput`. `HookMatcher.Handler` (raw) still works and wins when both are set.
