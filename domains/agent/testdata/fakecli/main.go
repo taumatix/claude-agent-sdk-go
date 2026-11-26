@@ -408,6 +408,12 @@ func main() {
 					`"error_status":529,"error":"overloaded","session_id":"e2e","uuid":"u-ar"}`)
 				emit(result)
 				continue
+			case "old-cli-error-result":
+				// An API failure ends the turn: the result frame carries is_error.
+				emit(`{"type":"result","subtype":"success","session_id":"e2e","duration_ms":12,` +
+					`"duration_api_ms":9,"is_error":true,"api_error_status":529,"num_turns":1,` +
+					`"result":"API Error: overloaded","terminal_reason":"completed"}`)
+				continue
 			case "old-cli-permission-denied":
 				// A deny rule refused a Bash call: the frame as 2.1.288 sends it.
 				emit(`{"type":"system","subtype":"permission_denied","tool_name":"Bash",` +
