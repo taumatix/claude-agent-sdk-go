@@ -10,6 +10,10 @@ marked as additive-after-1.0. The test for an entry is: *could finishing it late
 change?* If yes it is a gate; if it is only new surface, it can follow 1.0 in a minor. Source: the
 v2-risk audit of v0.12.0 (2026-11-26). Release goes on the next fortnightly train after the last gate closes.
 
+Status 2026-11-26: gates 1-6 are merged or in review (#84-#89). Gate 8 decision: entries 1, 5 and 6 and the
+`UsageTyped()`/`ModelUsageByModel()` accessors only add types, constants, methods or optional interfaces, so they
+follow 1.0 in minors. Remaining before the train: gate 7 and the floor measurement, which need a live CLI.
+
 Gates, in order (each ships on its own as a PR, `[Unreleased]` until the train):
 
 1. **Typed hook handler.** `HookHandler` is `func(ctx, id, json.RawMessage) (map[string]interface{}, error)`
@@ -249,21 +253,16 @@ with a `\n` the CLI will reject as malformed, and see what the CLI does with it.
 show whether it survives a bad line; until then closing is the safe answer. Also unchecked: Windows,
 where pipes have no write deadline and every cancel mid-write still closes stdin.
 
-## Make the `claude` CLI version floor the default
+## Measure the CLI version floor
 
-**Today:** `Options.RequireMinimumCLIVersion` refuses a CLI below 2.0.0 with `*errors.CLIVersionError`
-(2026-10-09), but it is opt-in, so a library consumer who does not know of it still gets the log line
-and a later protocol error. The floor itself (2.0.0) is from the original port; nothing has measured
-what the oldest CLI this SDK really works with is.
-
-**Shape:** announce in a release's notes, then flip the default in the next minor with
-`Options.SkipVersionCheck` as the opt-out; first run the live test against the oldest CLI still on npm
-that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows.
+The default flip shipped (`SkipVersionCheck`, #84). What remains is measuring: run the live test against the oldest
+CLI still on npm that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows. Raising the floor is
+a behaviour change, so it is a minor release before 1.0 and unwelcome after; until measured, 2.0.0 is documented as unverified.
 
 ## What the surface inventory found missing
 
 **Today:** `docs/upstream-surface.txt` accounts for all 159 names upstream exports (rechecked against the code 2026-10-13): 133 ported, 22
-partial (a string or raw JSON where upstream has a type), 1 missing, 3 skipped. One is missing, `ResultError`, which is a decision rather than a gap: upstream raises it when the CLI exits non-zero after an `is_error` result, whereas this SDK returns the `ResultMessage` and ends the stream cleanly, and raising now would change what existing callers see. Ordered
+partial (a string or raw JSON where upstream has a type), 1 missing, 3 skipped. One was missing, `ResultError`; it shipped as the opt-in `(*ResultMessage).Err()` (#85), because upstream raises it when the CLI exits non-zero after an `is_error` result, whereas this SDK returns the `ResultMessage` and ends the stream cleanly. Ordered
 by what limits a deployment:
 
 1. **The remaining control requests upstream's client sends (others in
