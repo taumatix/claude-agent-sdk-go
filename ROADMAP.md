@@ -12,7 +12,7 @@ v2-risk audit of v0.12.0 (2026-11-26). Release goes on the next fortnightly trai
 
 Status 2026-11-26: gates 1-6 are merged or in review (#84-#89). Gate 8 decision: entries 1, 5 and 6 and the
 `UsageTyped()`/`ModelUsageByModel()` accessors only add types, constants, methods or optional interfaces, so they
-follow 1.0 in minors. Remaining before the train: gate 7 and the floor measurement, which need a live CLI.
+follow 1.0 in minors. Floor measured 2026-11-27 (stays 2.0.0, see UPSTREAM.md); live suite green on CLI 2.1.283. Remaining before the train: golden-file replay in CI (additive, may follow 1.0).
 
 Gates, in order (each ships on its own as a PR, `[Unreleased]` until the train):
 
@@ -252,12 +252,6 @@ the CLI has half a JSON line and the next message would be glued to it. Only lin
 with a `\n` the CLI will reject as malformed, and see what the CLI does with it. Needs the live CLI to
 show whether it survives a bad line; until then closing is the safe answer. Also unchecked: Windows,
 where pipes have no write deadline and every cancel mid-write still closes stdin.
-
-## Measure the CLI version floor
-
-The default flip shipped (`SkipVersionCheck`, #84). What remains is measuring: run the live test against the oldest
-CLI still on npm that speaks the stdio protocol and raise `MinimumCLIVersion` to what it shows. Raising the floor is
-a behaviour change, so it is a minor release before 1.0 and unwelcome after; until measured, 2.0.0 is documented as unverified.
 
 ## What the surface inventory found missing
 

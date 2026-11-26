@@ -92,7 +92,11 @@ live-breaks-first.
 **The CLI version floor is enforced, and unmeasured.** This library spawns `@anthropic-ai/claude-code` and
 speaks its stdio protocol. It reads `claude -v` at construction and refuses a CLI below
 `subprocess.MinimumCLIVersion` (2.0.0) with a `*CLIVersionError`; `Options.SkipVersionCheck` skips the check.
-The 2.0.0 value comes from the original port and has not been tested against old CLIs. The live suite
+The 2.0.0 value comes from the original port. Measured 2026-11-27: CLI 2.0.0 crashes on startup under
+Node 26 (before speaking the protocol), so the floor is a statement about the protocol, not a promise that every
+old CLI runs everywhere. CLI 2.0.30 speaks it: model usage and the no-`data`-key checks pass, while session state,
+permission denials in results and the `--thinking` flags fail because that CLI predates them, so features
+arrive with newer CLIs and are not guaranteed by the floor. The floor stays 2.0.0; raising it is a behaviour change. The live suite
 (`CLAUDE_SDK_LIVE_E2E=1 go test ./domains/agent -run TestLive`) passed in full against CLI 2.1.283 on 2026-11-27.
 
 ## How this file is kept honest
