@@ -45,7 +45,7 @@ func Query(ctx context.Context, prompt string, opts Options) iter.Seq2[messages.
 				Args:                  BuildCLIArgs(opts),
 				Env:                   subprocessEnv(opts.Env),
 				WorkingDirectory:      opts.WorkingDirectory,
-				EnforceMinimumVersion: opts.RequireMinimumCLIVersion,
+				SkipVersionCheck:      opts.SkipVersionCheck,
 			})
 			if err != nil {
 				yield(messages.Message{}, err)

@@ -45,7 +45,7 @@ func (c *Client) Connect(ctx context.Context) error {
 			Args:                  BuildCLIArgs(c.opts),
 			Env:                   subprocessEnv(c.opts.Env),
 			WorkingDirectory:      c.opts.WorkingDirectory,
-			EnforceMinimumVersion: c.opts.RequireMinimumCLIVersion,
+			SkipVersionCheck:      c.opts.SkipVersionCheck,
 		})
 		if err != nil {
 			return err

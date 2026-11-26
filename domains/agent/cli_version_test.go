@@ -2,6 +2,7 @@ package agent_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -25,10 +26,20 @@ func oldCLI(t *testing.T) string {
 	return path
 }
 
-func TestClientConnect_RefusesACLIBelowTheFloorWhenAsked(t *testing.T) {
+func TestClientConnect_SkipVersionCheckLetsAnOldCLIStart(t *testing.T) {
 	opts := agent.DefaultOptions()
 	opts.CLIPath = oldCLI(t)
-	opts.RequireMinimumCLIVersion = true
+	opts.SkipVersionCheck = true
+
+	err := agent.NewClient(opts).Connect(context.Background())
+
+	var verr *sdkerrors.CLIVersionError
+	assert.False(t, errors.As(err, &verr), "a skipped check must not produce a CLIVersionError: %v", err)
+}
+
+func TestClientConnect_RefusesACLIBelowTheFloorByDefault(t *testing.T) {
+	opts := agent.DefaultOptions()
+	opts.CLIPath = oldCLI(t)
 
 	err := agent.NewClient(opts).Connect(context.Background())
 
@@ -37,10 +48,9 @@ func TestClientConnect_RefusesACLIBelowTheFloorWhenAsked(t *testing.T) {
 	assert.Equal(t, "1.0.5", verr.Found)
 }
 
-func TestQuery_RefusesACLIBelowTheFloorWhenAsked(t *testing.T) {
+func TestQuery_RefusesACLIBelowTheFloorByDefault(t *testing.T) {
 	opts := agent.DefaultOptions()
 	opts.CLIPath = oldCLI(t)
-	opts.RequireMinimumCLIVersion = true
 
 	var got error
 	for _, err := range agent.Query(context.Background(), "hi", opts) {
