@@ -198,7 +198,7 @@ func versionStub(t *testing.T, version string) string {
 
 func TestNew_ACLIBelowTheFloorIsRefusedWhenEnforced(t *testing.T) {
 	path := versionStub(t, "1.9.3 (Claude Code)")
-	tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path, EnforceMinimumVersion: true})
+	tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path})
 	if tr != nil {
 		_ = tr.Close()
 	}
@@ -210,9 +210,9 @@ func TestNew_ACLIBelowTheFloorIsRefusedWhenEnforced(t *testing.T) {
 	assert.Nil(t, tr)
 }
 
-func TestNew_ACLIBelowTheFloorStillStartsByDefault(t *testing.T) {
+func TestNew_ACLIBelowTheFloorStartsWhenTheCheckIsSkipped(t *testing.T) {
 	path := versionStub(t, "1.9.3 (Claude Code)")
-	tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path})
+	tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path, SkipVersionCheck: true})
 	require.NoError(t, err)
 	require.NoError(t, tr.Close())
 }
@@ -220,7 +220,7 @@ func TestNew_ACLIBelowTheFloorStillStartsByDefault(t *testing.T) {
 func TestNew_ACLIAtOrAboveTheFloorStartsWhenEnforced(t *testing.T) {
 	for _, v := range []string{"2.0.0 (Claude Code)", "2.1.283 (Claude Code)", "10.0.0"} {
 		path := versionStub(t, v)
-		tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path, EnforceMinimumVersion: true})
+		tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path})
 		require.NoError(t, err, v)
 		require.NoError(t, tr.Close())
 	}
@@ -228,7 +228,7 @@ func TestNew_ACLIAtOrAboveTheFloorStartsWhenEnforced(t *testing.T) {
 
 func TestNew_AnUnreadableVersionIsNotRefusedWhenEnforced(t *testing.T) {
 	path := versionStub(t, "not a version")
-	tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path, EnforceMinimumVersion: true})
+	tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path})
 	require.NoError(t, err)
 	require.NoError(t, tr.Close())
 }
@@ -236,7 +236,7 @@ func TestNew_AnUnreadableVersionIsNotRefusedWhenEnforced(t *testing.T) {
 func TestNew_TheSkipVariableDisablesEnforcement(t *testing.T) {
 	path := versionStub(t, "1.0.0")
 	t.Setenv("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK", "1")
-	tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path, EnforceMinimumVersion: true})
+	tr, err := subprocess.New(context.Background(), subprocess.Config{CLIPath: path})
 	require.NoError(t, err)
 	require.NoError(t, tr.Close())
 }

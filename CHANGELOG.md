@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the `*ViaStore` / `*FromStore` functions). Nothing is removed: all stay through v1, frozen, so none can force a v2.
 
 ### Changed
+- **A CLI older than 2.0.0 is now refused by default** with `*errors.CLIVersionError`, where it used to log a warning. Opt out with
+  `Options.SkipVersionCheck` (or `subprocess.Config.SkipVersionCheck`, or `CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK=1`). A CLI whose
+  version cannot be read still starts. `RequireMinimumCLIVersion` and `EnforceMinimumVersion` are deprecated no-ops. Done before
+  1.0 because flipping it afterwards would be a behaviour break. The 2.0.0 floor is from the original port, not measured against
+  the oldest CLI on npm; raising it later would be a behaviour change too.
 - Relicensed from MIT to Apache-2.0, matching the other Taumatix libraries. Anthropic's MIT notice for the upstream Python SDK is retained in `NOTICE`. Versions already released stay under MIT.
 
 ### Fixed

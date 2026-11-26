@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -44,9 +43,14 @@ type Config struct {
 	// WorkingDirectory sets the working directory for the subprocess.
 	WorkingDirectory string
 
-	// EnforceMinimumVersion makes a CLI older than MinimumCLIVersion an error
-	// (*errors.CLIVersionError) instead of a logged warning. A CLI whose version cannot be
-	// read is let through either way. CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK still disables the check.
+	// SkipVersionCheck lets a CLI older than MinimumCLIVersion start. By default such a CLI is
+	// refused with *errors.CLIVersionError. A CLI whose version cannot be read is let through
+	// either way. CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK=1 also disables the check.
+	SkipVersionCheck bool
+
+	// EnforceMinimumVersion has no effect: enforcement is the default.
+	//
+	// Deprecated: set SkipVersionCheck to opt out instead.
 	EnforceMinimumVersion bool
 }
 
@@ -74,8 +78,8 @@ func New(ctx context.Context, cfg Config) (*Transport, error) {
 		return nil, err
 	}
 
-	if os.Getenv("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK") == "" {
-		if err := checkVersion(cliPath, cfg.EnforceMinimumVersion); err != nil {
+	if !cfg.SkipVersionCheck && os.Getenv("CLAUDE_AGENT_SDK_SKIP_VERSION_CHECK") == "" {
+		if err := checkVersion(cliPath); err != nil {
 			return nil, err
 		}
 	}
@@ -345,9 +349,9 @@ func findCLI(cliPath string) (string, error) {
 	}
 }
 
-// checkVersion runs claude -v. A version below MinimumCLIVersion is logged, or returned as a
-// *CLIVersionError when enforce is set. An unreadable version is never an error.
-func checkVersion(cliPath string, enforce bool) error {
+// checkVersion runs claude -v. A version below MinimumCLIVersion is returned as a
+// *CLIVersionError. An unreadable version is never an error.
+func checkVersion(cliPath string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), versionCheckTimeout)
 	defer cancel()
 
@@ -370,12 +374,7 @@ func checkVersion(cliPath string, enforce bool) error {
 		return nil
 	}
 	found := fmt.Sprintf("%d.%d.%d", v[0], v[1], v[2])
-	if enforce {
-		return &sdkerrors.CLIVersionError{CLIPath: cliPath, Found: found, Required: MinimumCLIVersion}
-	}
-	log.Printf("WARNING: Claude Code version %s is below minimum required %s. Some features may not work correctly.",
-		found, MinimumCLIVersion)
-	return nil
+	return &sdkerrors.CLIVersionError{CLIPath: cliPath, Found: found, Required: MinimumCLIVersion}
 }
 
 // buildEnv constructs the subprocess environment.
