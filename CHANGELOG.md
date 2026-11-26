@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added (result errors)
+- **`messages.ResultError` and `(*ResultMessage).Err()`**: a failed result (`IsError`) as an error, opt-in. The SDK still
+  delivers it as a `ResultMessage` and ends the stream cleanly; that is now a stated v1 guarantee, so upstream's
+  raise-on-error behaviour is available to callers without changing what existing ones see.
+
 ### Added (typed hooks)
 - **`agent.TypedHookHandler` and `HookMatcher.TypedHandler`**: the handler receives the decoded `HookInput` and returns a
   `SyncHookJSONOutput` / `AsyncHookJSONOutput`. `HookMatcher.Handler` (raw) still works and wins when both are set.

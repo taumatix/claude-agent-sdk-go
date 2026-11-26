@@ -158,5 +158,5 @@ ClaudeSDKError|skipped|Go has no base-class hierarchy; the error types in domain
 CLIConnectionError|ported|domains/errors.CLIConnectionError
 CLINotFoundError|ported|domains/errors.CLINotFoundError
 ProcessError|ported|domains/errors.ProcessError
-ResultError|missing|a result with is_error is returned as a ResultMessage, not raised
+ResultError|ported|domains/messages.ResultError
 CLIJSONDecodeError|ported|domains/errors.CLIJSONDecodeError

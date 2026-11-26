@@ -3,6 +3,7 @@ package agent_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -543,4 +544,22 @@ func TestE2E_TypedHookHandlerRoundTrip(t *testing.T) {
 	raw, err := os.ReadFile(file)
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"systemMessage":"heads up","hookSpecificOutput":{"hookEventName":"SubagentStop","additionalContext":"more"}}`, string(raw))
+}
+
+// A failed result is delivered as a ResultMessage, never yielded as an error;
+// Err() is the opt-in to treat it as one.
+func TestE2E_AFailedResultIsAMessageAndErrIsOptIn(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	msgs := collect(t, agent.Query(ctx, "hi", fakeOpts("old-cli-error-result", nil)))
+
+	last := msgs[len(msgs)-1]
+	require.NotNil(t, last.Result)
+	assert.True(t, last.Result.IsError)
+	require.NotNil(t, last.Result.APIErrorStatus)
+	assert.Equal(t, 529, *last.Result.APIErrorStatus)
+
+	var rerr *messages.ResultError
+	require.True(t, errors.As(last.Result.Err(), &rerr))
+	assert.Contains(t, rerr.Error(), "API status 529")
 }
