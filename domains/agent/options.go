@@ -173,6 +173,10 @@ type Options struct {
 	ExtraArgs map[string]string
 
 	// Callbacks
+
+	// ToolPermissionHandler is the original yes/no callback.
+	//
+	// Deprecated: use ToolPermissionFunc. Kept through v1, frozen.
 	ToolPermissionHandler ToolPermissionHandler
 	// ToolPermissionFunc, when set, answers permission requests instead of
 	// ToolPermissionHandler and can rewrite the tool's input, apply permission

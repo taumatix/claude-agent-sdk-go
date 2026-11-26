@@ -10,6 +10,9 @@ import (
 
 // ToolPermissionHandler is called by the session manager when the CLI requests permission
 // to use a tool. Return allow=true to permit the tool use, or false with a reason to deny.
+//
+// Deprecated: use ToolPermissionFunc, which can also rewrite the input, apply permission
+// updates and interrupt the turn. This type stays through v1, frozen.
 type ToolPermissionHandler func(ctx context.Context, toolName string, input json.RawMessage, toolUseID string) (allow bool, reason string)
 
 // PermissionUpdate and PermissionRuleValue are the control protocol's permission

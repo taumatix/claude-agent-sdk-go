@@ -1,6 +1,9 @@
 package sessions
 
 // Store defines the interface for session persistence backends.
+//
+// Deprecated: Store is frozen and gains no methods. Implement SessionStore instead; it has
+// context support and optional capability interfaces. Kept through v1.
 type Store interface {
 	// ListSessions returns all sessions stored under the given project path.
 	// An empty projectPath may return all sessions.
